@@ -9,13 +9,13 @@ import pycircstat
 
 
 
-def process_dlc_data():
-    # set working directory
-    # home_dir = 'D:/analysis' # WINDOWS
-    home_dir = "/media/jake/LaCie" # Linux/Ubuntu
-
-    animal = 'Rat64'
-    session = '08-11-2023'
+def process_dlc_data(animal, session):
+    # detect operating system
+    if os.name == 'nt':
+        home_dir = 'D:/analysis' # WINDOWS
+    elif os.name == 'posix': # Linux or Mac OS
+        home_dir = "/media/jake/LaCie" # Linux/Ubuntu
+        
     data_dir = os.path.join(home_dir, animal, session)
 
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
@@ -54,14 +54,17 @@ def process_dlc_data():
         del num_dlc_frames, num_video_frames
         
         pulse_csv = 'pulseTS_' + trial_time + '.csv'
+        pulse_csv = os.path.join(csv_path, pulse_csv)
         pulse_ts = pd.read_csv(pulse_csv, header=None)
         pulse_ts = pulse_ts[0]
 
         crop_vals_csv = 'cropValues_' + trial_time + '.csv'
+        crop_vals_csv = os.path.join(csv_path, crop_vals_csv)
         crop_vals = pd.read_csv(crop_vals_csv, header=None)
         crop_vals = crop_vals.rename(columns={0: 'x', 1: 'y', 2: 'height', 3: 'width'})
 
-        crop_ts_csv = 'cropTimes_' + trial_time + '.csv'
+        crop_ts_csv = 'cropTS_' + trial_time + '.csv'
+        crop_ts_csv = os.path.join(csv_path, crop_ts_csv)
         crop_ts = pd.read_csv(crop_ts_csv, header=None)
         crop_ts = crop_ts.rename(columns={0: 'ts'})
 
@@ -184,9 +187,10 @@ def process_dlc_data():
         df.columns = pd.MultiIndex.from_product([[trial_time], df.columns])
         
         dlc_processed_data.append(df)
+    
+    return dlc_processed_data
         
-        os.chdir(os.path.dirname(os.getcwd()))
-        os.chdir('deeplabcut')
+        
 
 # a function to identify consecutive number, used below to get 
 # continuous chunks of bad tracking for interpolation
@@ -197,4 +201,7 @@ def get_consec(nums):
     return list(zip(edges, edges))
 
 if __name__ == "__main__":
-    process_dlc_data()
+    animal = 'Rat64'
+    session = '08-11-2023'
+    dlc_processed_data = process_dlc_data(animal, session)
+    pass
