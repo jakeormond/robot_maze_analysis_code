@@ -1,0 +1,10 @@
+process_dlc_data.py		Extracts the positional data from deeplabcut
+
+extract_pulses_from_raw.py	Finds the digital pulses emitted by Bonsai and recorded by SpikeGLX 
+				by reading the final channel of the binary file. 
+
+get_pulses.py			Reads in the pulse timings recorded by Bonsai, and matches them to the 
+				pulses read from the SpikeGLX data. It produces plots to allow the 
+				user to confirm that the SpikeGLX pulses are correctly aligned to the 
+				Bonsai data. 
+				
