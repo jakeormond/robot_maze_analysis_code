@@ -6,5 +6,10 @@ extract_pulses_from_raw.py	Finds the digital pulses emitted by Bonsai and record
 get_pulses.py			Reads in the pulse timings recorded by Bonsai, and matches them to the 
 				pulses read from the SpikeGLX data. It produces plots to allow the 
 				user to confirm that the SpikeGLX pulses are correctly aligned to the 
-				Bonsai data. 
+				Bonsai data. The Bonsai pulses (in computer time (ms)) and the SpikeGLX 
+				pulses (in samples) are combined into a 2d array and saved as a list of 
+				arrays as an H5 file.
+
+
+
 				

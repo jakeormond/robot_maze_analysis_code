@@ -10,6 +10,7 @@ import pandas as pd
 import tkinter as tk
 from tkinter import filedialog
 import h5py
+from get_directories import get_home_dir, get_data_dir 
 import matplotlib.pyplot as plt
 
 
@@ -204,19 +205,6 @@ def plot_pulse_alignment(pulses, directory):
         fig_name = os.path.join(fig_dir, fig_name)
         fig.savefig(fig_name)
         plt.close(fig)
-
-def get_home_dir():
-    # determine operating system
-    if os.name == 'nt':
-        home_dir = 'D:/analysis' # WINDOWS
-    elif os.name == 'posix': # Linux or Mac OS
-        home_dir = "/media/jake/LaCie" # Linux/Ubuntu
-    return home_dir
-
-def get_data_dir(animal, session):
-    home_dir = get_home_dir()
-    data_dir = os.path.join(home_dir, animal, session)
-    return data_dir
 
 
 if __name__ == "__main__":

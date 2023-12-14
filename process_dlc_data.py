@@ -6,18 +6,11 @@ from numpy import matlib as mb
 import re
 import pickle
 import pycircstat
-
+from get_directories import get_home_dir, get_data_dir
 
 
 def process_dlc_data(animal, session):
-    # detect operating system
-    if os.name == 'nt':
-        home_dir = 'D:/analysis' # WINDOWS
-    elif os.name == 'posix': # Linux or Mac OS
-        home_dir = "/media/jake/LaCie" # Linux/Ubuntu
-        
-    data_dir = os.path.join(home_dir, animal, session)
-
+    data_dir = get_data_dir(animal, session)
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
 
     # load tracking data
@@ -188,9 +181,19 @@ def process_dlc_data(animal, session):
         
         dlc_processed_data.append(df)
     
+
+    # save the processed data to a pickle file
+    pickle_path = os.path.join(dlc_dir, 'dlc_processed_data.pkl')
+    with open(pickle_path, 'wb') as f:
+        pickle.dump(dlc_processed_data, f)
+    
+    return dlc_processed_data, pickle_path
+
+def load_dlc_processed_pickle(pickle_path):        
+    with open(pickle_path, 'rb') as f:
+        dlc_processed_data = pickle.load(f)
+    
     return dlc_processed_data
-        
-        
 
 # a function to identify consecutive number, used below to get 
 # continuous chunks of bad tracking for interpolation
@@ -203,5 +206,7 @@ def get_consec(nums):
 if __name__ == "__main__":
     animal = 'Rat64'
     session = '08-11-2023'
-    dlc_processed_data = process_dlc_data(animal, session)
+    dlc_processed_data, pickle_path = process_dlc_data(animal, session)
+    del dlc_processed_data
+    dlc_processed_data = load_dlc_processed_pickle(pickle_path)
     pass
