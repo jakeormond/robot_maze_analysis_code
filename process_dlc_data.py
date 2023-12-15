@@ -9,10 +9,7 @@ import pycircstat
 from get_directories import get_home_dir, get_data_dir
 
 
-def process_dlc_data(animal, session):
-    data_dir = get_data_dir(animal, session)
-    dlc_dir = os.path.join(data_dir, 'deeplabcut')
-
+def process_dlc_data(dlc_dir):  
     # load tracking data
     tracking_files = glob.glob(os.path.join(dlc_dir, '*.h5'))
     tracking_files.sort()
@@ -206,7 +203,10 @@ def get_consec(nums):
 if __name__ == "__main__":
     animal = 'Rat64'
     session = '08-11-2023'
-    dlc_processed_data, pickle_path = process_dlc_data(animal, session)
-    del dlc_processed_data
+    data_dir = get_data_dir(animal, session)
+    dlc_dir = os.path.join(data_dir, 'deeplabcut')
+    # dlc_processed_data, pickle_path = process_dlc_data(dlc_dir)
+    # del dlc_processed_data
+    pickle_path = os.path.join(dlc_dir, 'dlc_processed_data.pkl')
     dlc_processed_data = load_dlc_processed_pickle(pickle_path)
     pass

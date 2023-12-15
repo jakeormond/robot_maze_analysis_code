@@ -130,13 +130,15 @@ def load_pulses():
     pulse_file = filedialog.askopenfilename()
 
     with h5py.File(pulse_file, 'r') as hf:
-        pulses = [hf[f'dataset_{i}'][:] for i in range(len(hf.keys()))]
+        # get keys
+        keys = list(hf.keys())
+        pulses = [hf[key][:] for key in keys]
 
     return pulses   
 
 
 if __name__ == "__main__":
-    pulses = extract_spikeglx_pulses()
-    del pulses
+    # pulses = extract_spikeglx_pulses()
+    # del pulses
     pulses = load_pulses()
     pass
