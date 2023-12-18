@@ -50,6 +50,7 @@ def match_behaviour_and_bonsai_files(behaviour_dir, video_dir):
 
 def rename_bonsai_files(behaviour_and_matching_bonsai_files, video_dir, video_csv_dir):
     bonsai_times = [None] * len(behaviour_and_matching_bonsai_files)
+    behaviour_times = [None] * len(behaviour_and_matching_bonsai_files)
     for i, b in enumerate(behaviour_and_matching_bonsai_files):
         # get the bonsai file name
         video_file = os.path.basename(b[1])
@@ -57,6 +58,12 @@ def rename_bonsai_files(behaviour_and_matching_bonsai_files, video_dir, video_cs
         # remove the video_ prefix
         bonsai_time = bonsai_time[6:]
         bonsai_times[i] = bonsai_time
+
+        # get the behaviour file name
+        behaviour_file = os.path.basename(b[0])
+        behaviour_time = os.path.splitext(behaviour_file)[0]
+        behaviour_times[i] = behaviour_time
+
 
     bonsai_files = ["cropTS", "cropValues", "dlcOut", "pulseTS", "videoTS"]
     for b in bonsai_files:
@@ -66,32 +73,35 @@ def rename_bonsai_files(behaviour_and_matching_bonsai_files, video_dir, video_cs
         # generate the list of files that should be there
         bonsai_files_b2 = [None] * len(bonsai_times)
         for i, t in enumerate(bonsai_times):
-            bonsai_files_b2[i] = b + "_" + t + ".csv"
+            bonsai_files_b2[i] = os.path.join(video_csv_dir, b + "_" + t + ".csv")
 
         # compare the two lists
-        bonsai_files_b2 = set(bonsai_files_b2)
-        bonsai_files_b = set(bonsai_files_b)
+        bonsai_files_b2_set = set(bonsai_files_b2)
+        bonsai_files_b_set = set(bonsai_files_b)
         # first check that all files in bonsai_files_b2 are in bonsai_files_b
-        if not bonsai_files_b2.issubset(bonsai_files_b):
+        if not bonsai_files_b2_set.issubset(bonsai_files_b_set):
             raise Exception("Not all files in bonsai_files_b2 are in bonsai_files_b")
         
         # then move all files in bonsai_files_b not in bonsai_files_b2 to a new folder
-        bonsai_files_b3 = bonsai_files_b - bonsai_files_b2
+        bonsai_files_b3 = bonsai_files_b_set - bonsai_files_b2_set
         bonsai_files_b3 = list(bonsai_files_b3)
-        bonsai_files_b3_dir = os.path.join(video_csv_dir, "extra_bonsai_files")
-        if not os.path.exists(bonsai_files_b3_dir):
-            os.mkdir(bonsai_files_b3_dir)
-        for b3 in bonsai_files_b3:
-            b3_path = os.path.join(video_csv_dir, b3)
-            b3_new_path = os.path.join(bonsai_files_b3_dir, b3)
-            os.rename(b3_path, b3_new_path)
+        # check if bonsai_files_b3 is empty
+        if len(bonsai_files_b3) != 0:           
+            bonsai_files_b3_dir = os.path.join(video_csv_dir, "extra_bonsai_files")
+            if not os.path.exists(bonsai_files_b3_dir):
+                os.mkdir(bonsai_files_b3_dir)
+            for b3 in bonsai_files_b3:
+                b3_path = os.path.join(video_csv_dir, b3)
+                b3_new_path = os.path.join(bonsai_files_b3_dir, b3)
+                os.rename(b3_path, b3_new_path)
         
-        # rename the bonsai files        
-        
-        bonsai_file = b + ".csv"
-        bonsai_file_path = os.path.join(video_dir, bonsai_file)
-        bonsai_file_new_path = os.path.join(video_csv_dir, bonsai_file)
-        os.rename(bonsai_file_path, bonsai_file_new_path)
+        # rename the bonsai files   
+        for i, b2 in reversed(list(enumerate(bonsai_files_b))):           
+            # find where the date starts in b, the "20" that comes after b
+            date_ind_b = b2.find(b) + len(b) + 1           
+            bonsai_file = b2[:date_ind_b] + behaviour_times[i] + ".csv"              
+            bonsai_file_new_path = os.path.join(video_csv_dir, bonsai_file)
+            os.rename(b2, bonsai_file_new_path)
 
 
 
