@@ -96,15 +96,92 @@ def rename_bonsai_files(behaviour_and_matching_bonsai_files, video_dir, video_cs
                 os.rename(b3_path, b3_new_path)
         
         # rename the bonsai files   
-        for i, b2 in reversed(list(enumerate(bonsai_files_b))):           
-            # find where the date starts in b, the "20" that comes after b
-            date_ind_b = b2.find(b) + len(b) + 1           
-            bonsai_file = b2[:date_ind_b] + behaviour_times[i] + ".csv"              
-            bonsai_file_new_path = os.path.join(video_csv_dir, bonsai_file)
-            os.rename(b2, bonsai_file_new_path)
+        # for i, b2 in reversed(list(enumerate(bonsai_files_b))):           
+        #     # find where the date starts in b, the "20" that comes after b
+        #     date_ind_b = b2.find(b) + len(b) + 1           
+        #     bonsai_file = b2[:date_ind_b] + behaviour_times[i] + ".csv"              
+        #     bonsai_file_new_path = os.path.join(video_csv_dir, bonsai_file)
+        #     os.rename(b2, bonsai_file_new_path)
+        
+    # video files
+    video_files = glob.glob(os.path.join(video_dir, "*.avi"))
+    
+    # generate the list of files that should be there
+    video_files_b = [None] * len(bonsai_times)
+    for i, t in enumerate(bonsai_times):
+        video_files_b[i] = os.path.join(video_dir, "video_" + t + ".avi")
 
+    # compare the two lists
+    video_files_set = set(video_files)
+    video_files_b_set = set(video_files_b)
+    # first check that all files in bonsai_files_b2 are in bonsai_files_b
+    if not video_files_b_set.issubset(video_files_set):
+        raise Exception("Not all files in video_files_b are in video_files")
+    
+    # then move all files in bonsai_files_b not in bonsai_files_b2 to a new folder
+    video_files_b2 = video_files_b_set - video_files_set
+    video_files_b2 = list(video_files_b2)
+    # check if video_files_b2 is empty
+    if len(video_files_b2) != 0:           
+        video_files_b2_dir = os.path.join(video_dir, "extra_video_files")
+        if not os.path.exists(video_files_b2_dir):
+            os.mkdir(video_files_b2_dir)
+        for b2 in video_files_b2:
+            b2_path = os.path.join(video_dir, b2)
+            b2_new_path = os.path.join(video_files_b2_dir, b2)
+            os.rename(b2_path, b2_new_path)
+        
+        # # rename the video files   
+        # for i, v in reversed(list(enumerate(video_files))):           
+        #     # find where the date starts in b, the "20" that comes after b
+        #     date_ind = v.find("video_2") + 6      
+        #     video_file = v[:date_ind]    
+        #     video_file = video_file + behaviour_times[i] + ".avi"              
+        #     os.rename(v, video_file)
 
+    # dlc files
+    dlc_files = [".h5", ".pickle"]
+    for d in dlc_files:
+        # get list of all dlc files end with d
+        dlc_files_d = glob.glob(os.path.join(dlc_dir, "video" + d))
 
+        # get generic dlc_file name with date and time removed
+        dlc_file = os.path.basename(dlc_files_d[0])
+        dlc_ind = dlc_file.find("DLC")
+        dlc_file_end = dlc_file[dlc_ind:]
+
+        # generate the list of files that should be there
+        dlc_files_d2 = [None] * len(bonsai_times)
+        for i, t in enumerate(bonsai_times):
+            dlc_files_d2[i] = os.path.join(dlc_dir, "video_" + t + dlc_file_end + d)
+
+        # compare the two lists
+        dlc_files_d2_set = set(dlc_files_d2)
+        dlc_files_d_set = set(dlc_files_d)
+        # first check that all files in dlc_files_d2 are in dlc_files_d
+        if not dlc_files_d2.issubset(dlc_files_d_set):
+            raise Exception("Not all files in dlc_files_d2 are in dlc_files_d")
+        
+        # then move all files in bonsai_files_b not in bonsai_files_b2 to a new folder
+        dlc_files_d3 = dlc_files_d_set - dlc_files_d2_set
+        dlc_files_d3 = list(dlc_files_d3)
+        # check if dlc_files_d3 is empty
+        if len(dlc_files_d3) != 0:           
+            dlc_files_d3_dir = os.path.join(dlc_dir, "extra_dlc_files")
+            if not os.path.exists(dlc_files_d3_dir):
+                os.mkdir(dlc_files_d3_dir)
+            for d3 in dlc_files_d3:
+                d3_path = os.path.join(dlc_dir, d3)
+                d3_new_path = os.path.join(dlc_files_d3_dir, d3)
+                os.rename(d3_path, d3_new_path)
+        
+        # rename the dlc files   
+        for i, d2 in reversed(list(enumerate(dlc_files_d))):           
+            # find where the date starts in d2, the "20" that comes after b
+            date_ind_d = d2.find("video_2") + 6          
+            dlc_file_new = "video_" + behaviour_times[i] + dlc_file_end + d              
+            dlc_file_new_path = os.path.join(dlc_dir, dlc_file_new)
+            os.rename(d2, dlc_file_new_path)
     pass
 
 
@@ -116,7 +193,9 @@ if __name__ == "__main__":
     behaviour_dir = os.path.join(data_dir, 'behaviour')
     video_dir = os.path.join(data_dir, 'video_files')
     video_csv_dir = os.path.join(data_dir, 'video_csv_files')
+    dlc_dir = os.path.join(data_dir, 'deeplabcut')
     behaviour_and_matching_bonsai_files = \
         match_behaviour_and_bonsai_files(behaviour_dir, video_dir)
     rename_bonsai_files(behaviour_and_matching_bonsai_files, \
-                        video_dir, video_csv_dir)
+                        video_dir, video_csv_dir, dlc_dir)
+    
