@@ -1,3 +1,9 @@
+
+rename_bonsai_files.py		Fixes the datestamp issue with Bonsai, where it is always one 
+				filename behind the honeycomb task script. Uses the times when 
+				the files were modified to correctly match them. 
+
+
 process_dlc_data.py		Extracts the positional data from deeplabcut
 
 extract_pulses_from_raw.py	Finds the digital pulses emitted by Bonsai and recorded by SpikeGLX 

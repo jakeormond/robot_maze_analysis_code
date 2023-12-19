@@ -205,8 +205,8 @@ if __name__ == "__main__":
     session = '08-11-2023'
     data_dir = get_data_dir(animal, session)
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
-    # dlc_processed_data, pickle_path = process_dlc_data(dlc_dir)
-    # del dlc_processed_data
+    dlc_processed_data, pickle_path = process_dlc_data(dlc_dir)
+    del dlc_processed_data
     pickle_path = os.path.join(dlc_dir, 'dlc_processed_data.pkl')
     dlc_processed_data = load_dlc_processed_pickle(pickle_path)
     pass
