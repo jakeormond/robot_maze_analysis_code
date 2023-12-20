@@ -23,6 +23,8 @@ def create_video_with_dlc_data(dlc_data, video_path):
     fps = int(cap.get(cv2.CAP_PROP_FPS))
 
     # create video_with_tracking folder
+    base_dir = os.path.dirname(video_path)
+    video_name = os.path.basename(video_path)
     video_with_tracking_dir = os.path.join(os.path.dirname(video_path), \
                                            'videos_with_tracking')
     if not os.path.exists(video_with_tracking_dir):
@@ -63,7 +65,7 @@ if __name__ == "__main__":
 
     for d in enumerate(dlc_processed_data):
         
-        video_time = d.columns[0][0]
+        video_time = d[1].columns[0][0]
         print(video_time)
 
         # find the correct video path for this video time
@@ -73,7 +75,7 @@ if __name__ == "__main__":
                 break
         
         # create the video with the dlc data
-        create_video_with_dlc_data(d, video_path)
+        create_video_with_dlc_data(d[1], video_path)
 
 
 
