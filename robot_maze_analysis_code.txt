@@ -2,9 +2,14 @@
 rename_bonsai_files.py		Fixes the datestamp issue with Bonsai, where it is always one 
 				filename behind the honeycomb task script. Uses the times when 
 				the files were modified to correctly match them. 
+				RUN THIS BEFORE RUNNING ANY OTHER CODE!!!!!
 
 
 process_dlc_data.py		Extracts the positional data from deeplabcut
+				NOTE THAT POSITIONAL DATA NEEDS TO BE TRIMMED AT START AND END!!!
+				THIS CAN BE DONE WHEN PROCESSING NEURAL DATA. 
+				
+create_videos_with_dlc_data.py	Produces videos with a red arrow tracking head position and direction. 
 
 extract_pulses_from_raw.py	Finds the digital pulses emitted by Bonsai and recorded by SpikeGLX 
 				by reading the final channel of the binary file. 
@@ -15,6 +20,10 @@ get_pulses.py			Reads in the pulse timings recorded by Bonsai, and matches them 
 				Bonsai data. The Bonsai pulses (in computer time (ms)) and the SpikeGLX 
 				pulses (in samples) are combined into a 2d array and saved as a list of 
 				arrays as an H5 file.
+				
+
+
+
 
 
 

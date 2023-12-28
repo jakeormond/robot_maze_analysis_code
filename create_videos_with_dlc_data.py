@@ -1,4 +1,3 @@
-import cv2
 import os
 import glob
 import pandas as pd
@@ -11,6 +10,8 @@ import pickle
 import math
 from get_directories import get_data_dir 
 from process_dlc_data import load_dlc_processed_pickle
+
+import cv2
 
 
 def create_video_with_dlc_data(dlc_data, video_path):
@@ -32,12 +33,55 @@ def create_video_with_dlc_data(dlc_data, video_path):
 
     # create video writer
     output_video_path = os.path.join(video_with_tracking_dir, \
-                                     os.path.basename(video_path))
+                                     video_name)
     # video_writer = cv2.VideoWriter_fourcc(*'XVID')
     video_writer = cv2.VideoWriter(output_video_path,
                                cv2.VideoWriter_fourcc('P', 'I', 'M', '1'), 
                                fps, (height, width))
     
+    num_frames = dlc_data.shape[0]
+
+    dlc_time = dlc_data.columns[0][0]
+    for frame_idx in range(num_frames):
+        ret, frame = cap.read()
+
+        # get the dlc data for this frame
+        dlc_for_frame = dlc_data.iloc[frame_idx, :]
+       
+        hd_for_frame = dlc_for_frame.loc[(dlc_time, 'hd')]
+
+        if math.isnan(hd_for_frame):
+            continue
+
+        x1 = np.cos(hd_for_frame) * arrow_len
+        y1 = -np.sin(hd_for_frame) * arrow_len
+
+        x2 = np.cos(hd_for_frame + np.pi) * arrow_len
+        y2 = -np.sin(hd_for_frame + np.pi) * arrow_len
+
+        x_cropped = dlc_for_frame.loc[(dlc_time, 'x_cropped')]
+        y_cropped = dlc_for_frame.loc[(dlc_time, 'y_cropped')]        
+        
+        arrow_start = (int(x_cropped + x1), 
+                       int(y_cropped + y1))
+        arrow_end = (int(x_cropped + x2), 
+                     int(y_cropped + y2))
+        
+        cv2.arrowedLine(frame, arrow_end, arrow_start, 
+                        (0, 0, 255), 4, tipLength = 0.5)
+
+        cv2.startWindowThread()
+
+        cv2.imshow('Video Player', frame)
+
+        video_writer.write(frame)
+
+        if cv2.waitKey(2) & 0xFF == ord('q'):
+            break 
+    
+    cap.release()
+    cv2.destroyAllWindows()
+    video_writer.release()  
 
 
     pass    
@@ -63,9 +107,12 @@ if __name__ == "__main__":
     dlc_processed_data = load_dlc_processed_pickle(dlc_pickle_path)
     video_times_and_paths = get_video_paths_from_dlc(dlc_processed_data, data_dir)
 
-    for d in enumerate(dlc_processed_data):
+    for i, d in enumerate(dlc_processed_data):
+
+        if i <= 1:
+            continue
         
-        video_time = d[1].columns[0][0]
+        video_time = d.columns[0][0]
         print(video_time)
 
         # find the correct video path for this video time
@@ -75,7 +122,7 @@ if __name__ == "__main__":
                 break
         
         # create the video with the dlc data
-        create_video_with_dlc_data(d[1], video_path)
+        create_video_with_dlc_data(d, video_path)
 
 
 
