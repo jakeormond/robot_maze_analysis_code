@@ -49,5 +49,10 @@ load_behaviour.py		Loads in the behavioural csv files, and saves the data as a l
 				the attributes need to be stripped out into their own lists, stored within
 				a dictionary, and then added back to the dataframes at loading time. 
 
+load_sorted_spikes.py		Loads the clusters classified as good in Phy (need to verify the cluster 
+				qualities are mine, and not kilosort's). Saves them in a dictionary with the 
+				cluster numbers as the keys, and the spike times in samples as the data. 
+				File is unit_spike_times.pickle. 
+
 
 				

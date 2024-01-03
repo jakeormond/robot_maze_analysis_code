@@ -2,12 +2,16 @@ import os
 import glob
 import pandas as pd
 import numpy as np
-from numpy import matlib as mb
+import numpy.matlib as mb
 import re
 import pickle
-import pycircstat
-from get_directories import get_home_dir, get_data_dir
+import copy
+from get_directories import get_data_dir
+from get_pulses import load_bonsai_pulses
 
+# note that sample rate is hardcoded as 30000
+# create global variable for sample rate
+sample_rate = 30000
 
 def process_dlc_data(dlc_dir):  
     # load tracking data
@@ -17,7 +21,7 @@ def process_dlc_data(dlc_dir):
     csv_directory = 'video_csv_files'
     csv_path = os.path.join(data_dir, csv_directory)
 
-    dlc_processed_data = []
+    dlc_processed_data = {}
 
     body_col = 'spot1' # used to determine what platform the animal is on
 
@@ -124,10 +128,10 @@ def process_dlc_data(dlc_dir):
         
             n_reps = int(last_frame - first_frame + 1)    
         
-            x_crops_temp = np.matlib.repmat(x_crop, n_reps, 1)    
+            x_crops_temp = mb.repmat(x_crop, n_reps, 1)    
             x_crops[first_frame:last_frame+1] = x_crops_temp
             
-            y_crops_temp = np.matlib.repmat(y_crop, n_reps, 1)    
+            y_crops_temp = mb.repmat(y_crop, n_reps, 1)    
             y_crops[first_frame:last_frame+1] = y_crops_temp
         
         x_crops = x_crops.astype(int) # these need to be integers 
@@ -174,9 +178,9 @@ def process_dlc_data(dlc_dir):
                 'x_body_cropped': x_body_uncor, 'y_body_cropped': y_body_uncor,
                 'hd': hd_rad}
         df = pd.DataFrame(data=df_data)
-        df.columns = pd.MultiIndex.from_product([[trial_time], df.columns])
+        # df.columns = pd.MultiIndex.from_product([[trial_time], df.columns])
         
-        dlc_processed_data.append(df)
+        dlc_processed_data[trial_time] = df
     
 
     # save the processed data to a pickle file
@@ -185,6 +189,76 @@ def process_dlc_data(dlc_dir):
         pickle.dump(dlc_processed_data, f)
     
     return dlc_processed_data, pickle_path
+
+
+def get_video_times_in_samples(dlc_processed_data, pulses):
+    """
+    Get the video times in samples. This is done by interpolating the video 
+    timestamps with the bonsai timestamps. The last few frames after the last 
+    pulse can't be interpolated properly so they need to be manually calculated.
+    
+    Parameters
+    ----------
+    dlc_processed_data : list of pandas dataframes
+        The dlc processed data. Each element in the list is a trial. Each 
+        dataframe contains the dlc processed data for a trial. Contains only
+        video times in ms, not in samples, which are necessary to calculate
+        the times of the recorded spikes. 
+    pulses : list of pandas dataframes
+        The pulse times and samples. Each element in the list is a trial. 
+        
+    Returns
+    -------
+    dlc_processed_with_samples : list of pandas dataframes
+        The dlc processed data with the video times in samples. Each element in 
+        the list is a trial. Each dataframe contains the dlc processed data for 
+        a trial. The first column is the video time in ms and the second column 
+        is the video time in samples. The rest of the columns are the body 
+        part positions and head direction.
+    """
+    trial_times = list(dlc_processed_data.keys())
+    dlc_processed_with_samples = {}
+
+    for i, t in enumerate(trial_times):
+       
+        d = dlc_processed_data[t]
+        video_ts = d['ts']
+        pulses_ts = pulses[t]['bonsai_pulses_ms']
+        pulses_samples = pulses[t]['imec_pulses_samples']
+
+        # interpolate the video samples 
+        video_samples = np.interp(video_ts, pulses_ts, pulses_samples)
+        video_samples = np.round(video_samples).astype(int)
+
+        # the last few frames after the last pulse can't be interpolated properly
+        # so they need to be manually calculated
+        # first find the first video_ts that is greater than the last pulse_ts
+        last_pulse_ts = pulses_ts.iloc[-1]
+        last_video_ind = np.where(video_ts > last_pulse_ts)[0][0]
+        video_samples[last_video_ind:] = video_samples[last_video_ind - 1] + \
+            (video_ts[last_video_ind:] - video_ts[last_video_ind - 1])*(sample_rate/1000) # sample rate 30000 divide by 1000 (i.e. 30 samples per ms)
+
+        # add the video samples to the dlc_processed_data.
+        # make it the second column
+        dlc_processed_with_samples[t] = copy.deepcopy(d)
+        # insert the video samples as the second column
+        dlc_processed_with_samples[t].insert(1, 'video_samples', video_samples)
+        
+    return dlc_processed_with_samples
+
+
+def restrict_dlc_to_video_endpoints(dlc_processed_data, video_endpoints):
+    
+    trial_times = list(dlc_processed_data.keys())
+    
+    restricted_dlc_processed_data = {}
+    for t in trial_times:
+        dlc_temp = dlc_processed_data[t].loc[0:video_endpoints[t]['end_frame']]
+        restricted_dlc_processed_data[t] = dlc_temp
+    
+    return restricted_dlc_processed_data
+
+
 
 def load_dlc_processed_pickle(pickle_path):        
     with open(pickle_path, 'rb') as f:
@@ -205,8 +279,43 @@ if __name__ == "__main__":
     session = '08-11-2023'
     data_dir = get_data_dir(animal, session)
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
-    dlc_processed_data, pickle_path = process_dlc_data(dlc_dir)
-    del dlc_processed_data
+    # dlc_processed_data, pickle_path = process_dlc_data(dlc_dir)
+    # del dlc_processed_data
     pickle_path = os.path.join(dlc_dir, 'dlc_processed_data.pkl')
     dlc_processed_data = load_dlc_processed_pickle(pickle_path)
+    
+    # load the pulses, which contains both the bonsai and spikeglx pulses in 
+    # ms and samples, respectively
+    bonsai_dir = os.path.join(data_dir, 'video_csv_files')
+    pulses = load_bonsai_pulses(bonsai_dir)
+
+    dlc_processed_with_samples = get_video_times_in_samples(dlc_processed_data, pulses)
+       
+    # save the processed data to a pickle file
+    pickle_path = os.path.join(dlc_dir, 'dlc_processed_data_with_samples.pkl')
+    with open(pickle_path, 'wb') as f:
+        pickle.dump(dlc_processed_with_samples, f)
+
+    # delete dlc_processed_with samples
+    del dlc_processed_with_samples
+
+    # load the processed data with samples
+    with open(pickle_path, 'rb') as f:
+        dlc_processed_with_samples = pickle.load(f)
+    
+
+    video_dir = os.path.join(data_dir, 'video_files')
+    video_endpoints_file = os.path.join(video_dir, 'video_endpoints.pkl')
+    # load the pickle file
+    with open(video_endpoints_file, 'rb') as f:
+        video_endpoints = pickle.load(f)
+
+    dlc_processed_data = restrict_dlc_to_video_endpoints(dlc_processed_data, 
+                                                         video_endpoints)
+
     pass
+
+
+
+
+

@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 import pickle
 import re
-from scipy import interpolate
 import copy
 from get_directories import get_data_dir
 from process_dlc_data import load_dlc_processed_pickle
