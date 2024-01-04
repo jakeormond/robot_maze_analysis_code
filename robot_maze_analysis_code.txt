@@ -8,6 +8,9 @@ process_dlc_data.py		Extracts the positional data from deeplabcut
 				NOTE THAT POSITIONAL DATA NEEDS TO BE TRIMMED AT START AND END!!!
 				THIS CAN BE DONE WHEN PROCESSING NEURAL DATA. 
 				
+				ALSO NOTE THAT: process_dlc_data.py now contains the functionality 
+				of calculate_video_times.py, which can now be removed. 
+				
 get_video_endpoints		Video recording, in most cases, went beyond the end of the trial (i.e. 
 				the experimenter can be seen at the end of the videos coming in to the 
 				arena with the food reward), and so an endpoint for each video needs 
@@ -37,7 +40,6 @@ calculate_video_times.py	Reads in the pulses saved in get_pulses.py, and the dlc
 				positional data can be aligned with the neural data. The data is saved
 				in a pickle file called called dlc_processed_data_with_sample.pkl.
 
-
 load_behaviour.py		Loads in the behavioural csv files, and saves the data as a list of 
 				dataframes with the name property corresponding to the trial time, 
 				and the goal property corresponding to the goal on that trial (saved as 
@@ -54,5 +56,9 @@ load_sorted_spikes.py		Loads the clusters classified as good in Phy (need to ver
 				cluster numbers as the keys, and the spike times in samples as the data. 
 				File is unit_spike_times.pickle. 
 
-
+classify_neurons.py 		Calculates mean firing rates and average waveforms, from which spike width 
+				can be calculated. Plots a scatter plot of mean rates vs spike width, 
+				from which it is possible to manually identify the interneurons. Once we 
+				have more sessions to look at, we can determine thresholds/cutoffs to 
+				automate the identification of principal and interneurons. 
 				

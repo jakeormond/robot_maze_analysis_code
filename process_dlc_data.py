@@ -310,9 +310,19 @@ if __name__ == "__main__":
     with open(video_endpoints_file, 'rb') as f:
         video_endpoints = pickle.load(f)
 
-    dlc_processed_data = restrict_dlc_to_video_endpoints(dlc_processed_data, 
+    dlc_final = restrict_dlc_to_video_endpoints(dlc_processed_with_samples, 
                                                          video_endpoints)
 
+    pickle_path = os.path.join(dlc_dir, 'dlc_final.pkl')
+    with open(pickle_path, 'wb') as f:
+        pickle.dump(dlc_final, f)
+
+    # delete dlc_processed_with samples
+    del dlc_final
+
+    # load the processed data with samples
+    with open(pickle_path, 'rb') as f:
+        dlc_final = pickle.load(f)
     pass
 
 
