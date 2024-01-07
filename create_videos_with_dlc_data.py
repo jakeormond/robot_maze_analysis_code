@@ -199,37 +199,48 @@ def create_full_video_with_dlc_data(dlc_data, data_dir, video_endpoint):
             
             cv2.arrowedLine(fs_frame, arrow_end, arrow_start, 
                             colours[i], 8, tipLength = 0.5)
-            
-        # make polar plots of the relative direction to each goal in the upper
-        # left and right corners
-        for i, g in enumerate(goal_coordinates.keys()):
+     
             # get the relative direction to the goal
             relative_dir = dlc_for_frame[f'relative_direction_{g}']
             
-            # plot the relative direction as an arrow within a circle
-            # first, create the circle
-            circle_radius = 200
-            circle_centre = (int(0.5*circle_radius), int(0.5*circle_radius))
-            circle = np.zeros((circle_radius, circle_radius, 3))
+            # plot the relative direction as the animal's head direction
+            # relative to the goal, which is plotted above the arrow
+            circle_radius = 80
 
             # if i is 0, plot in the upper left corner, otherwise plot in the
             # upper right corner
             if i == 0:
-                x_offset = 0
+                x_offset = 4*circle_radius
             else:
-                x_offset = 2048 - circle_radius
+                x_offset = 2448 - 4*circle_radius
+            
+            y_offset = 2*circle_radius
 
             # draw the circle
-            cv2.circle(circle, circle_centre, circle_radius, (255, 255, 255), 8)
+            circle_centre = (int(circle_radius/2) + x_offset, 
+                             int(circle_radius/2) + y_offset)
+            cv2.circle(fs_frame, circle_centre, circle_radius, colours[i], 8)
+
+            # overlay the text "goal" along the top of the circle
+            cv2.putText(fs_frame, 'GOAL', (int(x_offset - 0.5*circle_radius), 
+                                           int(y_offset - 0.75*circle_radius)), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 2, colours[i], 2, cv2.LINE_AA)
 
             # draw the arrow
-            arrow_len = 0.5*circle_radius
-            x1 = np.cos(relative_dir) * arrow_len
-            y1 = -np.sin(relative_dir) * arrow_len
+            arrow_len2 = 0.5*circle_radius
+            x1 = np.cos(relative_dir + np.pi/2) * arrow_len2
+            y1 = -np.sin(relative_dir + np.pi/2) * arrow_len2
 
-            x2 = np.cos(relative_dir + np.pi) * arrow_len
-            y2 = -np.sin(relative_dir + np.pi) * arrow_len
+            x2 = np.cos(relative_dir + (3/2)*np.pi) * arrow_len2
+            y2 = -np.sin(relative_dir + (3/2)*np.pi) * arrow_len2
 
+            arrow_start = (int((circle_radius/2) + x_offset + x1), 
+                        int((circle_radius/2) + 2*y_offset + y1))
+            arrow_end = (int((circle_radius/2) + x_offset + x2),  
+                        int((circle_radius/2) + 2*y_offset + y2))
+
+            cv2.arrowedLine(fs_frame, arrow_end, arrow_start, 
+                            [0, 0, 255], 8, tipLength = 0.5)
 
         # shrink the frame to keep file size under control
         fs_frame_re = cv2.resize(fs_frame, (1224, 1024))
