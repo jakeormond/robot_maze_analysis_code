@@ -63,11 +63,20 @@ def split_behaviour_data_by_goal(behaviour_data):
     """
 
     goals = []
+    behaviour_data_by_goal = {}
 
-    for i, b in enumerate(behaviour_data):
-        # the goal is the final entry in the chose_pos column
-        goal = int(b['chosen_pos'].iloc[-1])
+    for b in behaviour_data.keys():
+        # the goal is the final entry in the chosen_pos column
+        data_temp = behaviour_data[b]
+        goal = int(data_temp['chosen_pos'].iloc[-1])
         goals.append(goal)
+
+        # check if goal is a key in behaviour_data_by_goal
+        if goal not in behaviour_data_by_goal.keys():
+            behaviour_data_by_goal[goal] = {}
+        
+        # add the behaviour data to the goal
+        behaviour_data_by_goal[goal][b] = data_temp
 
     # get the unique goals
     unique_goals = np.unique(goals)
@@ -76,20 +85,6 @@ def split_behaviour_data_by_goal(behaviour_data):
         raise ValueError(
             f"More than 2 unique goals found. Unique goals: {unique_goals}"
         )
-    
-    goal1 = f'goal_{unique_goals[0]}'
-    goal2 = f'goal_{unique_goals[1]}'
-
-    behaviour_data_by_goal = {goal1: [], goal2: []}
-
-    # add goals to the behaviour data
-    for i, b in enumerate(behaviour_data):
-        b.goal = goals[i]
-
-        if b.goal == unique_goals[0]:
-            behaviour_data_by_goal[goal1].append(b)
-        elif b.goal == unique_goals[1]:
-            behaviour_data_by_goal[goal2].append(b)
     
     return behaviour_data_by_goal
 
@@ -165,25 +160,32 @@ if __name__ == "__main__":
     csv_files = glob.glob(os.path.join(behaviour_dir, '*.csv'))
 
     # load the csv files
-    behaviour_data = []
-    goals = []
+    behaviour_data = {}
     for i, f in enumerate(csv_files):
         behaviour_data_temp = load_behaviour_file(f)
-        behaviour_data.append(behaviour_data_temp)
+        trial_time = behaviour_data_temp.name
+        behaviour_data[trial_time] = behaviour_data_temp
 
     behaviour_data_by_goal = \
         split_behaviour_data_by_goal(behaviour_data)
 
     # save the behaviour data to a pickle file
-    pickle_path_beh = save_behav_data(behaviour_data, behaviour_dir)
-
+    behav_data_path = os.path.join(behaviour_dir, 'behaviour_data.pkl')
+    with open(behav_data_path, 'wb') as f:
+        pickle.dump(behaviour_data, f)
+    
     # save the behaviour data by goal to a pickle file
-    pickle_path_beh_goal = save_behav_data(behaviour_data_by_goal, behaviour_dir)    
+    behav_data_by_goal_path = os.path.join(behaviour_dir, 'behaviour_data_by_goal.pkl')
+    with open(behav_data_by_goal_path, 'wb') as f:
+        pickle.dump(behaviour_data_by_goal, f)
 
-    # delete and reload just to verify that it works
     del behaviour_data, behaviour_data_by_goal
 
-    behaviour_data = load_behav_data(pickle_path_beh)  
-    behaviour_data_by_goal = load_behav_data(pickle_path_beh_goal)
+    # load the behaviour data from the pickle file
+    with open(behav_data_path, 'rb') as f:
+        behaviour_data = pickle.load(f)
+
+    with open(behav_data_by_goal_path, 'rb') as f:
+        behaviour_data_by_goal = pickle.load(f)
 
     pass

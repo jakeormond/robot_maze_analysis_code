@@ -13,6 +13,13 @@ def get_data_dir(animal, session):
     data_dir = os.path.join(home_dir, animal, session)
     return data_dir
 
+def get_robot_maze_directory():
+    if os.name == 'nt':
+        home_dir = 'D:/robot_maze' # WINDOWS
+    elif os.name == 'posix': # Linux or Mac OS
+        home_dir = "/home/jake/Documents/robot_maze" # Linux/Ubuntu
+    return home_dir
+
 def reverse_date(date):
     """
     Reverse the date from dd-mm-yyyy to yyyy-mm-dd.

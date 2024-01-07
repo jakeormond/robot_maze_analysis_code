@@ -153,7 +153,7 @@ def calculate_spike_halfwidths(average_waveforms):
     for u in average_waveforms.keys():
 
         # calculate spike width
-        halfwidth = \
+        halfwidth, _, _ = \
             calculate_spike_halfwidth(average_waveforms[u])
         halfwidths[u] = halfwidth
 
@@ -207,8 +207,20 @@ def calculate_spike_halfwidth(average_waveform):
     return halfwidth, halfwidth_ind, waveform_upsampled
 
           
-def classify_neurons():
-    pass
+def classify_neurons(halfwidths, mean_rates):
+    neuron_types = {}
+
+    # get user input for halfwidth cutoff
+    halfwidth_cutoff = float(input('Enter halfwidth cutoff (ms): '))
+
+    for u in halfwidths.keys():
+        if halfwidths[u] < halfwidth_cutoff:
+            neuron_types[u] = 'interneuron'
+        else:
+            neuron_types[u] = 'pyramidal'
+    
+    return neuron_types
+
 
 if __name__ == "__main__":
     animal = 'Rat64'
@@ -248,7 +260,7 @@ if __name__ == "__main__":
 
 
     # plot average waveforms
-    plot_average_waveforms(average_waveforms, mean_rates, spike_dir)
+    # plot_average_waveforms(average_waveforms, mean_rates, spike_dir)
 
     # get halfwidths
     halfwidths = calculate_spike_halfwidths(average_waveforms)
@@ -256,9 +268,22 @@ if __name__ == "__main__":
     # plot halfwidths vs mean firing rates
     plt.figure()
     for u in mean_rates.keys():
-        plt.scatter(mean_rates[u], halfwidths[u][0])
+        plt.scatter(mean_rates[u], halfwidths[u])
     plt.xlabel('Mean firing rate (Hz)')
     plt.ylabel('Halfwidth (ms)')
     plt.savefig(os.path.join(spike_dir, 'average_waveforms', 
                              'halfwidth_vs_mean_firing_rate.png'))
+
+    # classify neurons
+    neuron_types = classify_neurons(halfwidths, mean_rates)
+    neuron_types_file = os.path.join(spike_dir, 'average_waveforms', 
+                                     'neuron_types.pickle')
+    with open(neuron_types_file, 'wb') as handle:
+        pickle.dump(neuron_types, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    
+    del neuron_types
+
+    with open(neuron_types_file, 'rb') as handle:
+        neuron_types = pickle.load(handle)
+
     pass

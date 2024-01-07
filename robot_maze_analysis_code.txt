@@ -60,5 +60,6 @@ classify_neurons.py 		Calculates mean firing rates and average waveforms, from w
 				can be calculated. Plots a scatter plot of mean rates vs spike width, 
 				from which it is possible to manually identify the interneurons. Once we 
 				have more sessions to look at, we can determine thresholds/cutoffs to 
-				automate the identification of principal and interneurons. 
+				automate the identification of principal and interneurons; for now, go 
+				through the plots, and manually enter a spike-width cut-off. 
 				
