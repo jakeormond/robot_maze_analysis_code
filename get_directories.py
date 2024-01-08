@@ -15,7 +15,7 @@ def get_data_dir(animal, session):
 
 def get_robot_maze_directory():
     if os.name == 'nt':
-        home_dir = 'D:/robot_maze' # WINDOWS
+        home_dir = 'C:/Users/Jake/Documents/robot_code/robot_maze' # WINDOWS C:\Users\Jake\Documents\robot_code\robot_maze
     elif os.name == 'posix': # Linux or Mac OS
         home_dir = "/home/jake/Documents/robot_maze" # Linux/Ubuntu
     return home_dir

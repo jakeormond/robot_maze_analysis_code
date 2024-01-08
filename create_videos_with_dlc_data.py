@@ -91,7 +91,15 @@ def create_cropped_video_with_dlc_data(dlc_data, video_path, video_endpoint):
     cv2.destroyAllWindows()
     video_writer.release()  
 
-def create_full_video_with_dlc_data(dlc_data, data_dir, video_endpoint):
+def create_full_video_with_dlc_data(video_time, dlc_data, data_dir, video_endpoint):
+
+    # get path to full_video.avi, which is two directories above data_dir
+    full_video_path = os.path.join(os.path.dirname(os.path.dirname(data_dir)), "full_video.avi")
+    cap = cv2.VideoCapture(full_video_path)
+    _, fs_frame_og = cap.read()
+    # display the frame to the user
+    # cv2.imshow('Video Player', frame)
+
     
     # get video path
     video_dir = os.path.join(data_dir, 'video_files')
@@ -100,9 +108,10 @@ def create_full_video_with_dlc_data(dlc_data, data_dir, video_endpoint):
     goal_coordinates = get_goal_coordinates(data_dir=data_dir)
     
     # blank full size frame 
-    blank_fs_frame = np.zeros((2048, 2448, 3))
+    # blank_fs_frame = np.zeros((2048, 2448, 3))
 
     arrow_len = 20
+    video_path = os.path.join(video_dir, 'video_' + video_time + '.avi')
     cap = cv2.VideoCapture(video_path)
 
     # properties
@@ -129,7 +138,7 @@ def create_full_video_with_dlc_data(dlc_data, data_dir, video_endpoint):
     end_frame = video_endpoint['end_frame']
 
     for frame_idx in range(num_frames):
-        ret, frame = cap.read()
+        _, frame = cap.read()
 
         if frame_idx > end_frame:
             break
@@ -150,10 +159,11 @@ def create_full_video_with_dlc_data(dlc_data, data_dir, video_endpoint):
                          - dlc_for_frame['y_cropped'])
        
         # gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        fs_frame = blank_fs_frame
+        # fs_frame = blank_fs_frame
+        fs_frame = fs_frame_og.copy()
         # fs_frame[y_crop_pos:y_crop_pos + 600, x_crop_pos:x_crop_pos + 600] = gray_frame
         fs_frame[y_crop_pos:y_crop_pos + 600, x_crop_pos:x_crop_pos + 600] = frame
-        fs_frame = fs_frame.astype('uint8')        
+        fs_frame = fs_frame.astype('uint8') 
 
         x1 = np.cos(hd_for_frame) * 1.5 * arrow_len
         y1 = -np.sin(hd_for_frame) * 1.5 * arrow_len
@@ -298,15 +308,15 @@ if __name__ == "__main__":
         print(video_time)
 
         # find the correct video path for this video time
-        video_path = video_paths[video_time]
+        # video_path = video_paths[video_time]
         
         # get video endpoint
         video_endpoint = video_endpoints[video_time]
 
-        # create thes video with the dlc data
+        # create the video with the dlc data
         # create_cropped_video_with_dlc_data(dlc_processed_data[d], video_path, video_endpoint)
             
-        create_full_video_with_dlc_data(dlc_final_data[d], 
+        create_full_video_with_dlc_data(video_time, dlc_final_data[d], 
                                         data_dir, video_endpoint)
 
 
