@@ -293,7 +293,7 @@ def create_gif_from_video(video_path, gif_path, start_and_end_time):
         frame_number += 1
     
     cap.release()
-    imageio.mimsave(gif_path, frames, 'GIF', fps=fps/10)
+    imageio.mimsave(gif_path, frames, 'GIF', fps=fps/10, loop=0)
 
 def get_video_paths_from_dlc(dlc_processed_data, data_dir):
     video_dir = os.path.join(data_dir, 'video_files')
