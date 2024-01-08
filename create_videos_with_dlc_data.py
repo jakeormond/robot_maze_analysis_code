@@ -289,6 +289,7 @@ def create_gif_from_video(video_path, gif_path, start_and_end_time):
         elif frame_time > start_and_end_time[1]:
             break
 
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         frames.append(frame)
         frame_number += 1
     
@@ -347,10 +348,10 @@ if __name__ == "__main__":
     
     # create a gif from video "video_2023-11-08_16.52.26.avi" using frames
     # from 70 seconds to 97 seconds
-    video_path = os.path.join(video_dir, "video_2023-11-08_16.52.26.avi")
-    gif_path = os.path.join(video_dir, "video_2023-11-08_16.52.26.gif")
-    start_time = 60
-    end_time = 80
+    video_path = os.path.join(video_dir, "cropped_videos_with_tracking", "video_2023-11-08_16.52.26.avi")
+    gif_path = os.path.join(video_dir, "cropped_videos_with_tracking", "video_2023-11-08_16.52.26.gif")
+    start_time = 70
+    end_time = 90
     create_gif_from_video(video_path, gif_path, (start_time, end_time))
 
 
