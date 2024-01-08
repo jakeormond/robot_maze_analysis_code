@@ -13,6 +13,7 @@ from process_dlc_data import load_dlc_processed_pickle
 
 from calculate_pos_and_dir import get_goal_coordinates
 
+import imageio
 import cv2
 
 
@@ -268,6 +269,32 @@ def create_full_video_with_dlc_data(video_time, dlc_data, data_dir, video_endpoi
     cv2.destroyAllWindows()
     video_writer.release()
 
+
+def create_gif_from_video(video_path, gif_path, start_and_end_time):
+    cap = cv2.VideoCapture(video_path)
+    fps = int(cap.get(cv2.CAP_PROP_FPS))
+    frames = []
+    
+    frame_number = 0
+    while True:
+        _, frame = cap.read()
+        
+        # calculate the time of this frame
+        frame_time = frame_number/fps
+
+        # if the frame time is before the start time, skip this frame
+        if frame_time < start_and_end_time[0] or frame_number % 20 != 0:
+            frame_number += 1
+            continue
+        elif frame_time > start_and_end_time[1]:
+            break
+
+        frames.append(frame)
+        frame_number += 1
+    
+    cap.release()
+    imageio.mimsave(gif_path, frames, 'GIF', fps=fps/10)
+
 def get_video_paths_from_dlc(dlc_processed_data, data_dir):
     video_dir = os.path.join(data_dir, 'video_files')
     video_paths = {}
@@ -300,26 +327,31 @@ if __name__ == "__main__":
     with open(video_endpoints_path, 'rb') as f:
         video_endpoints = pickle.load(f)
 
-    
+    # for d in dlc_processed_data.keys():
 
-    for d in dlc_processed_data.keys():
+    #     video_time = d
+    #     print(video_time)
 
-        video_time = d
-        print(video_time)
-
-        # find the correct video path for this video time
-        # video_path = video_paths[video_time]
+    #     # find the correct video path for this video time
+    #     # video_path = video_paths[video_time]
         
-        # get video endpoint
-        video_endpoint = video_endpoints[video_time]
+    #     # get video endpoint
+    #     video_endpoint = video_endpoints[video_time]
 
-        # create the video with the dlc data
-        # create_cropped_video_with_dlc_data(dlc_processed_data[d], video_path, video_endpoint)
+    #     # create the video with the dlc data
+    #     # create_cropped_video_with_dlc_data(dlc_processed_data[d], video_path, video_endpoint)
             
-        create_full_video_with_dlc_data(video_time, dlc_final_data[d], 
-                                        data_dir, video_endpoint)
+    #     create_full_video_with_dlc_data(video_time, dlc_final_data[d], 
+    #                                     data_dir, video_endpoint)
 
-
+    
+    # create a gif from video "video_2023-11-08_16.52.26.avi" using frames
+    # from 70 seconds to 97 seconds
+    video_path = os.path.join(video_dir, "video_2023-11-08_16.52.26.avi")
+    gif_path = os.path.join(video_dir, "video_2023-11-08_16.52.26.gif")
+    start_time = 60
+    end_time = 80
+    create_gif_from_video(video_path, gif_path, (start_time, end_time))
 
 
     pass
