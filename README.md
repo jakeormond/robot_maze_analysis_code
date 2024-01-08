@@ -68,6 +68,11 @@ attributes. Unfortunately, just straight up saving them doesn't work, so
 the attributes need to be stripped out into their own lists, stored within
 a dictionary, and then added back to the dataframes at loading time. 
 
+# calculate_pos_and_dir.py
+
+Calculates the animal's current platform, as well as the goal directions from 
+its current position, and its head direction relative to each of the goals.
+
 # load_sorted_spikes.py		
 
 Loads the clusters classified as good in Phy (need to verify the cluster 

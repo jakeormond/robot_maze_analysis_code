@@ -17,7 +17,7 @@ import imageio
 import cv2
 
 
-def create_cropped_video_with_dlc_data(dlc_data, video_path, video_endpoint):
+def create_cropped_video_with_dlc_data(dlc_data, video_path, start_and_end):
     arrow_len = 10
     cap = cv2.VideoCapture(video_path)
 
@@ -73,7 +73,13 @@ def create_cropped_video_with_dlc_data(dlc_data, video_path, video_endpoint):
         cv2.arrowedLine(frame, arrow_end, arrow_start, 
                         (0, 0, 255), 4, tipLength = 0.5)
         
-        if frame_idx > end_frame:
+        if frame_idx < start_and_end[0]:
+            # write BEFORE START on the frame along the top
+            cv2.putText(frame, 'BEFORE START', (10, 50), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+
+
+        if frame_idx > start_and_end[1]:
             # write END on the frame along the top
             cv2.putText(frame, 'END', (10, 50), 
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
@@ -92,7 +98,7 @@ def create_cropped_video_with_dlc_data(dlc_data, video_path, video_endpoint):
     cv2.destroyAllWindows()
     video_writer.release()  
 
-def create_full_video_with_dlc_data(video_time, dlc_data, data_dir, video_endpoint):
+def create_full_video_with_dlc_data(video_time, dlc_data, data_dir, start_and_end):
 
     # get path to full_video.avi, which is two directories above data_dir
     full_video_path = os.path.join(os.path.dirname(os.path.dirname(data_dir)), "full_video.avi")
@@ -141,7 +147,10 @@ def create_full_video_with_dlc_data(video_time, dlc_data, data_dir, video_endpoi
     for frame_idx in range(num_frames):
         _, frame = cap.read()
 
-        if frame_idx > end_frame:
+        if frame_idx < start_and_end[0]:
+            continue
+
+        if frame_idx > start_and_end[1]:
             break
 
         if frame_idx % 10 != 0:
@@ -323,27 +332,35 @@ if __name__ == "__main__":
 
     video_dir = os.path.join(data_dir, 'video_files')
    
+    # load video_startpoints.pkl
+    video_startpoints_path = os.path.join(video_dir, 'video_startpoints.pkl')
+    with open(video_startpoints_path, 'rb') as f:
+        video_startpoints = pickle.load(f)
+
+
     # load video_endpoints.pkl
     video_endpoints_path = os.path.join(video_dir, 'video_endpoints.pkl')
     with open(video_endpoints_path, 'rb') as f:
         video_endpoints = pickle.load(f)
 
-    # for d in dlc_processed_data.keys():
+    for d in dlc_processed_data.keys():
 
-    #     video_time = d
-    #     print(video_time)
+        video_time = d
+        print(video_time)
 
-    #     # find the correct video path for this video time
-    #     # video_path = video_paths[video_time]
+        # find the correct video path for this video time
+        video_path = video_paths[video_time]
         
-    #     # get video endpoint
-    #     video_endpoint = video_endpoints[video_time]
+        # get video startpoint and endpoint
+        video_startpoint = video_startpoints[video_time]
+        video_endpoint = video_endpoints[video_time]['end_frame']
+        start_and_end = (video_startpoint, video_endpoint)
 
-    #     # create the video with the dlc data
-    #     # create_cropped_video_with_dlc_data(dlc_processed_data[d], video_path, video_endpoint)
+        # create the video with the dlc data
+        create_cropped_video_with_dlc_data(dlc_processed_data[d], video_path, start_and_end)
             
-    #     create_full_video_with_dlc_data(video_time, dlc_final_data[d], 
-    #                                     data_dir, video_endpoint)
+        create_full_video_with_dlc_data(video_time, dlc_final_data[d], 
+                                        data_dir, start_and_end)
 
     
     # create a gif from video "video_2023-11-08_16.52.26.avi" using frames

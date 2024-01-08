@@ -247,13 +247,16 @@ def get_video_times_in_samples(dlc_processed_data, pulses):
     return dlc_processed_with_samples
 
 
-def restrict_dlc_to_video_endpoints(dlc_processed_data, video_endpoints):
+def restrict_dlc_to_video_start_and_end(dlc_processed_data, video_startpoints, video_endpoints):
     
     trial_times = list(dlc_processed_data.keys())
     
     restricted_dlc_processed_data = {}
     for t in trial_times:
-        dlc_temp = dlc_processed_data[t].loc[0:video_endpoints[t]['end_frame']]
+        startpoint = video_startpoints[t]
+        endpoint = video_endpoints[t]['end_frame']
+
+        dlc_temp = dlc_processed_data[t].loc[startpoint:endpoint]
         restricted_dlc_processed_data[t] = dlc_temp
     
     return restricted_dlc_processed_data
@@ -281,37 +284,44 @@ if __name__ == "__main__":
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
     # dlc_processed_data, pickle_path = process_dlc_data(dlc_dir)
     # del dlc_processed_data
-    pickle_path = os.path.join(dlc_dir, 'dlc_processed_data.pkl')
-    dlc_processed_data = load_dlc_processed_pickle(pickle_path)
+    # pickle_path = os.path.join(dlc_dir, 'dlc_processed_data.pkl')
+    # dlc_processed_data = load_dlc_processed_pickle(pickle_path)
     
-    # load the pulses, which contains both the bonsai and spikeglx pulses in 
-    # ms and samples, respectively
-    bonsai_dir = os.path.join(data_dir, 'video_csv_files')
-    pulses = load_bonsai_pulses(bonsai_dir)
+    # # load the pulses, which contains both the bonsai and spikeglx pulses in 
+    # # ms and samples, respectively
+    # bonsai_dir = os.path.join(data_dir, 'video_csv_files')
+    # pulses = load_bonsai_pulses(bonsai_dir)
 
-    dlc_processed_with_samples = get_video_times_in_samples(dlc_processed_data, pulses)
+    # dlc_processed_with_samples = get_video_times_in_samples(dlc_processed_data, pulses)
        
-    # save the processed data to a pickle file
+    # # save the processed data to a pickle file
     pickle_path = os.path.join(dlc_dir, 'dlc_processed_data_with_samples.pkl')
-    with open(pickle_path, 'wb') as f:
-        pickle.dump(dlc_processed_with_samples, f)
+    # with open(pickle_path, 'wb') as f:
+    #     pickle.dump(dlc_processed_with_samples, f)
 
-    # delete dlc_processed_with samples
-    del dlc_processed_with_samples
+    # # delete dlc_processed_with samples
+    # del dlc_processed_with_samples
 
     # load the processed data with samples
     with open(pickle_path, 'rb') as f:
         dlc_processed_with_samples = pickle.load(f)
     
+    # Once we have aligned the video data with the pulses recorded by the imec system, 
+    # we can restrict the video data to the start and end of the video. 
 
     video_dir = os.path.join(data_dir, 'video_files')
+    video_start_points_file = os.path.join(video_dir, 'video_startpoints.pkl')
+    # load the pickle file
+    with open(video_start_points_file, 'rb') as f:
+        video_startpoints = pickle.load(f)
+
     video_endpoints_file = os.path.join(video_dir, 'video_endpoints.pkl')
     # load the pickle file
     with open(video_endpoints_file, 'rb') as f:
         video_endpoints = pickle.load(f)
 
-    dlc_final = restrict_dlc_to_video_endpoints(dlc_processed_with_samples, 
-                                                         video_endpoints)
+    dlc_final = restrict_dlc_to_video_start_and_end(dlc_processed_with_samples, 
+                                            video_startpoints, video_endpoints)
 
     pickle_path = os.path.join(dlc_dir, 'dlc_final.pkl')
     with open(pickle_path, 'wb') as f:

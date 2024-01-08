@@ -54,21 +54,52 @@ def get_video_endpoints(video_dir):
     
     return end_frame_dictionary
 
+def get_video_startpoints(dlc_data):
+    start_frame_dictionary = {}
+
+    for d in dlc_data.keys():
+
+        # calculate frame intervals
+        frame_intervals = np.diff(dlc_data[d]['ts'].values)
+
+        # find the mean of the frame intervals
+        frame_interval_mean = np.mean(frame_intervals)
+
+        # the start frame is the first frame with a frame interval less than 1.5 times the mode
+        start_frame_dictionary[d] = np.where(frame_intervals < 1.5*frame_interval_mean)[0][0]
+
+    return start_frame_dictionary
+
+
 if __name__ == "__main__":
     animal = 'Rat64'
     session = '08-11-2023'
     data_dir = get_data_dir(animal, session)
     video_dir = os.path.join(data_dir, 'video_files')
 
-    endpoints = get_video_endpoints(video_dir)
+    # endpoints = get_video_endpoints(video_dir)
 
-    # save as pickle file
-    pickle_file = os.path.join(video_dir, 'video_endpoints.pkl')
+    # # save as pickle file
+    # pickle_file = os.path.join(video_dir, 'video_endpoints.pkl')
+    # with open(pickle_file, 'wb') as f:
+    #     pickle.dump(endpoints, f)
+
+    # del endpoints
+
+    # # load the pickle file
+    # with open(pickle_file, 'rb') as f:
+    #     endpoints = pickle.load(f)
+
+    # load dlc_data to get startpoints
+    dlc_dir = os.path.join(data_dir, 'deeplabcut')
+    dlc_pickle_path = os.path.join(dlc_dir, 'dlc_final.pkl')
+    with open(dlc_pickle_path, 'rb') as f:
+        dlc_data = pickle.load(f)
+
+    startpoints = get_video_startpoints(dlc_data)
+    pickle_file = os.path.join(video_dir, 'video_startpoints.pkl')
     with open(pickle_file, 'wb') as f:
-        pickle.dump(endpoints, f)
+         pickle.dump(startpoints, f)
 
-    del endpoints
 
-    # load the pickle file
-    with open(pickle_file, 'rb') as f:
-        endpoints = pickle.load(f)
+    pass
