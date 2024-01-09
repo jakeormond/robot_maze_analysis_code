@@ -5,6 +5,7 @@ import pickle
 import matplotlib.pyplot as plt
 import re
 import shutil
+import cv2 
 from get_directories import get_data_dir, get_robot_maze_directory
 
 
@@ -88,6 +89,61 @@ def get_current_platform(dlc_data, platform_coordinates):
 
     return dlc_data
 
+
+def get_screen_coordinates(data_dir): # these are the 4 tv screens in the corners of the arena, just want the rough centre coordinate
+
+    # get the coordinates of the points clicked by the user
+    screen_coordinates_temp = []
+    def get_coordinates(event, x, y, flags, param):
+        if event == cv2.EVENT_LBUTTONDOWN:
+            screen_coordinates_temp.append([x, y])
+            # Draw a small circle at the clicked position
+            cv2.circle(fs_frame_og, (x, y), 5, (0, 0, 255), -1)
+            cv2.imshow('frame', fs_frame_og)
+            print(screen_coordinates_temp)
+
+    # get path to full_video.avi, which is two directories above data_dir
+    full_video_path = os.path.join(os.path.dirname(os.path.dirname(data_dir)), "full_video_w_screen_platforms.avi")
+    cap = cv2.VideoCapture(full_video_path)
+
+    while True:
+        # Read the frame       
+        _, fs_frame_og = cap.read() 
+        # if frame is not completely black, break the loop
+        if np.sum(fs_frame_og) > 0:
+            break
+
+    # resize the frame to half its size
+    fs_frame_og = cv2.resize(fs_frame_og, (0, 0), fx=0.5, fy=0.5)
+
+    # Create a named window
+    cv2.namedWindow('frame')
+
+    # Set the mouse callback for the window to your get_coordinates function
+    cv2.setMouseCallback('frame', get_coordinates)
+
+    # Display the frame in the window
+    cv2.imshow('frame', fs_frame_og)
+
+    # Wait for a key press and then close the window
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+    cap.release()
+
+    # adjust the coordinates to account for the fact that the frame was resized
+    screen_coordinates_temp = np.array(screen_coordinates_temp)
+    screen_coordinates_temp = screen_coordinates_temp * 2
+
+    screen_coordinates = {}
+    # convert the coordinates to a dictionary
+    for i in range(4):
+        screen_coordinates[i+1] = screen_coordinates_temp[i,:]
+
+    return screen_coordinates
+
+
+
 def get_goal_coordinates(platform_coordinates=None, goals=None, data_dir=None):
 
     if data_dir is None and platform_coordinates is None:
@@ -117,7 +173,7 @@ def get_goal_coordinates(platform_coordinates=None, goals=None, data_dir=None):
         goal_coordinates[g] = platform_coordinates[g][0:2]
     return goal_coordinates
 
-def get_relative_head_direction(dlc_data, platform_coordinates, goals):
+def get_relative_head_direction(dlc_data, platform_coordinates, goals, screen_coordinates):
     
     # get the goal coordinates
     goal_coordinates = {}
@@ -135,7 +191,7 @@ def get_relative_head_direction(dlc_data, platform_coordinates, goals):
             y_diff = y - goal_coordinates[g][1]
             dlc_data[d][f'goal_direction_{g}'] = np.arctan2(y_diff, x_diff)
 
-        # add the goal directions to dlc_data[d]
+        # calculate the hd relative to each goal
         for g in goals:
             relative_direction_temp = dlc_data[d]['hd'] - dlc_data[d][f'goal_direction_{g}']
             # any relative direction greater than pi is actually less than pi
@@ -143,6 +199,21 @@ def get_relative_head_direction(dlc_data, platform_coordinates, goals):
             # any relative direction less than -pi is actually greater than -pi
             relative_direction_temp[relative_direction_temp < -np.pi] += 2*np.pi
             dlc_data[d][f'relative_direction_{g}'] = relative_direction_temp
+
+        # calculate the direction to each screen
+        for s in screen_coordinates.keys():
+            x_diff = screen_coordinates[s][0] - x
+            y_diff = y - screen_coordinates[s][1]
+            dlc_data[d][f'screen_direction_{s}'] = np.arctan2(y_diff, x_diff)
+
+        # calculate the hd relative to each screen
+        for s in screen_coordinates.keys():
+            relative_direction_temp = dlc_data[d]['hd'] - dlc_data[d][f'screen_direction_{s}']
+            # any relative direction greater than pi is actually less than pi
+            relative_direction_temp[relative_direction_temp > np.pi] -= 2*np.pi
+            # any relative direction less than -pi is actually greater than -pi
+            relative_direction_temp[relative_direction_temp < -np.pi] += 2*np.pi
+            dlc_data[d][f'relative_direction_screen{s}'] = relative_direction_temp
        
     return dlc_data, goal_coordinates
 
@@ -151,9 +222,18 @@ if __name__ == "__main__":
     animal = 'Rat64'
     session = '08-11-2023'
     data_dir = get_data_dir(animal, session)
-
-    # load dlc_data which has the trial times
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
+
+    # get the goal coordinates
+    # screen_coordinates = get_screen_coordinates(data_dir)
+    # save the screen coordinates
+    screen_coordinates_path = os.path.join(dlc_dir, 'screen_coordinates.pickle')
+    # with open(screen_coordinates_path, 'wb') as f:
+    #     pickle.dump(screen_coordinates, f, protocol=pickle.HIGHEST_PROTOCOL)
+    with open(screen_coordinates_path, 'rb') as f:
+        screen_coordinates = pickle.load(f)
+
+    # load dlc_data which has the trial times    
     dlc_pickle_path = os.path.join(dlc_dir, 'dlc_final.pkl')
     with open(dlc_pickle_path, 'rb') as f:
         dlc_data = pickle.load(f)
@@ -165,23 +245,23 @@ if __name__ == "__main__":
     with open(platform_path, 'rb') as f:
         platform_coordinates = pickle.load(f)
      
-    crop_path = os.path.join(robot_maze_dir, 'workstation', 
-            'map_files', 'crop_coordinates.pickle')
-    with open(crop_path, 'rb') as f:
-        crop_coordinates = pickle.load(f)
+    # crop_path = os.path.join(robot_maze_dir, 'workstation', 
+    #         'map_files', 'crop_coordinates.pickle')
+    # with open(crop_path, 'rb') as f:
+    #     crop_coordinates = pickle.load(f)
 
-    platform_coordinates, save_flag = get_uncropped_platform_coordinates(platform_coordinates, crop_coordinates)
-    if save_flag:
-        # first, copy the original platform_coordinates file
-        src_file = os.path.join(robot_maze_dir, 'workstation',
-                'map_files', 'platform_coordinates.pickle')
-        dst_file = os.path.join(robot_maze_dir, 'workstation',
-                'map_files', 'platform_coordinates_cropped.pickle')
-        shutil.copyfile(src_file, dst_file)     
+    # platform_coordinates, save_flag = get_uncropped_platform_coordinates(platform_coordinates, crop_coordinates)
+    # if save_flag:
+    #     # first, copy the original platform_coordinates file
+    #     src_file = os.path.join(robot_maze_dir, 'workstation',
+    #             'map_files', 'platform_coordinates.pickle')
+    #     dst_file = os.path.join(robot_maze_dir, 'workstation',
+    #             'map_files', 'platform_coordinates_cropped.pickle')
+    #     shutil.copyfile(src_file, dst_file)     
 
-        # save the new platform_coordinates file
-        with open(platform_path, 'wb') as f:
-            pickle.dump(platform_coordinates, f, protocol=pickle.HIGHEST_PROTOCOL)  
+    #     # save the new platform_coordinates file
+    #     with open(platform_path, 'wb') as f:
+    #         pickle.dump(platform_coordinates, f, protocol=pickle.HIGHEST_PROTOCOL)  
 
 
     # load the behaviour data, from which we can get the goal ids
@@ -196,10 +276,10 @@ if __name__ == "__main__":
         goals.append(k)
 
     # calculate the animal's current platform for each frame
-    dlc_data = get_current_platform(dlc_data, platform_coordinates)  
+    # dlc_data = get_current_platform(dlc_data, platform_coordinates)  
 
     # calculate head direction relative to the goals
-    dlc_data, goal_coordinates = get_relative_head_direction(dlc_data, platform_coordinates, goals)
+    dlc_data, goal_coordinates = get_relative_head_direction(dlc_data, platform_coordinates, goals, screen_coordinates)
 
     # save the dlc_data
     dlc_final_pickle_path = os.path.join(dlc_dir, 'dlc_final.pkl')
