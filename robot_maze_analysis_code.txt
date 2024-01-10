@@ -51,6 +51,10 @@ load_behaviour.py		Loads in the behavioural csv files, and saves the data as a l
 				the attributes need to be stripped out into their own lists, stored within
 				a dictionary, and then added back to the dataframes at loading time. 
 
+calculate_pos_and_dir.py	Calculates the animal's current platform, as well as the goal directions 
+				from its current position, and its head direction relative to each of the 
+				goals.
+
 load_sorted_spikes.py		Loads the clusters classified as good in Phy (need to verify the cluster 
 				qualities are mine, and not kilosort's). Saves them in a dictionary with the 
 				cluster numbers as the keys, and the spike times in samples as the data. 
@@ -62,4 +66,8 @@ classify_neurons.py 		Calculates mean firing rates and average waveforms, from w
 				have more sessions to look at, we can determine thresholds/cutoffs to 
 				automate the identification of principal and interneurons; for now, go 
 				through the plots, and manually enter a spike-width cut-off. 
+
+restrict_spikes_to_trials.py	As the title says. 
+
+
 				

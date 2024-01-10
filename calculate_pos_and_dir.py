@@ -8,6 +8,18 @@ import shutil
 import cv2 
 from get_directories import get_data_dir, get_robot_maze_directory
 
+# screen platforms is a dictionary where each key is the screen number and each
+# value is the number of the platfom that is directly adjacent to the screen
+screen_platforms = {1: 12, 2: 18, 3: 246, 4: 240}
+
+# load the platform map
+robot_maze_dir = get_robot_maze_directory()
+map_path = os.path.join(robot_maze_dir, 'workstation',
+            'map_files', 'platform_map.csv')
+platform_map = np.genfromtxt(map_path, delimiter=',')
+col_dist = np.round(np.cos(np.radians(30)), 3)  # distances between columns
+row_dist = 0.5                                  # and rows in platform map
+
 
 def get_uncropped_platform_coordinates(platform_coordinates, crop_coordinates):
 
@@ -143,7 +155,6 @@ def get_screen_coordinates(data_dir): # these are the 4 tv screens in the corner
     return screen_coordinates
 
 
-
 def get_goal_coordinates(platform_coordinates=None, goals=None, data_dir=None):
 
     if data_dir is None and platform_coordinates is None:
@@ -218,6 +229,75 @@ def get_relative_head_direction(dlc_data, platform_coordinates, goals, screen_co
     return dlc_data, goal_coordinates
 
 
+def get_distances(dlc_data, platform_coordinates, goal_coordinates, screen_coordinates): # get distance to each goal and screen. Distances will be calculated
+    
+    # get the goal indices
+    goal_indices = {}
+    for g in goal_coordinates.keys():
+        # find the row and col coordinates of the goal in the platform map array
+        row, col = np.where(platform_map == g)
+        goal_indices[g] = [row[0], col[0]]    
+
+    # get the screen indices
+    screen_indices = {}
+    for s in screen_coordinates.keys():
+        # find the row and col coordinates of the screen in the platform map array
+        row, col = np.where(platform_map == screen_platforms[s])
+        screen_indices[s] = [row[0], col[0]]
+    
+    # in both pixels and in platform distances (to account for the effect of the camera lens)
+    for d in dlc_data.keys():
+        # get the x and y coordinates of the animal's head
+        x = dlc_data[d]['x'].values
+        y = dlc_data[d]['y'].values
+
+        # get the platform positions for each frame
+        occupied_platforms = dlc_data[d]['occupied_platforms'].values
+        # platform_indices is a 2d array where each row is the row and col. 
+        # Its shape is (len(occupied_platforms), 2)
+        platform_indices = np.zeros((len(occupied_platforms), 2))
+
+        # find the row and col coordinates of the occupied platforms in the platform map array
+        for i, p in enumerate(occupied_platforms):
+            # find the row and col coordinates of the occupied platform in the platform map array
+            row, col = np.where(platform_map == p)
+            platform_indices[i, 0] = row[0]
+            platform_indices[i, 1] = col[0]
+
+        # goal distances
+        for g in goal_coordinates.keys():            
+            # calculate the distance to each goal in pixels
+            x_diff = goal_coordinates[g][0] - x
+            y_diff = goal_coordinates[g][1] - y
+            dlc_data[d][f'distance_to_goal_{g}'] = np.sqrt(x_diff**2 + y_diff**2)
+
+            # calculate the distance to each goal in platform distances
+            row_diff = goal_indices[g][0] - platform_indices[:,0]
+            col_diff = goal_indices[g][1] - platform_indices[:,1]
+
+            row_diff = row_diff * row_dist
+            col_diff = col_diff * col_dist
+
+            dlc_data[d][f'distance_to_goal_{g}_platform'] = np.sqrt(row_diff**2 + col_diff**2)
+
+        # calculate the distance to each screen
+        for s in screen_coordinates.keys():
+            # calculate the distance to each screen in pixels
+            x_diff = screen_coordinates[s][0] - x
+            y_diff = screen_coordinates[s][1] - y
+            dlc_data[d][f'distance_to_screen_{s}'] = np.sqrt(x_diff**2 + y_diff**2)
+
+            # calculate the distance to each screen in platform distances
+            row_diff = screen_indices[s][0] - platform_indices[:,0]
+            col_diff = screen_indices[s][1] - platform_indices[:,1]
+
+            row_diff = row_diff * row_dist
+            col_diff = col_diff * col_dist
+
+            dlc_data[d][f'distance_to_screen_{s}_platform'] = np.sqrt(row_diff**2 + col_diff**2)
+
+    return dlc_data
+
 if __name__ == "__main__":
     animal = 'Rat64'
     session = '08-11-2023'
@@ -280,6 +360,10 @@ if __name__ == "__main__":
 
     # calculate head direction relative to the goals
     dlc_data, goal_coordinates = get_relative_head_direction(dlc_data, platform_coordinates, goals, screen_coordinates)
+
+    # calculate the distance to each goal and screen
+    dlc_data = get_distances(dlc_data, platform_coordinates, goal_coordinates, screen_coordinates)
+
 
     # save the dlc_data
     dlc_final_pickle_path = os.path.join(dlc_dir, 'dlc_final.pkl')

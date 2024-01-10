@@ -133,6 +133,12 @@ def get_positional_occupancy(dlc_data, limits):
 
 
 def get_directional_occupancy(dlc_data):
+
+
+
+
+
+
     pass
 
 
@@ -173,8 +179,54 @@ def concatenate_dlc_data(dlc_data):
 
     return dlc_data_concat, limits
 
-def get_directional_occupancy():
-    pass
+def get_directional_occupancy(dlc_data):
+
+    # create 24 bins, each 15 degrees
+    n_bins = 24
+    direction_bins = np.linspace(-np.pi, np.pi, n_bins+1)
+    direction_bins[0] = direction_bins[0] - 0.1 # subtract a small number from the first bin so that the first value is included in the bin
+    direction_bins[-1] = direction_bins[-1] + 0.1 # add a small number to the last bin so that the last value is included in the bin
+
+    # create list of dlc_data with directional data
+    direction_data = {}
+    direction_data['allocentric'] = []
+    # start with column 'hd', and then find columns that begin 
+    # with 'goal_direction' or 'screen_direction'
+    for d in dlc_data.keys():
+        if 'hd' in d:
+            direction_data['allocentric'].append(d)
+        elif 'goal_direction' in d:
+            direction_data['allocentric'].append(d)
+        elif 'screen_direction' in d:
+            direction_data['allocentric'].append(d)       
+
+    # create list of dlc_data with relative direction data
+    direction_data['egocentric'] = []
+    # find columns  that bign with 'relative_direction'
+    for d in dlc_data.keys():
+        if 'relative_direction' in d:
+            direction_data['egocentric'].append(d)
+
+    # directional_occupancy is a dictionary with keys 'allocentric' and 'egocentric'
+    directional_occupancy = {'allocentric': {}, 'egocentric': {}}
+    for direction_type in direction_data.keys():
+        for d in direction_data[direction_type]:
+            # bin_counts, bin_edges = \
+            #     np.histogram(dlc_data[d], direction_bins)
+            bin_indices = np.digitize(dlc_data[d], direction_bins, right=True) - 1
+            # any bin_indices that are -1 should be 0
+            bin_indices[bin_indices==-1] = 0
+            # any bin_indices that are n_bins should be n_bins-1
+            bin_indices[bin_indices==n_bins] = n_bins-1
+
+            # get the occupancy for each bin, so a vector of length n_bins
+            occupancy = np.zeros(n_bins)
+            for i in range(n_bins):
+                occupancy[i] = np.sum(dlc_data['durations'][bin_indices==i])
+
+            directional_occupancy[direction_type][d] = occupancy
+
+    return directional_occupancy
 
 def get_rel2goal_occupancy():
     pass
@@ -204,14 +256,14 @@ if __name__ == "__main__":
     dlc_data_concat, limits = concatenate_dlc_data(dlc_data)
 
     # calculate positional occupancy
-    positional_occupancy = get_positional_occupancy(dlc_data_concat, limits)
+    # positional_occupancy = get_positional_occupancy(dlc_data_concat, limits)
 
-    # save the positional_occupancy
+    # # save the positional_occupancy
     positional_occupancy_file = os.path.join(dlc_dir, 'positional_occupancy.pkl')
-    with open(positional_occupancy_file, 'wb') as f:
-        pickle.dump(positional_occupancy, f)
+    # with open(positional_occupancy_file, 'wb') as f:
+    #     pickle.dump(positional_occupancy, f)
 
-    del positional_occupancy
+    # del positional_occupancy
 
     with open(positional_occupancy_file, 'rb') as f:
         positional_occupancy = pickle.load(f)       
@@ -221,6 +273,13 @@ if __name__ == "__main__":
     #     plot_trial_path(dlc_data[d], limits, dlc_dir, d)
 
     # plot the heat map of occupancy
-    occupancy_dir = os.path.join(dlc_dir, 'trial_paths')
-    plot_occupancy_heatmap(positional_occupancy, limits, occupancy_dir)
-    pass
+    # occupancy_dir = os.path.join(dlc_dir, 'trial_paths')
+    # plot_occupancy_heatmap(positional_occupancy, limits, occupancy_dir)
+    
+    # calculate directional occupancy
+    directional_occupancy = get_directional_occupancy(dlc_data_concat)   
+    directional_occupancy_file = os.path.join(dlc_dir, 'directional_occupancy.pkl')
+    with open(directional_occupancy_file, 'wb') as f:
+        pickle.dump(directional_occupancy, f)
+    
+   

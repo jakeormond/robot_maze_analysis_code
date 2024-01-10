@@ -142,7 +142,6 @@ def create_full_video_with_dlc_data(video_time, dlc_data, data_dir, start_and_en
                                fps, (width, height), isColor=True)
     
     num_frames = dlc_data.shape[0]
-    end_frame = video_endpoint['end_frame']
 
     for frame_idx in range(num_frames):
         _, frame = cap.read()
@@ -262,6 +261,10 @@ def create_full_video_with_dlc_data(video_time, dlc_data, data_dir, start_and_en
             cv2.arrowedLine(fs_frame, arrow_end, arrow_start, 
                             [0, 0, 255], 8, tipLength = 0.5)
 
+        # add x and y coordinates and hd_for_frame as text along the bottom of the frame
+        cv2.putText(fs_frame, f'x: {x:.2f}, y: {y:.2f}, hd: {hd_for_frame:.2f}', 
+                    (100, fs_frame.shape[0] - 100), cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 0, 255), 8, cv2.LINE_AA)
+
         # shrink the frame to keep file size under control
         fs_frame_re = cv2.resize(fs_frame, (1224, 1024))
 
@@ -357,7 +360,7 @@ if __name__ == "__main__":
         start_and_end = (video_startpoint, video_endpoint)
 
         # create the video with the dlc data
-        create_cropped_video_with_dlc_data(dlc_processed_data[d], video_path, start_and_end)
+        # create_cropped_video_with_dlc_data(dlc_processed_data[d], video_path, start_and_end)
             
         create_full_video_with_dlc_data(video_time, dlc_final_data[d], 
                                         data_dir, start_and_end)
