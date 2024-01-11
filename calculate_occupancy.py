@@ -8,10 +8,13 @@ from get_directories import get_data_dir, get_robot_maze_directory
 from calculate_pos_and_dir import get_goal_coordinates
 
 
-def plot_occupancy_heatmap(positional_occupancy, limits, figure_dir):
+def plot_occupancy_heatmap(positional_occupancy, figure_dir):
     
-    n_x_bins = positional_occupancy.shape[1]
-    n_y_bins = positional_occupancy.shape[0]
+    x_bins = positional_occupancy['x_bins']
+    y_bins = positional_occupancy['y_bins']
+
+    n_x_bins = x_bins.shape[0]
+    n_y_bins = y_bins.shape[0]
 
     # set ticks at every 5th bin
     x_tick_positions = np.arange(0, n_x_bins, 5) 
@@ -19,17 +22,12 @@ def plot_occupancy_heatmap(positional_occupancy, limits, figure_dir):
     
     # plot the positional occupancy as a heatmap
     plt.figure()
-    plt.imshow(positional_occupancy, cmap='hot')
+    plt.imshow(positional_occupancy['occupancy'], cmap='hot')
 
 
     # convert the tick values to pixel values
-    x_min = limits['x_min']
-    x_max = limits['x_max']
-    x_bins = np.linspace(x_min, x_max, n_x_bins)
-    
-    y_min = limits['y_min']
-    y_max = limits['y_max']
-    y_bins = np.linspace(y_min, y_max, n_y_bins)
+    x_bins = np.linspace(x_bins[0], x_bins[-1], n_x_bins)
+    y_bins = np.linspace(y_bins[0], y_bins[-1], n_y_bins)
 
     # Set the tick positions and labels
     plt.xticks(x_tick_positions - 0.5, np.int32(x_bins[x_tick_positions]))
@@ -41,7 +39,6 @@ def plot_occupancy_heatmap(positional_occupancy, limits, figure_dir):
     figure_path = os.path.join(figure_dir, 'occupancy_heatmap.png')
     plt.savefig(figure_path)
     plt.close()
-
 
 
 def plot_trial_path(dlc_data, limits, dlc_dir, d):
@@ -109,9 +106,12 @@ def get_positional_occupancy(dlc_data, limits):
     n_y_bins = int(np.round(y_height/pixels_per_bin))
 
     # create bins
-    x_bins = np.linspace(x_min, x_max, n_x_bins)
+    x_bins_og = np.linspace(x_min, x_max, n_x_bins)
+    x_bins = x_bins_og.copy()
     x_bins[-1] = x_bins[-1] + 1e-6 # add a small number to the last bin so that the last value is included in the bin
-    y_bins = np.linspace(y_min, y_max, n_y_bins)
+    
+    y_bins_og = np.linspace(y_min, y_max, n_y_bins)
+    y_bins = y_bins_og.copy()
     y_bins[-1] = y_bins[-1] + 1e-6 # add a small number to the last bin so that the last value is included in the bin
 
     # create positional occupancy matrix
@@ -129,18 +129,9 @@ def get_positional_occupancy(dlc_data, limits):
         # add to the appropriate bin
         positional_occupancy[y_bin, x_bin] += dlc_data['durations'][i]
 
-    return positional_occupancy
+    x_and_y_bins = {'x_bins': x_bins_og, 'y_bins': y_bins_og}
 
-
-def get_directional_occupancy(dlc_data):
-
-
-
-
-
-
-    pass
-
+    return positional_occupancy, x_and_y_bins
 
 
 def concatenate_dlc_data(dlc_data):
@@ -179,13 +170,15 @@ def concatenate_dlc_data(dlc_data):
 
     return dlc_data_concat, limits
 
+
 def get_directional_occupancy(dlc_data):
 
     # create 24 bins, each 15 degrees
     n_bins = 24
-    direction_bins = np.linspace(-np.pi, np.pi, n_bins+1)
-    direction_bins[0] = direction_bins[0] - 0.1 # subtract a small number from the first bin so that the first value is included in the bin
-    direction_bins[-1] = direction_bins[-1] + 0.1 # add a small number to the last bin so that the last value is included in the bin
+    direction_bins_og = np.linspace(-np.pi, np.pi, n_bins+1)
+    direction_bins = direction_bins_og.copy()
+    direction_bins[0] = direction_bins_og[0] - 0.1 # subtract a small number from the first bin so that the first value is included in the bin
+    direction_bins[-1] = direction_bins_og[-1] + 0.1 # add a small number to the last bin so that the last value is included in the bin
 
     # create list of dlc_data with directional data
     direction_data = {}
@@ -226,10 +219,39 @@ def get_directional_occupancy(dlc_data):
 
             directional_occupancy[direction_type][d] = occupancy
 
-    return directional_occupancy
+    return directional_occupancy, direction_bins_og
 
-def get_rel2goal_occupancy():
-    pass
+
+def plot_directional_occupancy(directional_occupancy, figure_dir):
+    
+    # note that polar plot converts radian to degrees. 0 degrees = 0 radians,
+    # 90 degrees = pi/2 radians, 180 degrees = +/- pi radians, etc.
+
+    # plot the directional occupancy
+    bins = directional_occupancy['bins']
+    # polar plot ticks are the centres of the bins
+    tick_positions = np.round(bins[:-1] + np.diff(bins)/2, 2)
+    tick_positions = np.append(tick_positions, tick_positions[0])
+    
+    for direction_type in directional_occupancy['occupancy'].keys():
+        for d in directional_occupancy['occupancy'][direction_type].keys():
+            plt.figure()
+
+            occupancy = directional_occupancy['occupancy'][direction_type][d]
+            # add concatenate the first value to the end so that the plot is closed
+            occupancy = np.append(occupancy, occupancy[0])
+
+            plt.polar(tick_positions, occupancy)
+
+            plt.title(d)
+            plt.show()
+            
+            # save the figure
+            fig_path = os.path.join(figure_dir, f'{direction_type}_{d}.png')
+            plt.savefig(fig_path)
+            plt.close()
+
+
 
 if __name__ == "__main__":
     animal = 'Rat64'
@@ -238,27 +260,28 @@ if __name__ == "__main__":
 
     # load dlc_data which has the trial times
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
-    dlc_pickle_path = os.path.join(dlc_dir, 'dlc_final.pkl')
-    with open(dlc_pickle_path, 'rb') as f:
-        dlc_data = pickle.load(f)
+    # dlc_pickle_path = os.path.join(dlc_dir, 'dlc_final.pkl')
+    # with open(dlc_pickle_path, 'rb') as f:
+    #     dlc_data = pickle.load(f)
 
-    # load the platform coordinates, from which we can get the goal coordinates
-    robot_maze_dir = get_robot_maze_directory()
-    platform_path = os.path.join(robot_maze_dir, 'workstation',
-            'map_files', 'platform_coordinates.pickle')
-    with open(platform_path, 'rb') as f:
-        platform_coordinates = pickle.load(f)
+    # # load the platform coordinates, from which we can get the goal coordinates
+    # robot_maze_dir = get_robot_maze_directory()
+    # platform_path = os.path.join(robot_maze_dir, 'workstation',
+    #         'map_files', 'platform_coordinates.pickle')
+    # with open(platform_path, 'rb') as f:
+    #     platform_coordinates = pickle.load(f)
 
-    # get goal coordinates 
-    goal_coordinates = get_goal_coordinates(data_dir=data_dir)
+    # # get goal coordinates 
+    # goal_coordinates = get_goal_coordinates(data_dir=data_dir)
 
-    # concatenate dlc_data
-    dlc_data_concat, limits = concatenate_dlc_data(dlc_data)
+    # # concatenate dlc_data
+    # dlc_data_concat, limits = concatenate_dlc_data(dlc_data)
 
-    # calculate positional occupancy
-    # positional_occupancy = get_positional_occupancy(dlc_data_concat, limits)
+    # # calculate positional occupancy
+    # positional_occupancy_temp, x_and_y_bins = get_positional_occupancy(dlc_data_concat, limits)
+    # positional_occupancy = {'occupancy': positional_occupancy_temp, 'x_bins': x_and_y_bins['x_bins'], 'y_bins': x_and_y_bins['y_bins']}
 
-    # # save the positional_occupancy
+    # # # save the positional_occupancy
     positional_occupancy_file = os.path.join(dlc_dir, 'positional_occupancy.pkl')
     # with open(positional_occupancy_file, 'wb') as f:
     #     pickle.dump(positional_occupancy, f)
@@ -273,13 +296,23 @@ if __name__ == "__main__":
     #     plot_trial_path(dlc_data[d], limits, dlc_dir, d)
 
     # plot the heat map of occupancy
-    # occupancy_dir = os.path.join(dlc_dir, 'trial_paths')
-    # plot_occupancy_heatmap(positional_occupancy, limits, occupancy_dir)
+    plot_occupancy_heatmap(positional_occupancy, dlc_dir)
     
     # calculate directional occupancy
-    directional_occupancy = get_directional_occupancy(dlc_data_concat)   
+    # directional_occupancy_temp, direction_bins_og = get_directional_occupancy(dlc_data_concat)  
+    # directional_occupancy = {'occupancy': directional_occupancy_temp, 'bins': direction_bins_og} 
     directional_occupancy_file = os.path.join(dlc_dir, 'directional_occupancy.pkl')
-    with open(directional_occupancy_file, 'wb') as f:
-        pickle.dump(directional_occupancy, f)
-    
+    # with open(directional_occupancy_file, 'wb') as f:
+    # #     pickle.dump(directional_occupancy, f)
+
+    # del directional_occupancy
+    with open(directional_occupancy_file, 'rb') as f:
+        directional_occupancy = pickle.load(f)
+
+    # plot the directional occupancy
+    figure_dir = os.path.join(dlc_dir, 'directional_occupancy_plots')
+    if not os.path.exists(figure_dir):
+        os.makedirs(figure_dir)
+
+    plot_directional_occupancy(directional_occupancy, figure_dir)
    
