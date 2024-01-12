@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 
 from get_directories import get_data_dir, get_robot_maze_directory
 from calculate_pos_and_dir import get_goal_coordinates
+from load_and_save_data import load_pickle, save_pickle
 
 
 def plot_occupancy_heatmap(positional_occupancy, figure_dir):
@@ -102,7 +103,7 @@ def get_positional_occupancy(dlc_data, limits):
 
     # we want roughly 400 bins
     pixels_per_bin = np.sqrt(x_width*y_height/400)
-    n_x_bins = int(np.round(x_width/pixels_per_bin))
+    n_x_bins = int(np.round(x_width/pixels_per_bin)) # note that n_bins is actually one more than the number of bins
     n_y_bins = int(np.round(y_height/pixels_per_bin))
 
     # create bins
@@ -117,17 +118,20 @@ def get_positional_occupancy(dlc_data, limits):
     # create positional occupancy matrix
     positional_occupancy = np.zeros((n_y_bins, n_x_bins))
 
+    # get x and y data 
+    x = dlc_data['x']
+    y = dlc_data['y']
+
+    x_bin = np.digitize(x, x_bins) - 1
+    y_bin = np.digitize(y, y_bins) - 1 
+
     # loop through each frame and add to the appropriate bin
-    for i in range(len(dlc_data)):
-        x = dlc_data['x'][i]
-        y = dlc_data['y'][i]
-
-        # find out which bin this frame belongs to
-        x_bin = np.digitize(x, x_bins)
-        y_bin = np.digitize(y, y_bins)
-
-        # add to the appropriate bin
-        positional_occupancy[y_bin, x_bin] += dlc_data['durations'][i]
+    for i in range(np.max(x_bin)):
+        for j in range(np.max(y_bin)):
+            # get the indices of the frames in the bin
+            indices = np.where((x_bin==i) & (y_bin==j))[0]
+            # add to the appropriate bin
+            positional_occupancy[j, i] = np.sum(dlc_data['durations'][indices])
 
     x_and_y_bins = {'x_bins': x_bins_og, 'y_bins': y_bins_og}
 
@@ -252,7 +256,6 @@ def plot_directional_occupancy(directional_occupancy, figure_dir):
             plt.close()
 
 
-
 if __name__ == "__main__":
     animal = 'Rat64'
     session = '08-11-2023'
@@ -260,33 +263,24 @@ if __name__ == "__main__":
 
     # load dlc_data which has the trial times
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
-    # dlc_pickle_path = os.path.join(dlc_dir, 'dlc_final.pkl')
-    # with open(dlc_pickle_path, 'rb') as f:
-    #     dlc_data = pickle.load(f)
+    dlc_data = load_pickle('dlc_final', dlc_dir)
+    
+    # load the platform coordinates, from which we can get the goal coordinates
+    robot_maze_dir = get_robot_maze_directory()
+    platform_dir = os.path.join(robot_maze_dir, 'workstation', 'map_files')
+    platform_coordinates = load_pickle('platform_coordinates', platform_dir)
 
-    # # load the platform coordinates, from which we can get the goal coordinates
-    # robot_maze_dir = get_robot_maze_directory()
-    # platform_path = os.path.join(robot_maze_dir, 'workstation',
-    #         'map_files', 'platform_coordinates.pickle')
-    # with open(platform_path, 'rb') as f:
-    #     platform_coordinates = pickle.load(f)
+    # get goal coordinates 
+    goal_coordinates = get_goal_coordinates(data_dir=data_dir)
 
-    # # get goal coordinates 
-    # goal_coordinates = get_goal_coordinates(data_dir=data_dir)
+    # concatenate dlc_data
+    dlc_data_concat, limits = concatenate_dlc_data(dlc_data)
 
-    # # concatenate dlc_data
-    # dlc_data_concat, limits = concatenate_dlc_data(dlc_data)
-
-    # # calculate positional occupancy
-    # positional_occupancy_temp, x_and_y_bins = get_positional_occupancy(dlc_data_concat, limits)
-    # positional_occupancy = {'occupancy': positional_occupancy_temp, 'x_bins': x_and_y_bins['x_bins'], 'y_bins': x_and_y_bins['y_bins']}
-
-    # # # save the positional_occupancy
-    positional_occupancy_file = os.path.join(dlc_dir, 'positional_occupancy.pkl')
-    # with open(positional_occupancy_file, 'wb') as f:
-    #     pickle.dump(positional_occupancy, f)
-
-    # del positional_occupancy
+    # calculate positional occupancy
+    positional_occupancy_temp, x_and_y_bins = get_positional_occupancy(dlc_data_concat, limits)
+    positional_occupancy = {'occupancy': positional_occupancy_temp, 'x_bins': x_and_y_bins['x_bins'], 'y_bins': x_and_y_bins['y_bins']}
+    # save the positional_occupancy
+    positional_occupancy_file = os.path.join(dlc_dir, 'positional_occupancy')
 
     with open(positional_occupancy_file, 'rb') as f:
         positional_occupancy = pickle.load(f)       

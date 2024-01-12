@@ -20,6 +20,8 @@ platform_map = np.genfromtxt(map_path, delimiter=',')
 col_dist = np.round(np.cos(np.radians(30)), 3)  # distances between columns
 row_dist = 0.5                                  # and rows in platform map
 
+cm_per_pixel = 370/2048 # 370 cm is the y dimension of the arena, 2048 is the y dimension of the video
+
 
 def get_uncropped_platform_coordinates(platform_coordinates, crop_coordinates):
 
@@ -297,6 +299,32 @@ def get_distances(dlc_data, platform_coordinates, goal_coordinates, screen_coord
             dlc_data[d][f'distance_to_screen_{s}_platform'] = np.sqrt(row_diff**2 + col_diff**2)
 
     return dlc_data
+
+
+def get_x_and_y_limits(dlc_data):
+
+    x_and_y_limits = {}
+
+    min_x = 100000
+    max_x = -100000
+
+    min_y = 100000
+    max_y = -100000
+
+    for t in dlc_data.keys():
+        x = dlc_data[t]['x'].values
+        y = dlc_data[t]['y'].values
+
+        min_x = np.min([min_x, np.min(x)])
+        max_x = np.max([max_x, np.max(x)])
+
+        min_y = np.min([min_y, np.min(y)])
+        max_y = np.max([max_y, np.max(y)])
+    
+    x_and_y_limits['x'] = [min_x, max_x]
+    x_and_y_limits['y'] = [min_y, max_y]
+
+    return x_and_y_limits
 
 if __name__ == "__main__":
     animal = 'Rat64'

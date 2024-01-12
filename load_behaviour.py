@@ -6,6 +6,11 @@ import scipy.io
 import pickle
 import re 
 from get_directories import get_data_dir, reverse_date
+from load_and_save_data import load_pickle, save_pickle
+
+def get_behaviour_dir(data_dir):
+    behaviour_dir = os.path.join(data_dir, 'behaviour')
+    return behaviour_dir
 
 def get_behaviour_file_path(animal, session, time):
     """
@@ -39,7 +44,7 @@ def load_behaviour_file(behaviour_file_path, time=None):
         filename = os.path.basename(behaviour_file_path)
         # daytime is the last 8 characters of the filename
         # before the .csv
-        time = filename[-12:-4]
+        time = filename[0:-4]
 
     behaviour_data = pd.read_csv(behaviour_file_path)
     behaviour_data.name = time
@@ -149,12 +154,24 @@ def load_behav_data(pickle_path):
     
     return behaviour_data
 
+def split_dictionary_by_goal(dictionary, data_dir):
+    behaviour_dir = get_behaviour_dir(data_dir)
+    behav_data_by_goal = load_pickle('behaviour_data_by_goal', behaviour_dir)
+
+    split_dictionary = {}
+    for g in behav_data_by_goal.keys():
+        split_dictionary[g] = {}
+        for t in behav_data_by_goal[g].keys():
+            split_dictionary[g][t] = dictionary[t]
+        
+    return split_dictionary 
+
 
 if __name__ == "__main__":
     animal = 'Rat64'
     session = '08-11-2023'
     data_dir = get_data_dir(animal, session)
-    behaviour_dir = os.path.join(data_dir, 'behaviour')
+    behaviour_dir = get_behaviour_dir(data_dir)
 
     # find csv files in behaviour directory
     csv_files = glob.glob(os.path.join(behaviour_dir, '*.csv'))
@@ -166,26 +183,13 @@ if __name__ == "__main__":
         trial_time = behaviour_data_temp.name
         behaviour_data[trial_time] = behaviour_data_temp
 
+    # save the behaviour data to a pickle file
+    save_pickle(behaviour_data, 'behaviour_data', behaviour_dir)
+       
+    # split the behaviour data by goal and save to a pickle file
     behaviour_data_by_goal = \
         split_behaviour_data_by_goal(behaviour_data)
+    save_pickle(behaviour_data_by_goal, 'behaviour_data_by_goal', behaviour_dir)
 
-    # save the behaviour data to a pickle file
-    behav_data_path = os.path.join(behaviour_dir, 'behaviour_data.pkl')
-    with open(behav_data_path, 'wb') as f:
-        pickle.dump(behaviour_data, f)
-    
-    # save the behaviour data by goal to a pickle file
-    behav_data_by_goal_path = os.path.join(behaviour_dir, 'behaviour_data_by_goal.pkl')
-    with open(behav_data_by_goal_path, 'wb') as f:
-        pickle.dump(behaviour_data_by_goal, f)
-
-    del behaviour_data, behaviour_data_by_goal
-
-    # load the behaviour data from the pickle file
-    with open(behav_data_path, 'rb') as f:
-        behaviour_data = pickle.load(f)
-
-    with open(behav_data_by_goal_path, 'rb') as f:
-        behaviour_data_by_goal = pickle.load(f)
 
     pass

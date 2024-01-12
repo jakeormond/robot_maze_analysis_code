@@ -5,6 +5,7 @@ import pickle
 from scipy import interpolate
 
 from get_directories import get_data_dir, get_robot_maze_directory
+from load_and_save_data import load_pickle, save_pickle
 
 
 def interpolate_rads(og_times, og_rads, target_times):
@@ -45,6 +46,66 @@ def get_unit_position_and_directions(dlc_data, unit):
 
     return unit
 
+def bin_spikes_by_position(units, positional_occupancy):
+
+    # get the x and y bins
+    x_bins = positional_occupancy['x_bins']
+    x_bins[-1] = x_bins[-1] + 1
+    y_bins = positional_occupancy['y_bins']
+    y_bins[-1] = y_bins[-1] + 1
+
+    # loop through the units
+    spike_rates_by_position = {}
+    for u in units.keys():
+        
+        # loop through the trials getting all the spike positions
+        for i, t in enumerate(units[u].keys()):
+            # get the x and y positions
+            if i == 0:
+                x = units[u][t]['x']
+                y = units[u][t]['y']
+                samples = units[u][t]['samples']
+            else:
+                x = np.concatenate((x, units[u][t]['x']))
+                y = np.concatenate((y, units[u][t]['y']))
+                samples = np.concatenate((samples, units[u][t]['samples']))
+        
+        # sort the spike positions into bins
+        x_bin = np.digitize(x, x_bins) - 1
+        y_bin = np.digitize(y, y_bins) - 1
+
+        # create the spike counts array
+        spike_counts = np.zeros(positional_occupancy['occupancy'].shape)
+
+        # sort the x and y bins into the spike_counts array
+        for x_ind, y_ind in zip(x_bin, y_bin):        
+            spike_counts[y_ind, x_ind] += 1
+
+        # divide the spike counts by the occupancy
+        spike_rates_by_position[u] = spike_counts / positional_occupancy['occupancy']
+
+        # find the indices of the first position in spike_rates_by_position that is nan
+        nan_ind = np.argwhere(np.isnan(spike_rates_by_position[u]))[0][0]
+
+        # TROUBLESHOOTING - USE FIRST UNIT, CLUSTER_2
+        # spike_counts[0,10] is 160, but positional_occupancy['occupancy'][0,10] is 0
+        # get the x values corresponding to the 11th bin in x_bins, and the first bin in y_bins
+        x_vals = np.where(x_bin == 10)[0]
+        y_vals = np.where(y_bin == 0)[0]
+        # get the intersection of the two
+        vals = np.intersect1d(x_vals, y_vals)
+        # get the spike counts for those values
+        
+
+
+
+    
+    return spike_counts_by_position
+
+
+
+
+
 if __name__ == "__main__":
     animal = 'Rat64'
     session = '08-11-2023'
@@ -52,29 +113,27 @@ if __name__ == "__main__":
 
     # load spike data
     spike_dir = os.path.join(data_dir, 'spike_sorting')
-    restricted_units_file = os.path.join(spike_dir, 'restricted_units.pickle')
-    with open(restricted_units_file, 'rb') as handle:
-        restricted_units = pickle.load(handle)
+    restricted_units = load_pickle('restricted_units', spike_dir)
 
     # load neuron classification data
-    neuron_types_file = os.path.join(spike_dir, 'average_waveforms', 
-                                     'neuron_types.pickle')
-    with open(neuron_types_file, 'rb') as handle:
-        neuron_types = pickle.load(handle)    
+    neuron_types_dir = os.path.join(spike_dir, 'average_waveforms') 
+    neuron_types = load_pickle('neuron_types', neuron_types_dir)
 
     # load positional data
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
-    dlc_pickle_path = os.path.join(dlc_dir, 'dlc_final.pkl')
-    with open(dlc_pickle_path, 'rb') as f:
-        dlc_data = pickle.load(f)
+    dlc_data = load_pickle('dlc_final', dlc_dir)
 
     # loop through units and calculate positions and various directional correlates
-    for unit in restricted_units.keys():
-        restricted_units[unit] = get_unit_position_and_directions(dlc_data, restricted_units[unit])
+    # for unit in restricted_units.keys():
+    #     restricted_units[unit] = get_unit_position_and_directions(dlc_data, restricted_units[unit])
 
     # save the restricted units
-    restricted_units_file = os.path.join(spike_dir, 'units_w_behav_correlates.pickle')
-    with open(restricted_units_file, 'wb') as handle:
-        pickle.dump(restricted_units, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    # save_pickle(restricted_units, 'units_w_behav_correlates', spike_dir)
 
-    pass
+    # bin spikes by position
+    positional_occupancy = load_pickle('positional_occupancy', dlc_dir)
+    # load units
+    units = load_pickle('units_w_behav_correlates', spike_dir)
+    # bin spikes by position
+    spike_counts_by_position = bin_spikes_by_position(units, positional_occupancy)
+    
