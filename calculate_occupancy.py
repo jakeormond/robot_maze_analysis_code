@@ -107,11 +107,11 @@ def get_positional_occupancy(dlc_data, limits):
     n_y_bins = int(np.round(y_height/pixels_per_bin))
 
     # create bins
-    x_bins_og = np.linspace(x_min, x_max, n_x_bins)
+    x_bins_og = np.linspace(x_min, x_max, n_x_bins + 1)
     x_bins = x_bins_og.copy()
     x_bins[-1] = x_bins[-1] + 1e-6 # add a small number to the last bin so that the last value is included in the bin
     
-    y_bins_og = np.linspace(y_min, y_max, n_y_bins)
+    y_bins_og = np.linspace(y_min, y_max, n_y_bins + 1)
     y_bins = y_bins_og.copy()
     y_bins[-1] = y_bins[-1] + 1e-6 # add a small number to the last bin so that the last value is included in the bin
 
@@ -125,13 +125,11 @@ def get_positional_occupancy(dlc_data, limits):
     x_bin = np.digitize(x, x_bins) - 1
     y_bin = np.digitize(y, y_bins) - 1 
 
-    # loop through each frame and add to the appropriate bin
-    for i in range(np.max(x_bin)):
-        for j in range(np.max(y_bin)):
-            # get the indices of the frames in the bin
-            indices = np.where((x_bin==i) & (y_bin==j))[0]
-            # add to the appropriate bin
-            positional_occupancy[j, i] = np.sum(dlc_data['durations'][indices])
+    # sort the x and y bins into the spike_counts array
+    for i, (x_ind, y_ind) in enumerate(zip(x_bin, y_bin)):        
+        positional_occupancy[y_ind, x_ind] += dlc_data['durations'][i]
+        
+    positional_occupancy = np.round(positional_occupancy, 3)
 
     x_and_y_bins = {'x_bins': x_bins_og, 'y_bins': y_bins_og}
 
@@ -280,10 +278,9 @@ if __name__ == "__main__":
     positional_occupancy_temp, x_and_y_bins = get_positional_occupancy(dlc_data_concat, limits)
     positional_occupancy = {'occupancy': positional_occupancy_temp, 'x_bins': x_and_y_bins['x_bins'], 'y_bins': x_and_y_bins['y_bins']}
     # save the positional_occupancy
-    positional_occupancy_file = os.path.join(dlc_dir, 'positional_occupancy')
+    save_pickle(positional_occupancy, 'positional_occupancy', dlc_dir)
 
-    with open(positional_occupancy_file, 'rb') as f:
-        positional_occupancy = pickle.load(f)       
+    
     
     # plot the the trial paths
     # for d in dlc_data.keys():

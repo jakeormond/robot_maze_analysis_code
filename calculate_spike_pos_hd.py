@@ -49,13 +49,21 @@ def get_unit_position_and_directions(dlc_data, unit):
 def bin_spikes_by_position(units, positional_occupancy):
 
     # get the x and y bins
-    x_bins = positional_occupancy['x_bins']
-    x_bins[-1] = x_bins[-1] + 1
-    y_bins = positional_occupancy['y_bins']
-    y_bins[-1] = y_bins[-1] + 1
+    x_bins_og = positional_occupancy['x_bins']
+    x_bins = x_bins_og.copy()
+    x_bins[-1] = x_bins_og[-1] + 1
+
+    y_bins_og = positional_occupancy['y_bins']
+    y_bins = y_bins_og.copy()
+    y_bins[-1] = y_bins_og[-1] + 1
 
     # loop through the units
     spike_rates_by_position = {}
+    spike_rates_by_position['x_bins'] = x_bins_og
+    spike_rates_by_position['y_bins'] = y_bins_og
+    spike_rates_by_position['occupancy'] = positional_occupancy['occupancy']
+    spike_rates_by_position['rate_maps'] = {}
+
     for u in units.keys():
         
         # loop through the trials getting all the spike positions
@@ -81,29 +89,20 @@ def bin_spikes_by_position(units, positional_occupancy):
         for x_ind, y_ind in zip(x_bin, y_bin):        
             spike_counts[y_ind, x_ind] += 1
 
-        # divide the spike counts by the occupancy
-        spike_rates_by_position[u] = spike_counts / positional_occupancy['occupancy']
+        # get the indices of any bins that have non-zero spike counts but zero occupancy
+        # these are the bins that have no occupancy, but have spikes
+        zero_occupancy_ind = np.argwhere((spike_counts > 0) & 
+                                         (positional_occupancy['occupancy'] == 0))
 
-        # find the indices of the first position in spike_rates_by_position that is nan
-        nan_ind = np.argwhere(np.isnan(spike_rates_by_position[u]))[0][0]
-
-        # TROUBLESHOOTING - USE FIRST UNIT, CLUSTER_2
-        # spike_counts[0,10] is 160, but positional_occupancy['occupancy'][0,10] is 0
-        # get the x values corresponding to the 11th bin in x_bins, and the first bin in y_bins
-        x_vals = np.where(x_bin == 10)[0]
-        y_vals = np.where(y_bin == 0)[0]
-        # get the intersection of the two
-        vals = np.intersect1d(x_vals, y_vals)
-        # get the spike counts for those values
+        # throw an error if there are any
+        if zero_occupancy_ind.size > 0:
+            raise ValueError('There are bins with zero occupancy but non-zero spike counts.')
         
-
-
-
-    
-    return spike_counts_by_position
-
-
-
+        # divide the spike counts by the occupancy
+        spike_rates = spike_counts / positional_occupancy['occupancy']
+        spike_rates_by_position['rate_maps'][u] = np.around(spike_rates, 3)
+            
+    return spike_rates_by_position
 
 
 if __name__ == "__main__":
@@ -135,5 +134,10 @@ if __name__ == "__main__":
     # load units
     units = load_pickle('units_w_behav_correlates', spike_dir)
     # bin spikes by position
-    spike_counts_by_position = bin_spikes_by_position(units, positional_occupancy)
+    rate_maps = bin_spikes_by_position(units, positional_occupancy)
+    # save the spike counts by position
+    save_pickle(rate_maps, 'rate_maps', spike_dir)
+
+
+    pass
     
