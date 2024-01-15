@@ -3,38 +3,84 @@ import numpy as np
 import pandas as pd
 import pickle
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from get_directories import get_data_dir, get_robot_maze_directory
-from calculate_pos_and_dir import get_goal_coordinates
+from calculate_pos_and_dir import get_goal_coordinates, cm_per_pixel
 from load_and_save_data import load_pickle, save_pickle
+from load_behaviour import get_behaviour_dir
 
 
-def plot_occupancy_heatmap(positional_occupancy, figure_dir):
+def plot_occupancy_heatmap(positional_occupancy, goal_coordinates, figure_dir):
+
+    # if figure_dir doesn't exist, create it
+    if not os.path.exists(figure_dir):
+        os.makedirs(figure_dir)
     
     x_bins = positional_occupancy['x_bins']
     y_bins = positional_occupancy['y_bins']
 
-    n_x_bins = x_bins.shape[0]
-    n_y_bins = y_bins.shape[0]
+    # n_x_bins = x_bins.shape[0]
+    # n_y_bins = y_bins.shape[0]
 
     # set ticks at every 5th bin
-    x_tick_positions = np.arange(0, n_x_bins, 5) 
-    y_tick_positions = np.arange(0, n_y_bins, 5)    
+    # x_tick_positions = np.arange(0, n_x_bins, 5) 
+    # y_tick_positions = np.arange(0, n_y_bins, 5)    
     
     # plot the positional occupancy as a heatmap
-    plt.figure()
-    plt.imshow(positional_occupancy['occupancy'], cmap='hot')
+    fig, ax = plt.subplots(1, 1, figsize=(10, 10))
+    im = plt.imshow(positional_occupancy['occupancy'], cmap='hot')
 
+    # plot colourbar
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="5%", pad=0.05)
+    cbar = plt.colorbar(im, cax=cax)
 
-    # convert the tick values to pixel values
-    x_bins = np.linspace(x_bins[0], x_bins[-1], n_x_bins)
-    y_bins = np.linspace(y_bins[0], y_bins[-1], n_y_bins)
+    cbar.set_label('Occupancy (sec)', size=15)         
+    cbar.ax.tick_params(labelsize=15)   
 
-    # Set the tick positions and labels
-    plt.xticks(x_tick_positions - 0.5, np.int32(x_bins[x_tick_positions]))
-    plt.yticks(y_tick_positions - 0.5, np.int32(y_bins[y_tick_positions]))
+    ax.set_xlabel('x (cm)',fontsize=15)
+    ax.set_ylabel('y (cm)', fontsize=15)
+    # don't need to flip the y axis because it's an image, so plots from top dow
+    ax.set_aspect('equal', 'box')
 
-    plt.colorbar()
+    # draw the goal locations
+    colours = ['k', '0.5']
+    for i, g in enumerate(goal_coordinates.keys()):
+        # first, convert to heat map coordinates
+        goal_x, goal_y = goal_coordinates[g]
+
+        # Convert to heat map coordinates
+        goal_x_heatmap = np.interp(goal_x, x_bins, np.arange(len(x_bins))) - 0.5
+        goal_y_heatmap = np.interp(goal_y, y_bins, np.arange(len(y_bins))) - 0.5                          
+        
+        # draw a circle with radius 80 around the goal on ax
+        circle = plt.Circle((goal_x_heatmap, 
+            goal_y_heatmap), radius=1, color=colours[i], 
+            fill=False, linewidth=4)
+        ax.add_artist(circle)
+
+    #  get x_ticks
+    xticks = ax.get_xticks()
+    # set the x ticks so that only those that are between 0 and n_x_bins are shown
+    xticks = xticks[(xticks >= 0) & (xticks < len(x_bins))]
+    ax.set_xticks(xticks)
+    # interpolate the x values to get the pixel values, noting that 0.5 needs to be added to the xticks, because they are centred on their bins
+    xtick_values = np.int32(np.round(np.interp(xticks + 0.5, np.arange(len(x_bins)), x_bins), 0))
+    # then convert to cm 
+    xtick_values = np.int32(np.round(xtick_values * cm_per_pixel, 0))        
+    ax.set_xticklabels(xtick_values)
+    ax.tick_params(axis='x', labelsize=15)
+
+    # do the same for y_ticks
+    yticks = ax.get_yticks()
+    yticks = yticks[(yticks >= 0) & (yticks < len(y_bins))]
+    ax.set_yticks(yticks)
+    ytick_values = np.int32(np.round(np.interp(yticks + 0.5, np.arange(len(y_bins)), y_bins), 0))
+    ytick_values = np.int32(np.round(ytick_values * cm_per_pixel, 0))
+    ax.set_yticklabels(ytick_values)
+    ax.tick_params(axis='y', labelsize=15)
+
     plt.show()
     # save the figure
     figure_path = os.path.join(figure_dir, 'occupancy_heatmap.png')
@@ -116,7 +162,7 @@ def get_positional_occupancy(dlc_data, limits):
     y_bins[-1] = y_bins[-1] + 1e-6 # add a small number to the last bin so that the last value is included in the bin
 
     # create positional occupancy matrix
-    positional_occupancy = np.zeros((n_y_bins, n_x_bins))
+    positional_occupancy_temp = np.zeros((n_y_bins, n_x_bins))
 
     # get x and y data 
     x = dlc_data['x']
@@ -127,17 +173,18 @@ def get_positional_occupancy(dlc_data, limits):
 
     # sort the x and y bins into the spike_counts array
     for i, (x_ind, y_ind) in enumerate(zip(x_bin, y_bin)):        
-        positional_occupancy[y_ind, x_ind] += dlc_data['durations'][i]
+        positional_occupancy_temp[y_ind, x_ind] += dlc_data['durations'][i]
         
-    positional_occupancy = np.round(positional_occupancy, 3)
+    positional_occupancy_temp = np.round(positional_occupancy_temp, 3)
 
-    x_and_y_bins = {'x_bins': x_bins_og, 'y_bins': y_bins_og}
+    positional_occupancy = {'occupancy': positional_occupancy_temp, 
+                            'x_bins': x_bins_og, 'y_bins': y_bins_og}
 
-    return positional_occupancy, x_and_y_bins
+    return positional_occupancy
 
 
-def concatenate_dlc_data(dlc_data):
-    for i, d in enumerate(dlc_data.keys()):
+def calculate_frame_durations(dlc_data):
+    for d in dlc_data.keys():
 
         # calculate frame intervals
         times = dlc_data[d]['ts'].values
@@ -151,26 +198,49 @@ def concatenate_dlc_data(dlc_data):
         frame_intervals = np.round(frame_intervals, 4)
         dlc_data[d]['durations'] = frame_intervals
 
+    return dlc_data
+
+
+def get_axes_limits(dlc_data):
+    # get the x and y limits of the maze
+    x_min = np.min(dlc_data['x'])
+    x_max = np.max(dlc_data['x'])
+    x_width = x_max - x_min
+
+    y_min = np.min(dlc_data['y'])
+    y_max = np.max(dlc_data['y'])    
+    y_height = y_max - y_min
+
+    limits =  {'x_min': x_min, 'x_max': x_max, 'x_width': x_width,
+            'y_min': y_min, 'y_max': y_max, 'y_height': y_height}
+
+    return limits
+
+
+def concatenate_dlc_data(dlc_data):
+    for i, d in enumerate(dlc_data.keys()):       
         if i==0:
             dlc_data_concat = dlc_data[d]
         
         else:
             dlc_data_concat = pd.concat([dlc_data_concat, dlc_data[d]], 
                     ignore_index=True)            
-   
-    # get the x and y limits of the maze
-    x_min = np.min(dlc_data_concat['x'])
-    x_max = np.max(dlc_data_concat['x'])
-    x_width = x_max - x_min
 
-    y_min = np.min(dlc_data_concat['y'])
-    y_max = np.max(dlc_data_concat['y'])    
-    y_height = y_max - y_min
+    return dlc_data_concat
 
-    limits =  {'x_min': x_min, 'x_max': x_max, 'x_width': x_width,
-            'y_min': y_min, 'y_max': y_max, 'y_height': y_height}
-
-    return dlc_data_concat, limits
+def concatenate_dlc_data_by_goal(dlc_data, behaviour_data):
+    
+    dlc_data_concat_by_goal = {}
+    
+    for g in behaviour_data.keys():
+        
+        for i, t in enumerate(behaviour_data[g]):
+            if i==0:
+                dlc_data_concat_by_goal[g] = dlc_data[t]
+            else:
+                dlc_data_concat_by_goal[g] = pd.concat([dlc_data_concat_by_goal[g], 
+                                                dlc_data[t]], ignore_index=True) 
+    return dlc_data_concat_by_goal
 
 
 def get_directional_occupancy(dlc_data):
@@ -206,8 +276,7 @@ def get_directional_occupancy(dlc_data):
     directional_occupancy = {'allocentric': {}, 'egocentric': {}}
     for direction_type in direction_data.keys():
         for d in direction_data[direction_type]:
-            # bin_counts, bin_edges = \
-            #     np.histogram(dlc_data[d], direction_bins)
+            # get the bin indices for each value in dlc_data[d]
             bin_indices = np.digitize(dlc_data[d], direction_bins, right=True) - 1
             # any bin_indices that are -1 should be 0
             bin_indices[bin_indices==-1] = 0
@@ -221,11 +290,17 @@ def get_directional_occupancy(dlc_data):
 
             directional_occupancy[direction_type][d] = occupancy
 
-    return directional_occupancy, direction_bins_og
+    directional_occupancy = {'occupancy': directional_occupancy, 'bins': direction_bins_og} 
+
+    return directional_occupancy
 
 
 def plot_directional_occupancy(directional_occupancy, figure_dir):
     
+    # if figure_dir doesn't exist, create it
+    if not os.path.exists(figure_dir):
+        os.makedirs(figure_dir)
+
     # note that polar plot converts radian to degrees. 0 degrees = 0 radians,
     # 90 degrees = pi/2 radians, 180 degrees = +/- pi radians, etc.
 
@@ -240,7 +315,7 @@ def plot_directional_occupancy(directional_occupancy, figure_dir):
             plt.figure()
 
             occupancy = directional_occupancy['occupancy'][direction_type][d]
-            # add concatenate the first value to the end so that the plot is closed
+            # concatenate the first value to the end so that the plot is closed
             occupancy = np.append(occupancy, occupancy[0])
 
             plt.polar(tick_positions, occupancy)
@@ -271,39 +346,64 @@ if __name__ == "__main__":
     # get goal coordinates 
     goal_coordinates = get_goal_coordinates(data_dir=data_dir)
 
+    # calculate frame intervals
+    dlc_data = calculate_frame_durations(dlc_data)
+
     # concatenate dlc_data
-    dlc_data_concat, limits = concatenate_dlc_data(dlc_data)
+    dlc_data_concat = concatenate_dlc_data(dlc_data)
+
+    # get axes limits
+    limits = get_axes_limits(dlc_data_concat)
 
     # calculate positional occupancy
-    positional_occupancy_temp, x_and_y_bins = get_positional_occupancy(dlc_data_concat, limits)
-    positional_occupancy = {'occupancy': positional_occupancy_temp, 'x_bins': x_and_y_bins['x_bins'], 'y_bins': x_and_y_bins['y_bins']}
+    # positional_occupancy = get_positional_occupancy(dlc_data_concat, limits)
     # save the positional_occupancy
-    save_pickle(positional_occupancy, 'positional_occupancy', dlc_dir)
+    # save_pickle(positional_occupancy, 'positional_occupancy', dlc_dir)
+    positional_occupancy = load_pickle('positional_occupancy', dlc_dir)
 
-    
-    
     # plot the the trial paths
     # for d in dlc_data.keys():
     #     plot_trial_path(dlc_data[d], limits, dlc_dir, d)
 
     # plot the heat map of occupancy
-    plot_occupancy_heatmap(positional_occupancy, dlc_dir)
+    plot_occupancy_heatmap(positional_occupancy, goal_coordinates, dlc_dir)
     
     # calculate directional occupancy
-    # directional_occupancy_temp, direction_bins_og = get_directional_occupancy(dlc_data_concat)  
-    # directional_occupancy = {'occupancy': directional_occupancy_temp, 'bins': direction_bins_og} 
-    directional_occupancy_file = os.path.join(dlc_dir, 'directional_occupancy.pkl')
-    # with open(directional_occupancy_file, 'wb') as f:
-    # #     pickle.dump(directional_occupancy, f)
-
-    # del directional_occupancy
-    with open(directional_occupancy_file, 'rb') as f:
-        directional_occupancy = pickle.load(f)
+    directional_occupancy = get_directional_occupancy(dlc_data_concat)  
+    # save the directional_occupancy
+    save_pickle(directional_occupancy, 'directional_occupancy', dlc_dir)
 
     # plot the directional occupancy
     figure_dir = os.path.join(dlc_dir, 'directional_occupancy_plots')
-    if not os.path.exists(figure_dir):
-        os.makedirs(figure_dir)
-
     plot_directional_occupancy(directional_occupancy, figure_dir)
+
+    # calculate occupancy by goal
+    behaviour_dir = get_behaviour_dir(data_dir)
+    behaviour_data = load_pickle('behaviour_data_by_goal', behaviour_dir)
+    dlc_data_concat_by_goal = concatenate_dlc_data_by_goal(dlc_data, behaviour_data)
+    # save dlc_data_concat_by_goal
+    save_pickle(dlc_data_concat_by_goal, 'dlc_data_concat_by_goal', dlc_dir)
+
+    positional_occupancy_by_goal = {}
+    directional_occupancy_by_goal = {}
+
+    for g in behaviour_data.keys():
+        
+        # calculate positional occupancy
+        positional_occupancy_by_goal[g] = \
+            get_positional_occupancy(dlc_data_concat_by_goal[g], limits)
+        
+        figure_dir = os.path.join(dlc_dir, 'positional_occupancy_by_goal', f'goal_{g}')
+        plot_occupancy_heatmap(positional_occupancy_by_goal[g], goal_coordinates, figure_dir)
+
+        # calculate directional occupancy
+        directional_occupancy_by_goal[g] = \
+            get_directional_occupancy(dlc_data_concat_by_goal[g])  
+        
+        figure_dir = os.path.join(dlc_dir, 'directional_occupancy_by_goal', f'goal_{g}')        
+        plot_directional_occupancy(directional_occupancy_by_goal[g], figure_dir)
    
+    # save the positional_occupancy_by_goal
+    save_pickle(positional_occupancy_by_goal, 'positional_occupancy_by_goal', dlc_dir)
+    # save the directional_occupancy_by_goal
+    save_pickle(directional_occupancy_by_goal, 'directional_occupancy_by_goal', dlc_dir)

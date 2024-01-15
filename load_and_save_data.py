@@ -20,6 +20,10 @@ def load_pickle(filename, dir):
     """
     # find the file in the directory
     files = os.listdir(dir)
+
+    # remove any entries in files that aren't pickle files
+    files = [f for f in files if f.endswith('.pickle') or f.endswith('.pkl')]
+
     for f in files:
         if filename in f:
             filename = f

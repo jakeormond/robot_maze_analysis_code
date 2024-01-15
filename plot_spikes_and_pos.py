@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import pickle
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from scipy import ndimage
 
@@ -87,7 +88,7 @@ def plot_spikes_2goals(units_by_goal, dlc_data, goal_coordinates, x_and_y_limits
         plt.close(fig)
 
 
-def plot_rate_maps(rate_maps, plot_dir):
+def plot_rate_maps(rate_maps, goal_coordinates, plot_dir):
     # plot the rate maps
     if not os.path.exists(plot_dir):
         os.mkdir(plot_dir)
@@ -137,35 +138,77 @@ def plot_rate_maps(rate_maps, plot_dir):
         rate_map_smoothed = ndimage.gaussian_filter(rate_map_copy, sigma=1)
 
         # use masked array to set all the nans to white
-        rate_map_smoothed = np.ma.filled(masked_array, fill_value=np.NaN)
+        rate_map_smoothed = np.where(masked_array.mask, np.nan, rate_map_smoothed)
 
-        fig, ax = plt.subplots(1, 1, figsize=(10, 10))
-        ax.set_title(u)
+        # make figure with 2 subplots
+        fig, ax = plt.subplots(1, 2, figsize=(20, 10))        
 
-        ax.imshow(rate_map_smoothed, cmap='jet', aspect='auto')
-        ax.set_xlabel('x (cm)')
-        ax.set_ylabel('y (cm)')
-        # don't need to flip the y axis because it's an image, so plots from top dow
-        ax.set_aspect('equal', 'box')
+        # plot the unsmoothed rate map in the first subplot
+        for i in range(2):
+            if i == 0:
+                im = ax[0].imshow(rate_map, cmap='jet', aspect='auto')
+                ax[0].set_title([u + ' - unsmoothed'], fontsize=15)  
+                # add a colourbar
+                divider = make_axes_locatable(ax[0])
+                cax = divider.append_axes("right", size="5%", pad=0.05)
+                cbar = plt.colorbar(im, cax=cax)
+                                
+            else:
+                im = ax[1].imshow(rate_map_smoothed, cmap='jet', aspect='auto')
+                ax[1].set_title([u + ' - smoothed'], fontsize=15)
+                # add a colourbar
+                divider = make_axes_locatable(ax[1])
+                cax = divider.append_axes("right", size="5%", pad=0.05)
+                cbar = plt.colorbar(im, cax=cax)
+                
+                
+                # cbar = plt.colorbar(ax[1].imshow(rate_map_smoothed, cmap='jet', aspect='auto'), ax=ax[1])
 
-        # get x_ticks
-        xticks = ax.get_xticks()
-        # set the x ticks so that only those that are between 0 and n_x_bins are shown
-        xticks = xticks[(xticks >= 0) & (xticks < len(x_bins))]
-        ax.set_xticks(xticks)
-        # interpolate the x values to get the pixel values, noting that 0.5 needs to be added to the xticks, because they are centred on their bins
-        xtick_values = np.int32(np.round(np.interp(xticks + 0.5, np.arange(len(x_bins)), x_bins), 0))
-        # then convert to cm 
-        xtick_values = np.int32(np.round(xtick_values * cm_per_pixel, 0))        
-        ax.set_xticklabels(xtick_values)
+            cbar.set_label('Firing rate (Hz)', size=15)         
+            cbar.ax.tick_params(labelsize=15)   
 
-        # do the same for y_ticks
-        yticks = ax.get_yticks()
-        yticks = yticks[(yticks >= 0) & (yticks < len(y_bins))]
-        ax.set_yticks(yticks)
-        ytick_values = np.int32(np.round(np.interp(yticks + 0.5, np.arange(len(y_bins)), y_bins), 0))
-        ytick_values = np.int32(np.round(ytick_values * cm_per_pixel, 0))
-        ax.set_yticklabels(ytick_values)
+            ax[i].set_xlabel('x (cm)',fontsize=15)
+            ax[i].set_ylabel('y (cm)', fontsize=15)
+            # don't need to flip the y axis because it's an image, so plots from top dow
+            ax[i].set_aspect('equal', 'box')
+
+            # get x_ticks
+            xticks = ax[i].get_xticks()
+            # set the x ticks so that only those that are between 0 and n_x_bins are shown
+            xticks = xticks[(xticks >= 0) & (xticks < len(x_bins))]
+            ax[i].set_xticks(xticks)
+            # interpolate the x values to get the pixel values, noting that 0.5 needs to be added to the xticks, because they are centred on their bins
+            xtick_values = np.int32(np.round(np.interp(xticks + 0.5, np.arange(len(x_bins)), x_bins), 0))
+            # then convert to cm 
+            xtick_values = np.int32(np.round(xtick_values * cm_per_pixel, 0))        
+            ax[i].set_xticklabels(xtick_values)
+            ax[i].tick_params(axis='x', labelsize=15)
+
+            # do the same for y_ticks
+            yticks = ax[i].get_yticks()
+            yticks = yticks[(yticks >= 0) & (yticks < len(y_bins))]
+            ax[i].set_yticks(yticks)
+            ytick_values = np.int32(np.round(np.interp(yticks + 0.5, np.arange(len(y_bins)), y_bins), 0))
+            ytick_values = np.int32(np.round(ytick_values * cm_per_pixel, 0))
+            ax[i].set_yticklabels(ytick_values)
+            ax[i].tick_params(axis='y', labelsize=15)
+
+            # draw the goal positions over top
+            colours = ['k', '0.5']
+            for j, g in enumerate(goal_coordinates.keys()):
+                # first, convert to heat map coordinates
+                goal_x, goal_y = goal_coordinates[g]
+
+                # Convert to heat map coordinates
+                goal_x_heatmap = np.interp(goal_x, x_bins, np.arange(len(x_bins))) - 0.5
+                goal_y_heatmap = np.interp(goal_y, y_bins, np.arange(len(y_bins))) - 0.5                          
+                
+                # draw a circle with radius 80 around the goal on ax
+                circle = plt.Circle((goal_x_heatmap, 
+                    goal_y_heatmap), radius=1, color=colours[j], 
+                    fill=False, linewidth=4)
+                ax[i].add_artist(circle)
+
 
         # show the plot
         plt.show()
@@ -174,6 +217,65 @@ def plot_rate_maps(rate_maps, plot_dir):
 
         plt.close(fig)
 
+
+def plot_rate_maps_2goals(rate_maps, goal_coordinates, plot_dir):
+    
+    
+    
+    pass
+
+
+def plot_spike_rates_by_direction(spike_rates_by_direction, plot_dir):
+
+    if not os.path.exists(plot_dir):
+        os.mkdir(plot_dir)
+
+    # note that polar plot converts radian to degrees. 0 degrees = 0 radians,
+    # 90 degrees = pi/2 radians, 180 degrees = +/- pi radians, etc.
+        
+    bins = spike_rates_by_direction['bins']
+    # polar plot ticks are the centres of the bins
+    tick_positions = np.round(bins[:-1] + np.diff(bins)/2, 2)
+    tick_positions = np.append(tick_positions, tick_positions[0])
+
+    spike_rates = spike_rates_by_direction['units']
+
+    for u in spike_rates.keys():
+        # create plot with 8 subplots. Currently we only 
+        # need 7 plots, but easiest to arrange in two rows of 4
+
+        fig, ax = plt.subplots(2, 4, figsize=(20, 10), subplot_kw=dict(polar=True))
+        
+        for i, d in enumerate(spike_rates[u].keys()):
+
+            # get the spike rates for this direction
+            spike_rates_temp = spike_rates[u][d]
+            # concatenate the first value to the end so that the plot is closed
+            spike_rates_temp = np.append(spike_rates_temp, spike_rates_temp[0])
+
+            # make a polar plot
+            ax[i//4, i%4].plot(tick_positions, spike_rates_temp, 'b-')
+            
+            
+            
+            # ax[i//4, i%4].polar(tick_positions, spike_rates_temp, 'k.-', markersize=10)
+
+            # ax[i//4, i%4].set_xticks(tick_positions)
+            # ax[i//4, i%4].set_xticklabels(tick_positions)
+            # ax[i//4, i%4].set_ylim([0, 10])
+            # ax[i//4, i%4].set_yticks([0, 5, 10])
+            ax[i//4, i%4].tick_params(axis='x', labelsize=15) # these are the degrees
+            ax[i//4, i%4].tick_params(axis='y', labelsize=15) # these are the rates
+            ax[i//4, i%4].set_theta_zero_location('N')
+            # ax[i//4, i%4].set_theta_direction(-1)
+
+            ax[i//4, i%4].set_title(f'{u} - {d}', fontsize=15)
+
+        plt.show(fig)
+        fig.savefig(os.path.join(plot_dir, f'{u}.png'))
+        plt.close
+
+    pass
 
 if __name__ == "__main__":
     animal = 'Rat64'
@@ -212,11 +314,22 @@ if __name__ == "__main__":
     plot_dir = os.path.join(spike_dir, 'spikes_and_pos_by_goal')
     # plot_spikes_2goals(units_by_goal, dlc_data, goal_coordinates, x_and_y_limits, plot_dir)
 
-    # plot rate maps
+    # plot spike rates by direction
+    plot_dir = os.path.join(spike_dir, 'spike_rates_by_direction')
+    spike_rates_by_direction = load_pickle('spike_rates_by_direction', spike_dir)
+
+    plot_spike_rates_by_direction(spike_rates_by_direction, plot_dir)
+
+
+
+
+
+
+    # plot rate maps by goal
     plot_dir = os.path.join(spike_dir, 'rate_maps')
     rate_maps = load_pickle('rate_maps', spike_dir)
 
-    plot_rate_maps(rate_maps, plot_dir)
+    plot_rate_maps(rate_maps, goal_coordinates, plot_dir)
 
     
 

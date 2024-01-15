@@ -6,7 +6,22 @@ from scipy import interpolate
 
 from get_directories import get_data_dir, get_robot_maze_directory
 from load_and_save_data import load_pickle, save_pickle
+from load_behaviour import get_behaviour_dir
 
+def sort_units_by_goal(behaviour_data_by_goal, units):
+
+    units_by_goal = {}
+
+    for g in behaviour_data_by_goal.keys():
+        units_by_goal[g] = {}
+        
+        for u in units.keys():
+            units_by_goal[g][u] = {}
+            
+            for t in behaviour_data_by_goal[g].keys():
+                units_by_goal[g][u][t] = units[u][t]
+
+        return units_by_goal
 
 def interpolate_rads(og_times, og_rads, target_times):
     unwrapped_ogs = np.unwrap(og_rads)
@@ -105,6 +120,83 @@ def bin_spikes_by_position(units, positional_occupancy):
     return spike_rates_by_position
 
 
+def bin_spikes_by_direction(units, directional_occupancy):
+    
+    direction_bins_og = directional_occupancy['bins']
+    direction_bins = direction_bins_og.copy()
+    direction_bins[0] = direction_bins_og[0] - 0.1 # subtract a small number from the first bin so that the first value is included in the bin
+    direction_bins[-1] = direction_bins_og[-1] + 0.1 # add a small number to the last bin so that the last value is included in the bin
+
+    n_bins = len(direction_bins) - 1
+
+    occupancy = directional_occupancy['occupancy']
+
+    # directional occupancy is split into 2 groups, allocentric
+    # and egocentric. For now, we will only look at 'hd' (i.e. head
+    # direction) from the allocentric group. We will use all
+    # the egocentric groups, which consists of head direction
+    # relative to the goals and the tv screens. 
+    occupancy['hd'] = occupancy['allocentric']['hd']
+    for d in occupancy['egocentric'].keys():
+        occupancy[d] = occupancy['egocentric'][d]
+    # remove the egocentric and allocentric keys
+    occupancy.pop('egocentric')
+    occupancy.pop('allocentric')
+
+    # create dictionaries for the spike counts and rates
+    spike_counts_temp = {}
+    spike_rates_temp = {}
+
+    for u in units.keys():
+
+        spike_counts_temp[u] = {}
+        spike_rates_temp[u] = {}
+
+        # loop through the different types of directional data
+        for d in occupancy.keys():       
+            # loop through the trials 
+            for i, t in enumerate(units[u].keys()):
+                
+                if i == 0:
+                    directional_data = units[u][t][d]
+                    
+                else:
+                    directional_data = np.concatenate((directional_data, units[u][t][d]))
+            
+            # sort the directional data into bins
+            # get the bin indices for each value in dlc_data[d]
+            bin_indices = np.digitize(directional_data, direction_bins, right=True) - 1
+            # any bin_indices that are -1 should be 0
+            bin_indices[bin_indices==-1] = 0
+            # any bin_indices that are n_bins should be n_bins-1
+            bin_indices[bin_indices==n_bins] = n_bins-1
+
+            # get the spike counts and rates
+            spike_counts_temp[u][d] = np.zeros(n_bins)
+            spike_rates_temp[u][d] = np.zeros(n_bins)
+
+            for i in range(n_bins):
+                # get the spike counts for the current bin
+                spike_counts_temp[u][d][i] = np.sum(bin_indices==i)
+                # divide the spike counts by the occupancy
+                spike_rates_temp[u][d][i] = np.round(spike_counts_temp[u][d][i] / occupancy[d][i], 3)
+
+    # create the spike counts and rates dictionaries
+    spike_counts = {}
+    spike_rates = {}
+    
+    spike_counts['units'] = spike_counts_temp
+    spike_rates['units'] = spike_rates_temp
+
+    spike_counts['bins'] = direction_bins_og
+    spike_rates['bins'] = direction_bins_og
+
+    spike_counts['occupancy'] = occupancy
+    spike_rates['occupancy'] = occupancy
+   
+    return spike_rates, spike_counts
+
+
 if __name__ == "__main__":
     animal = 'Rat64'
     session = '08-11-2023'
@@ -112,11 +204,11 @@ if __name__ == "__main__":
 
     # load spike data
     spike_dir = os.path.join(data_dir, 'spike_sorting')
-    restricted_units = load_pickle('restricted_units', spike_dir)
+    # restricted_units = load_pickle('restricted_units', spike_dir)
 
     # load neuron classification data
-    neuron_types_dir = os.path.join(spike_dir, 'average_waveforms') 
-    neuron_types = load_pickle('neuron_types', neuron_types_dir)
+    # neuron_types_dir = os.path.join(spike_dir, 'average_waveforms') 
+    # neuron_types = load_pickle('neuron_types', neuron_types_dir)
 
     # load positional data
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
@@ -130,14 +222,39 @@ if __name__ == "__main__":
     # save_pickle(restricted_units, 'units_w_behav_correlates', spike_dir)
 
     # bin spikes by position
-    positional_occupancy = load_pickle('positional_occupancy', dlc_dir)
+    # positional_occupancy = load_pickle('positional_occupancy', dlc_dir)
     # load units
     units = load_pickle('units_w_behav_correlates', spike_dir)
     # bin spikes by position
-    rate_maps = bin_spikes_by_position(units, positional_occupancy)
+    # rate_maps = bin_spikes_by_position(units, positional_occupancy)
     # save the spike counts by position
-    save_pickle(rate_maps, 'rate_maps', spike_dir)
+    # save_pickle(rate_maps, 'rate_maps', spike_dir)
 
+    # bin spikes by direction
+    directional_occupancy = load_pickle('directional_occupancy', dlc_dir)
+    spike_rates_by_direction, spike_counts = bin_spikes_by_direction(units, 
+                                            directional_occupancy)
+    # save the spike counts and rates by direction
+    save_pickle(spike_rates_by_direction, 'spike_rates_by_direction', spike_dir)
+    save_pickle(spike_counts, 'spike_counts_by_direction', spike_dir)
+
+    # sort spike data by goal
+    behaviour_dir = get_behaviour_dir(data_dir)
+    behaviour_data_by_goal = load_pickle('behaviour_data_by_goal', behaviour_dir)
+
+    units_by_goal = sort_units_by_goal(behaviour_data_by_goal, units)
+
+    # load the positional occupancy data by goal
+    positional_occupancy_by_goal = load_pickle('positional_occupancy_by_goal', dlc_dir)
+
+    # bin spikes by position by goal
+    rate_maps_by_goal = {}
+    for g in units_by_goal.keys():
+        rate_maps_by_goal[g] = bin_spikes_by_position(units_by_goal[g], positional_occupancy_by_goal[g])
+    
+    save_pickle(rate_maps_by_goal, 'rate_maps_by_goal', spike_dir)
+
+    # 
 
     pass
     
