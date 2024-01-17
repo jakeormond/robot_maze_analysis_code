@@ -184,8 +184,8 @@ def re_date_dlc_files(behaviour_and_matching_video_datestamps, dlc_dir):
     
 
 if __name__ == "__main__":
-    animal = 'Rat64'
-    session = '08-11-2023'
+    animal = 'Rat65'
+    session = '10-11-2023'
     data_dir = get_data_dir(animal, session)
     behaviour_dir = os.path.join(data_dir, 'behaviour')
     video_dir = os.path.join(data_dir, 'video_files')

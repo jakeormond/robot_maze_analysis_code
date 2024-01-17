@@ -211,11 +211,11 @@ def plot_rate_maps(rate_maps, goal_coordinates, plot_dir):
 
 
         # show the plot
-        plt.show()
+        # plt.show()
         
         fig.savefig(os.path.join(plot_dir, f'{u}.png'))
 
-        plt.close(fig)
+        plt.close()
 
 
 def plot_rate_maps_2goals(rate_maps, goal_coordinates, plot_dir):
@@ -255,25 +255,23 @@ def plot_spike_rates_by_direction(spike_rates_by_direction, plot_dir):
 
             # make a polar plot
             ax[i//4, i%4].plot(tick_positions, spike_rates_temp, 'b-')
-            
-            
-            
             # ax[i//4, i%4].polar(tick_positions, spike_rates_temp, 'k.-', markersize=10)
-
             # ax[i//4, i%4].set_xticks(tick_positions)
             # ax[i//4, i%4].set_xticklabels(tick_positions)
             # ax[i//4, i%4].set_ylim([0, 10])
             # ax[i//4, i%4].set_yticks([0, 5, 10])
             ax[i//4, i%4].tick_params(axis='x', labelsize=15) # these are the degrees
             ax[i//4, i%4].tick_params(axis='y', labelsize=15) # these are the rates
-            ax[i//4, i%4].set_theta_zero_location('N')
+            
+            if d != 'hd':
+                ax[i//4, i%4].set_theta_zero_location('N')
             # ax[i//4, i%4].set_theta_direction(-1)
 
             ax[i//4, i%4].set_title(f'{u} - {d}', fontsize=15)
 
-        plt.show(fig)
+        # plt.show()
         fig.savefig(os.path.join(plot_dir, f'{u}.png'))
-        plt.close
+        plt.close()
 
     pass
 
@@ -318,18 +316,33 @@ if __name__ == "__main__":
     plot_dir = os.path.join(spike_dir, 'spike_rates_by_direction')
     spike_rates_by_direction = load_pickle('spike_rates_by_direction', spike_dir)
 
-    plot_spike_rates_by_direction(spike_rates_by_direction, plot_dir)
+    # plot_spike_rates_by_direction(spike_rates_by_direction, plot_dir)
 
-
-
-
-
-
-    # plot rate maps by goal
+    # plot rate maps 
     plot_dir = os.path.join(spike_dir, 'rate_maps')
     rate_maps = load_pickle('rate_maps', spike_dir)
 
-    plot_rate_maps(rate_maps, goal_coordinates, plot_dir)
+    # plot_rate_maps(rate_maps, goal_coordinates, plot_dir)
+
+    # plot spike rates by direction by goal
+    # spike_rates_by_direction = load_pickle('spike_rates_by_direction_by_goal', spike_dir)
+    # plot_dir = os.path.join(spike_dir, 'spike_rates_by_direction_by_goal')
+    # if not os.path.exists(plot_dir):
+    #     os.mkdir(plot_dir)
+
+    # for g in spike_rates_by_direction.keys():
+    #     plot_dir = os.path.join(spike_dir, 'spike_rates_by_direction_by_goal', f'goal_{g}')
+    #     plot_spike_rates_by_direction(spike_rates_by_direction[g], plot_dir)
+
+    # plot rate maps by goal
+    rate_maps_by_goal = load_pickle('rate_maps_by_goal', spike_dir)
+    plot_dir = os.path.join(spike_dir, 'rate_maps_by_goal')
+    if not os.path.exists(plot_dir):
+        os.mkdir(plot_dir)
+
+    for g  in rate_maps_by_goal.keys():
+        plot_dir = os.path.join(spike_dir, 'rate_maps_by_goal', f'goal_{g}')     
+        plot_rate_maps(rate_maps_by_goal[g], goal_coordinates, plot_dir)
 
     
 

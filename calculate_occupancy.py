@@ -356,9 +356,9 @@ if __name__ == "__main__":
     limits = get_axes_limits(dlc_data_concat)
 
     # calculate positional occupancy
-    # positional_occupancy = get_positional_occupancy(dlc_data_concat, limits)
+    positional_occupancy = get_positional_occupancy(dlc_data_concat, limits)
     # save the positional_occupancy
-    # save_pickle(positional_occupancy, 'positional_occupancy', dlc_dir)
+    save_pickle(positional_occupancy, 'positional_occupancy', dlc_dir)
     positional_occupancy = load_pickle('positional_occupancy', dlc_dir)
 
     # plot the the trial paths

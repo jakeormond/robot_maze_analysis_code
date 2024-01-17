@@ -39,25 +39,12 @@ def load_sorted_spikes(spike_dir):
     return units
 
 if __name__ == "__main__":
-    animal = 'Rat64'
-    session = '08-11-2023'
+    animal = 'Rat65'
+    session = '10-11-2023'
     data_dir = get_data_dir(animal, session)
     
     # load the spike data
     spike_dir = os.path.join(data_dir, 'spike_sorting')
     units = load_sorted_spikes(spike_dir)
 
-    units_file = os.path.join(spike_dir, 'unit_spike_times.pickle')
-
-    with open(units_file, 'wb') as handle:
-        pickle.dump(units, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    
-    del units
-
-    with open(units_file, 'rb') as handle:
-        units = pickle.load(handle)
-
-    pass
-
-    
-  
+    save_pickle(units, 'unit_spike_times', spike_dir)

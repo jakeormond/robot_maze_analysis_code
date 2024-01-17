@@ -21,7 +21,7 @@ def sort_units_by_goal(behaviour_data_by_goal, units):
             for t in behaviour_data_by_goal[g].keys():
                 units_by_goal[g][u][t] = units[u][t]
 
-        return units_by_goal
+    return units_by_goal
 
 def interpolate_rads(og_times, og_rads, target_times):
     unwrapped_ogs = np.unwrap(og_rads)
@@ -204,11 +204,11 @@ if __name__ == "__main__":
 
     # load spike data
     spike_dir = os.path.join(data_dir, 'spike_sorting')
-    # restricted_units = load_pickle('restricted_units', spike_dir)
+    restricted_units = load_pickle('restricted_units', spike_dir)
 
     # load neuron classification data
-    # neuron_types_dir = os.path.join(spike_dir, 'average_waveforms') 
-    # neuron_types = load_pickle('neuron_types', neuron_types_dir)
+    neuron_types_dir = os.path.join(spike_dir, 'average_waveforms') 
+    neuron_types = load_pickle('neuron_types', neuron_types_dir)
 
     # load positional data
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
@@ -222,13 +222,13 @@ if __name__ == "__main__":
     # save_pickle(restricted_units, 'units_w_behav_correlates', spike_dir)
 
     # bin spikes by position
-    # positional_occupancy = load_pickle('positional_occupancy', dlc_dir)
+    positional_occupancy = load_pickle('positional_occupancy', dlc_dir)
     # load units
     units = load_pickle('units_w_behav_correlates', spike_dir)
     # bin spikes by position
-    # rate_maps = bin_spikes_by_position(units, positional_occupancy)
+    rate_maps = bin_spikes_by_position(units, positional_occupancy)
     # save the spike counts by position
-    # save_pickle(rate_maps, 'rate_maps', spike_dir)
+    save_pickle(rate_maps, 'rate_maps', spike_dir)
 
     # bin spikes by direction
     directional_occupancy = load_pickle('directional_occupancy', dlc_dir)
@@ -252,9 +252,19 @@ if __name__ == "__main__":
     for g in units_by_goal.keys():
         rate_maps_by_goal[g] = bin_spikes_by_position(units_by_goal[g], positional_occupancy_by_goal[g])
     
-    save_pickle(rate_maps_by_goal, 'rate_maps_by_goal', spike_dir)
+    save_pickle(rate_maps_by_goal, 'rate_maps_by_goal', spike_dir)  
 
-    # 
+    # load the directional occupancy data by goal
+    directional_occupancy_by_goal = load_pickle('directional_occupancy_by_goal', dlc_dir)
+
+    # bin spikes by direction by goal
+    spike_rates_by_direction_by_goal = {}
+    spike_counts_by_direction_by_goal = {}
+    for g in units_by_goal.keys():
+        spike_rates_by_direction_by_goal[g], spike_counts_by_direction_by_goal[g]\
+              = bin_spikes_by_direction(units_by_goal[g], directional_occupancy_by_goal[g])
+
+    save_pickle(spike_rates_by_direction_by_goal, 'spike_rates_by_direction_by_goal', spike_dir)
 
     pass
     

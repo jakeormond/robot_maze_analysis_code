@@ -7,6 +7,7 @@ import re
 import shutil
 import cv2 
 from get_directories import get_data_dir, get_robot_maze_directory
+from load_and_save_data import save_pickle, load_pickle
 
 # screen platforms is a dictionary where each key is the screen number and each
 # value is the number of the platfom that is directly adjacent to the screen
@@ -333,58 +334,41 @@ if __name__ == "__main__":
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
 
     # get the goal coordinates
-    # screen_coordinates = get_screen_coordinates(data_dir)
+    screen_coordinates = get_screen_coordinates(data_dir)
     # save the screen coordinates
-    screen_coordinates_path = os.path.join(dlc_dir, 'screen_coordinates.pickle')
-    # with open(screen_coordinates_path, 'wb') as f:
-    #     pickle.dump(screen_coordinates, f, protocol=pickle.HIGHEST_PROTOCOL)
-    with open(screen_coordinates_path, 'rb') as f:
-        screen_coordinates = pickle.load(f)
-
+    save_pickle(screen_coordinates, 'screen_coordinates', dlc_dir)
+  
     # load dlc_data which has the trial times    
-    dlc_pickle_path = os.path.join(dlc_dir, 'dlc_final.pkl')
-    with open(dlc_pickle_path, 'rb') as f:
-        dlc_data = pickle.load(f)
-
+    dlc_data = load_pickle('dlc_final', dlc_dir)
+    
     # load the platform coordinates, from which we can get the goal coordinates
     robot_maze_dir = get_robot_maze_directory()
-    platform_path = os.path.join(robot_maze_dir, 'workstation',
-            'map_files', 'platform_coordinates.pickle')
-    with open(platform_path, 'rb') as f:
-        platform_coordinates = pickle.load(f)
-     
-    # crop_path = os.path.join(robot_maze_dir, 'workstation', 
-    #         'map_files', 'crop_coordinates.pickle')
-    # with open(crop_path, 'rb') as f:
-    #     crop_coordinates = pickle.load(f)
+    platform_path = os.path.join(robot_maze_dir, 'workstation', 'map_files')
+    platform_coordinates = load_pickle('platform_coordinates', platform_path)
+    crop_coordinates = load_pickle('crop_coordinates', platform_path)
 
-    # platform_coordinates, save_flag = get_uncropped_platform_coordinates(platform_coordinates, crop_coordinates)
-    # if save_flag:
-    #     # first, copy the original platform_coordinates file
-    #     src_file = os.path.join(robot_maze_dir, 'workstation',
-    #             'map_files', 'platform_coordinates.pickle')
-    #     dst_file = os.path.join(robot_maze_dir, 'workstation',
-    #             'map_files', 'platform_coordinates_cropped.pickle')
-    #     shutil.copyfile(src_file, dst_file)     
+    platform_coordinates, save_flag = get_uncropped_platform_coordinates(platform_coordinates, crop_coordinates)
+    if save_flag:
+        # first, copy the original platform_coordinates file
+        src_file = os.path.join(robot_maze_dir, 'workstation',
+                'map_files', 'platform_coordinates.pickle')
+        dst_file = os.path.join(robot_maze_dir, 'workstation',
+                'map_files', 'platform_coordinates_cropped.pickle')
+        shutil.copyfile(src_file, dst_file)     
 
-    #     # save the new platform_coordinates file
-    #     with open(platform_path, 'wb') as f:
-    #         pickle.dump(platform_coordinates, f, protocol=pickle.HIGHEST_PROTOCOL)  
-
+        # save the new platform_coordinates file
+        save_pickle(platform_coordinates, 'platform_coordinates', platform_path)
 
     # load the behaviour data, from which we can get the goal ids
     behaviour_dir = os.path.join(data_dir, 'behaviour')
-    behaviour_pickle_path = os.path.join(behaviour_dir, 
-            'behaviour_data_by_goal.pkl')
-    with open(behaviour_pickle_path, 'rb') as f:
-        behaviour_data = pickle.load(f)
+    behaviour_data = load_pickle('behaviour_data_by_goal', behaviour_dir)
 
     goals = []
     for k in behaviour_data.keys():
         goals.append(k)
 
     # calculate the animal's current platform for each frame
-    # dlc_data = get_current_platform(dlc_data, platform_coordinates)  
+    dlc_data = get_current_platform(dlc_data, platform_coordinates)  
 
     # calculate head direction relative to the goals
     dlc_data, goal_coordinates = get_relative_head_direction(dlc_data, platform_coordinates, goals, screen_coordinates)
@@ -392,9 +376,6 @@ if __name__ == "__main__":
     # calculate the distance to each goal and screen
     dlc_data = get_distances(dlc_data, platform_coordinates, goal_coordinates, screen_coordinates)
 
-
     # save the dlc_data
-    dlc_final_pickle_path = os.path.join(dlc_dir, 'dlc_final.pkl')
-    with open(dlc_final_pickle_path, 'wb') as f:
-        pickle.dump(dlc_data, f, protocol=pickle.HIGHEST_PROTOCOL)
-    pass
+    save_pickle(dlc_data, 'dlc_final', dlc_dir)
+    

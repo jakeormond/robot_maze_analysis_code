@@ -13,11 +13,14 @@ import h5py
 
 def extract_spikeglx_pulses():
     # use tkinter to select the file
+    # print 'select spikeglx bin file'
+    print('select spikeglx bin file')
     root = tk.Tk()
     root.withdraw()
     bin_path = filedialog.askopenfilename()
 
     # also get the meta file
+    print('select spikeglx meta file')
     meta_file = filedialog.askopenfilename()
     meta_data = open(meta_file, 'r')
     sample_rate = 30000
@@ -140,5 +143,8 @@ def load_pulses():
 if __name__ == "__main__":
     # pulses = extract_spikeglx_pulses()
     # del pulses
+
+    pulses = extract_spikeglx_pulses()
+
     pulses = load_pulses()
     pass

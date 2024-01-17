@@ -6,6 +6,24 @@ filename behind the honeycomb task script. Uses the times when
 the files were modified to correctly match them. 
 RUN THIS BEFORE RUNNING ANY OTHER CODE!!!!!
 
+# extract_pulses_from_raw.py	
+
+Finds the digital pulses emitted by Bonsai and recorded by SpikeGLX 
+by reading the final channel of the binary file. 
+
+# get_pulses.py			
+
+Reads in the pulse timings recorded by Bonsai, and matches them to the 
+pulses read from the SpikeGLX data. It produces plots to allow the 
+user to confirm that the SpikeGLX pulses are correctly aligned to the 
+Bonsai data. The Bonsai pulses (in computer time (ms)) and the SpikeGLX 
+pulses (in samples) are combined into a 2d array and saved as a list of 
+arrays as an H5 file. Figures are plotted to allow the user to confirm 
+that pulses have been correctly aligned (see below).
+
+![pulse alignment](media/2023-11-10_13.31.00.png)
+
+
 # process_dlc_data.py		
 
 Extracts the positional data from deeplabcut
@@ -32,10 +50,7 @@ frames that come past the endpoint for manual verification.
 
 ![cropped video](media/video_2023-11-08_16.52.26.gif)
 
-# extract_pulses_from_raw.py	
 
-Finds the digital pulses emitted by Bonsai and recorded by SpikeGLX 
-by reading the final channel of the binary file. 
 
 # get_pulses.py			
 

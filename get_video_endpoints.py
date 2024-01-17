@@ -9,7 +9,6 @@ from matplotlib import pyplot as plt
 import pickle
 import math
 from get_directories import get_data_dir 
-from process_dlc_data import load_dlc_processed_pickle
 
 import cv2
 
