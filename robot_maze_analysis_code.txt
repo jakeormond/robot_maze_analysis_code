@@ -32,13 +32,21 @@ process_dlc_data.py		Extracts the positional data from deeplabcut. Loads the pul
 
 load_behaviour.py		Loads in the behavioural csv files, and saves the data as a dictionary
 				with trial times as the keys (saved as behaviour_data.pkl). Also sorts 
-				trials according to the goal, and saves them as a dictionary (with the goal as key) 
-				of dictionaries (behaviour_data_by_goal.pkl).
+				trials according to the goal, and saves them as a dictionary (with the 
+				goal as key) of dictionaries (behaviour_data_by_goal.pkl).
 				
 
-create_videos_with_dlc_data.py	Produces videos with a red arrow tracking head position and direction. 
-				In the cropped videos it produces, it super-imposes a red END over the 
-				frames that come past the endpoint for manual verification. In the full
+create_videos_with_dlc_data.py	create_cropped_video_with_dlc_data produces videos with a red arrow 
+				tracking head position and direction. In the cropped videos it produces, 
+				it super-imposes a red END over the frames that come past the endpoint 
+				for manual verification.  
+				
+				create_full_video_with_dlc_data produces videos with relative directions,
+				so can only be run AFTERcalculate_pos_and_dir.py
+				
+				
+				
+				The fullIn the full
 				size  
 
 
