@@ -9,6 +9,7 @@ from matplotlib import pyplot as plt
 import pickle
 import math
 from get_directories import get_data_dir 
+from load_and_save_data import load_pickle, save_pickle
 
 import cv2
 
@@ -71,34 +72,19 @@ def get_video_startpoints(dlc_data):
 
 
 if __name__ == "__main__":
-    animal = 'Rat64'
-    session = '08-11-2023'
+    animal = 'Rat65'
+    session = '10-11-2023'
     data_dir = get_data_dir(animal, session)
     video_dir = os.path.join(data_dir, 'video_files')
 
-    # endpoints = get_video_endpoints(video_dir)
-
-    # # save as pickle file
-    # pickle_file = os.path.join(video_dir, 'video_endpoints.pkl')
-    # with open(pickle_file, 'wb') as f:
-    #     pickle.dump(endpoints, f)
-
-    # del endpoints
-
-    # # load the pickle file
-    # with open(pickle_file, 'rb') as f:
-    #     endpoints = pickle.load(f)
+    endpoints = get_video_endpoints(video_dir)
+    save_pickle(endpoints, 'video_endpoints', video_dir)
 
     # load dlc_data to get startpoints
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
-    dlc_pickle_path = os.path.join(dlc_dir, 'dlc_final.pkl')
-    with open(dlc_pickle_path, 'rb') as f:
-        dlc_data = pickle.load(f)
-
+    dlc_data = load_pickle('dlc_final', dlc_dir)
+    
     startpoints = get_video_startpoints(dlc_data)
-    pickle_file = os.path.join(video_dir, 'video_startpoints.pkl')
-    with open(pickle_file, 'wb') as f:
-         pickle.dump(startpoints, f)
-
-
+    save_pickle(startpoints, 'video_startpoints', video_dir)
+    
     pass
