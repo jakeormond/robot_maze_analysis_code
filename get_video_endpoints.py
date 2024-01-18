@@ -80,11 +80,13 @@ if __name__ == "__main__":
     endpoints = get_video_endpoints(video_dir)
     save_pickle(endpoints, 'video_endpoints', video_dir)
 
-    # load dlc_data to get startpoints
-    dlc_dir = os.path.join(data_dir, 'deeplabcut')
-    dlc_data = load_pickle('dlc_final', dlc_dir)
+    # start_points IS RUN IN process_dlc_data.py NOT HERE!!!!!
     
-    startpoints = get_video_startpoints(dlc_data)
-    save_pickle(startpoints, 'video_startpoints', video_dir)
+    # load dlc_data to get startpoints
+    # dlc_dir = os.path.join(data_dir, 'deeplabcut')
+    # dlc_data = load_pickle('dlc_processed_data', dlc_dir)
+    
+    # startpoints = get_video_startpoints(dlc_data)
+    # save_pickle(startpoints, 'video_startpoints', video_dir)
     
     pass

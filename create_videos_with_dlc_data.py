@@ -9,15 +9,15 @@ from matplotlib import pyplot as plt
 import pickle
 import math
 from get_directories import get_data_dir 
-from process_dlc_data import load_dlc_processed_pickle
-
+from load_and_save_data import load_pickle, save_pickle
 from calculate_pos_and_dir import get_goal_coordinates
 
 import imageio
 import cv2
 
 
-def create_cropped_video_with_dlc_data(dlc_data, video_path, start_and_end):
+def create_cropped_video_with_dlc_data(dlc_data, 
+                        video_path, start_and_end):
     arrow_len = 10
     cap = cv2.VideoCapture(video_path)
 
@@ -42,16 +42,14 @@ def create_cropped_video_with_dlc_data(dlc_data, video_path, start_and_end):
                                fps, (height, width))
     
     num_frames = dlc_data.shape[0]
-    end_frame = video_endpoint['end_frame']
 
-    dlc_time = dlc_data.columns[0][0]
     for frame_idx in range(num_frames):
         ret, frame = cap.read()
 
         # get the dlc data for this frame
         dlc_for_frame = dlc_data.iloc[frame_idx, :]
        
-        hd_for_frame = dlc_for_frame.loc[(dlc_time, 'hd')]
+        hd_for_frame = dlc_for_frame['hd']
 
         if math.isnan(hd_for_frame):
             continue
@@ -62,8 +60,8 @@ def create_cropped_video_with_dlc_data(dlc_data, video_path, start_and_end):
         x2 = np.cos(hd_for_frame + np.pi) * arrow_len
         y2 = -np.sin(hd_for_frame + np.pi) * arrow_len
 
-        x_cropped = dlc_for_frame.loc[(dlc_time, 'x_cropped')]
-        y_cropped = dlc_for_frame.loc[(dlc_time, 'y_cropped')]        
+        x_cropped = dlc_for_frame['x_cropped']
+        y_cropped = dlc_for_frame['y_cropped']        
         
         arrow_start = (int(x_cropped + x1), 
                        int(y_cropped + y1))
@@ -102,12 +100,14 @@ def create_full_video_with_dlc_data(video_time, dlc_data, data_dir, start_and_en
 
     # get path to full_video.avi, which is two directories above data_dir
     full_video_path = os.path.join(os.path.dirname(os.path.dirname(data_dir)), "full_video.avi")
-    cap = cv2.VideoCapture(full_video_path)
-    _, fs_frame_og = cap.read()
+    # cap = cv2.VideoCapture(full_video_path)
+    # _, fs_frame_og = cap.read()
     # display the frame to the user
     # cv2.imshow('Video Player', frame)
 
-    
+    # fs_frame_og is a 2048 x 2448 x 3 array of uint8 and is black
+    fs_frame_og = np.zeros((2048, 2448, 3))
+        
     # get video path
     video_dir = os.path.join(data_dir, 'video_files')
 
@@ -320,33 +320,26 @@ def get_video_paths_from_dlc(dlc_processed_data, data_dir):
 
 
 if __name__ == "__main__":
-    animal = 'Rat64'
-    session = '08-11-2023'
+    animal = 'Rat65'
+    session = '10-11-2023'
     data_dir = get_data_dir(animal, session)
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
     
-    dlc_pickle_path = os.path.join(dlc_dir, 'dlc_processed_data.pkl')
-    dlc_processed_data = load_dlc_processed_pickle(dlc_pickle_path)
+    dlc_processed_data = load_pickle('dlc_processed_data', dlc_dir)
 
-    dlc_final_pickle_path = os.path.join(dlc_dir, 'dlc_final.pkl')
-    dlc_final_data = load_dlc_processed_pickle(dlc_final_pickle_path)
-
+    dlc_final_data = load_pickle('dlc_final', dlc_dir)
+    
     video_paths = get_video_paths_from_dlc(dlc_processed_data, data_dir)
 
     video_dir = os.path.join(data_dir, 'video_files')
    
     # load video_startpoints.pkl
-    video_startpoints_path = os.path.join(video_dir, 'video_startpoints.pkl')
-    with open(video_startpoints_path, 'rb') as f:
-        video_startpoints = pickle.load(f)
-
-
+    video_startpoints = load_pickle('video_startpoints', video_dir)
+ 
     # load video_endpoints.pkl
-    video_endpoints_path = os.path.join(video_dir, 'video_endpoints.pkl')
-    with open(video_endpoints_path, 'rb') as f:
-        video_endpoints = pickle.load(f)
+    video_endpoints = load_pickle('video_endpoints', video_dir)
 
-    for d in dlc_processed_data.keys():
+    for i, d in enumerate(dlc_processed_data.keys()):
 
         video_time = d
         print(video_time)
@@ -360,10 +353,12 @@ if __name__ == "__main__":
         start_and_end = (video_startpoint, video_endpoint)
 
         # create the video with the dlc data
-        # create_cropped_video_with_dlc_data(dlc_processed_data[d], video_path, start_and_end)
+        if i > 0:
+            create_cropped_video_with_dlc_data(dlc_processed_data[d], 
+                                        video_path, start_and_end)
             
-        create_full_video_with_dlc_data(video_time, dlc_final_data[d], 
-                                        data_dir, start_and_end)
+        # create_full_video_with_dlc_data(video_time, dlc_final_data[d], 
+        #                                data_dir, start_and_end)
 
     
     # create a gif from video "video_2023-11-08_16.52.26.avi" using frames

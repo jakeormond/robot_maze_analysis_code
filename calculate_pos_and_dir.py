@@ -165,22 +165,15 @@ def get_goal_coordinates(platform_coordinates=None, goals=None, data_dir=None):
 
     if platform_coordinates is None:
         robot_maze_dir = get_robot_maze_directory()
-        platform_path = os.path.join(robot_maze_dir, 'workstation',
-                'map_files', 'platform_coordinates.pickle')
-        with open(platform_path, 'rb') as f:
-            platform_coordinates = pickle.load(f)
-
+        platform_path = os.path.join(robot_maze_dir, 'workstation', 'map_files')
+        platform_coordinates = load_pickle('platform_coordinates', platform_path)
+   
     if goals is None:
-
-        behaviour_dir = os.path.join(data_dir, 'behaviour')
-        behaviour_pickle_path = os.path.join(behaviour_dir, 
-                'behaviour_data_by_goal.pkl')
-        with open(behaviour_pickle_path, 'rb') as f:
-            behaviour_data = pickle.load(f)
         goals = []
+        behaviour_dir = os.path.join(data_dir, 'behaviour')
+        behaviour_data = load_pickle('behaviour_data_by_goal', behaviour_dir)
         for k in behaviour_data.keys():
             goals.append(k)
-
 
     goal_coordinates = {}
     for g in goals:

@@ -168,8 +168,8 @@ def split_dictionary_by_goal(dictionary, data_dir):
 
 
 if __name__ == "__main__":
-    animal = 'Rat64'
-    session = '08-11-2023'
+    animal = 'Rat65'
+    session = '10-11-2023'
     data_dir = get_data_dir(animal, session)
     behaviour_dir = get_behaviour_dir(data_dir)
 
