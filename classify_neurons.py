@@ -8,6 +8,7 @@ from scipy import stats
 from random import sample
 import itertools
 from get_directories import get_data_dir 
+from load_and_save_data import save_pickle, load_pickle
 
 sample_rate = 30000
 upsample_factor = 10 # for upsampling the waveform to get the halfwidth
@@ -69,7 +70,7 @@ def get_average_waveforms(units, spike_dir, bin_path):
         templates_for_cluster = np.unique(spike_templates[spike_ind])       
         if templates_for_cluster.shape[0] != 1:
             # use the most common template, i.e. the mode
-            templates_for_cluster, _ = stats.mode(spike_templates[spike_ind], 
+            templates_for_cluster = stats.mode(spike_templates[spike_ind], 
                                                  keepdims=False)[0]
             
         
@@ -167,7 +168,9 @@ def calculate_spike_halfwidth(average_waveform):
     if np.abs(negative_peak) > positive_peak:
         peak = negative_peak
     else:
-        peak = positive_peak
+        peak = -positive_peak
+        # flip the waveform so code still works
+        average_waveform = -average_waveform
     
     baseline = np.mean(average_waveform[0:20])
     
@@ -204,17 +207,54 @@ def calculate_spike_halfwidth(average_waveform):
 
     halfwidth_ind = [rising_edge, falling_edge]
 
+    if np.abs(negative_peak) < positive_peak:
+        # flip the waveform back
+        waveform_upsampled = -waveform_upsampled
+
     return halfwidth, halfwidth_ind, waveform_upsampled
+
+
+def remove_bad_clusters(units, average_waveforms, mean_rates):
+    """
+    Manually remove any clusters that don't look like neurons.
+    """
+    # ask the user if there are any bad clusters; the user should enter
+    # a 'y' or 'n'
+    bad_clusters = input('Are there any bad clusters? (y/n): ')
+    if bad_clusters == 'n':
+        save_flag = False
+        return units, average_waveforms, mean_rates, save_flag
+
+    save_flag = True
+    # get user input in a loop, so they can enter the cluster number 
+    # one at a time. When they're done, they hit enter with no input
+    bad_clusters = []
+    while True:
+        bad_cluster = input('Enter bad cluster: ')
+        if bad_cluster == '':
+            break
+        else:
+            bad_clusters.append(bad_cluster)
+    
+    # remove bad clusters
+    for b in bad_clusters:
+        del units[f'cluster_{b}']
+        del average_waveforms[f'cluster_{b}']
+        del mean_rates[f'cluster_{b}']
+
+    return units, average_waveforms, mean_rates, save_flag
 
           
 def classify_neurons(halfwidths, mean_rates):
+    # not currently ussing mean_rates
     neuron_types = {}
 
-    # get user input for halfwidth cutoff
+    # get user input for halfwidth cutoff and mean rate cutoff
     halfwidth_cutoff = float(input('Enter halfwidth cutoff (ms): '))
+    mean_rate_cutoff = float(input('Enter mean firing rate cutoff (Hz): '))
 
     for u in halfwidths.keys():
-        if halfwidths[u] < halfwidth_cutoff:
+        if halfwidths[u] <= halfwidth_cutoff or mean_rates[u] >= mean_rate_cutoff:
             neuron_types[u] = 'interneuron'
         else:
             neuron_types[u] = 'pyramidal'
@@ -223,46 +263,44 @@ def classify_neurons(halfwidths, mean_rates):
 
 
 if __name__ == "__main__":
-    animal = 'Rat64'
-    session = '08-11-2023'
+    animal = 'Rat65'
+    session = '10-11-2023'
     data_dir = get_data_dir(animal, session)
 
     # load dlc_data which has the trial times
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
-    dlc_pickle_path = os.path.join(dlc_dir, 'dlc_final.pkl')
-    with open(dlc_pickle_path, 'rb') as f:
-        dlc_data = pickle.load(f)
+    dlc_data = load_pickle('dlc_final', dlc_dir)
 
     # load the spike data
     spike_dir = os.path.join(data_dir, 'spike_sorting')
-    spike_file  = os.path.join(spike_dir, 'restricted_units.pickle')
-    with open(spike_file, 'rb') as handle:
-        units = pickle.load(handle)
-
+    units = load_pickle('restricted_units', spike_dir)
+    
     # hardcoding the directory of the neuropixel bin file, as
     # it's not in the data directory
-    # bin_dir = '/media/jake/LaCie1/' + animal + '/' + session
-    # bin_path = glob.glob(bin_dir + '/*.ap.bin')[0]
+    bin_dir = '/media/jake/LaCie/' + animal + '/' + session
+    bin_path = glob.glob(bin_dir + '/*.ap.bin')[0]
 
     # calculate mean firing rates
     mean_rates = calculate_mean_rates(units, dlc_data)
 
     # get average waveforms
     # average_waveforms = get_average_waveforms(units, spike_dir, bin_path)
-    average_waveforms_file = os.path.join(spike_dir, 'average_waveforms', 
-                                          'average_waveforms.pickle')
-    # with open(average_waveforms_file, 'wb') as handle:
-    #     pickle.dump(average_waveforms, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-    # del average_waveforms
-    with open(average_waveforms_file, 'rb') as handle:
-        average_waveforms = pickle.load(handle)
-
+    # save_pickle(average_waveforms, 'average_waveforms', spike_dir)
 
     # plot average waveforms
+    average_waveforms = load_pickle('average_waveforms', spike_dir)
     # plot_average_waveforms(average_waveforms, mean_rates, spike_dir)
 
-    # get halfwidths
+    # manually remove any clusters that don't look like neurons
+    # units, average_waveforms, mean_rates, save_flag = \
+    #     remove_bad_clusters(units, average_waveforms, mean_rates)
+
+    # if save_flag is True:
+    #     # resave units and average_waveforms
+    #     save_pickle(units, 'restricted_units', spike_dir)
+    #     save_pickle(average_waveforms, 'average_waveforms', spike_dir)
+
+    # get halfwidths    
     halfwidths = calculate_spike_halfwidths(average_waveforms)
 
     # plot halfwidths vs mean firing rates
@@ -273,17 +311,9 @@ if __name__ == "__main__":
     plt.ylabel('Halfwidth (ms)')
     plt.savefig(os.path.join(spike_dir, 'average_waveforms', 
                              'halfwidth_vs_mean_firing_rate.png'))
-
     # classify neurons
     neuron_types = classify_neurons(halfwidths, mean_rates)
-    neuron_types_file = os.path.join(spike_dir, 'average_waveforms', 
-                                     'neuron_types.pickle')
-    with open(neuron_types_file, 'wb') as handle:
-        pickle.dump(neuron_types, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    save_pickle(neuron_types, 'neuron_types', spike_dir)
     
-    del neuron_types
-
-    with open(neuron_types_file, 'rb') as handle:
-        neuron_types = pickle.load(handle)
 
     pass

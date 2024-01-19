@@ -330,8 +330,8 @@ def plot_directional_occupancy(directional_occupancy, figure_dir):
 
 
 if __name__ == "__main__":
-    animal = 'Rat64'
-    session = '08-11-2023'
+    animal = 'Rat65'
+    session = '10-11-2023'
     data_dir = get_data_dir(animal, session)
 
     # load dlc_data which has the trial times
@@ -362,8 +362,8 @@ if __name__ == "__main__":
     positional_occupancy = load_pickle('positional_occupancy', dlc_dir)
 
     # plot the the trial paths
-    # for d in dlc_data.keys():
-    #     plot_trial_path(dlc_data[d], limits, dlc_dir, d)
+    for d in dlc_data.keys():
+        plot_trial_path(dlc_data[d], limits, dlc_dir, d)
 
     # plot the heat map of occupancy
     plot_occupancy_heatmap(positional_occupancy, goal_coordinates, dlc_dir)

@@ -8,6 +8,7 @@ import shutil
 import cv2 
 from get_directories import get_data_dir, get_robot_maze_directory
 from load_and_save_data import save_pickle, load_pickle
+import glob
 
 # screen platforms is a dictionary where each key is the screen number and each
 # value is the number of the platfom that is directly adjacent to the screen
@@ -107,6 +108,16 @@ def get_current_platform(dlc_data, platform_coordinates):
 
 def get_screen_coordinates(data_dir): # these are the 4 tv screens in the corners of the arena, just want the rough centre coordinate
 
+    # first check if we already have the screen coordinates file, which may end
+    # in .pickle or .pkl
+    dlc_dir = os.path.join(data_dir, 'deeplabcut')
+    files = glob.glob(os.path.join(dlc_dir, 'screen_coordinates.*'))    
+   
+    if files:
+        screen_coordinates = load_pickle('screen_coordinates', dlc_dir)
+        save_flag = False
+        return screen_coordinates, save_flag
+
     # get the coordinates of the points clicked by the user
     screen_coordinates_temp = []
     def get_coordinates(event, x, y, flags, param):
@@ -155,7 +166,8 @@ def get_screen_coordinates(data_dir): # these are the 4 tv screens in the corner
     for i in range(4):
         screen_coordinates[i+1] = screen_coordinates_temp[i,:]
 
-    return screen_coordinates
+    save_flag = True
+    return screen_coordinates, save_flag
 
 
 def get_goal_coordinates(platform_coordinates=None, goals=None, data_dir=None):
@@ -321,15 +333,16 @@ def get_x_and_y_limits(dlc_data):
     return x_and_y_limits
 
 if __name__ == "__main__":
-    animal = 'Rat64'
-    session = '08-11-2023'
+    animal = 'Rat65'
+    session = '10-11-2023'
     data_dir = get_data_dir(animal, session)
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
 
     # get the goal coordinates
-    screen_coordinates = get_screen_coordinates(data_dir)
+    screen_coordinates, save_flag = get_screen_coordinates(data_dir)
     # save the screen coordinates
-    save_pickle(screen_coordinates, 'screen_coordinates', dlc_dir)
+    if save_flag:
+        save_pickle(screen_coordinates, 'screen_coordinates', dlc_dir)    
   
     # load dlc_data which has the trial times    
     dlc_data = load_pickle('dlc_final', dlc_dir)

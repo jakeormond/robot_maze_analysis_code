@@ -42,29 +42,35 @@ create_videos_with_dlc_data.py	create_cropped_video_with_dlc_data produces video
 				for manual verification.  
 				
 				create_full_video_with_dlc_data produces videos with relative directions,
-				so can only be run AFTERcalculate_pos_and_dir.py
+				so can only be run AFTER calculate_pos_and_dir.py
 				
 				
-				
-				The fullIn the full
-				size  
-
-
-
-
-				
-
-
-
-
 calculate_pos_and_dir.py	Calculates the animal's current platform, as well as the goal directions 
 				from its current position, and its head direction relative to each of the 
-				goals.
+				goals and the TV screens. 
+				
+				Note that the function get_screen_coordinates requires a full size video
+				frame. However, if you have run the function before on another dataset, 
+				just copy the file screen_coordinates.pickle from that sessions deeplabcut 
+				folder to the same folder in the current session. 
+				
+				Also, note that this code doesn't save the DLC data to a new file, instead,
+				it adds it to the existing file (dlc_final.pickle) so as to avoid saving
+				an increasing number of increasingly large files. If unsure, simply open
+				the pickle file, and check if the relative directions to goals and tv
+				screens is included, in which case this code has already been run. You 
+				can use the function load_pickle from load_and_save_data.py 
+				(dlc_final = load_pickle('dlc_final', dlc_dir)). 
+				
 
 load_sorted_spikes.py		Loads the clusters classified as good in Phy (need to verify the cluster 
 				qualities are mine, and not kilosort's). Saves them in a dictionary with the 
 				cluster numbers as the keys, and the spike times in samples as the data. 
 				File is unit_spike_times.pickle. 
+
+				
+restrict_spikes_to_trials.py	As the title says. 				
+				
 
 classify_neurons.py 		Calculates mean firing rates and average waveforms, from which spike width 
 				can be calculated. Plots a scatter plot of mean rates vs spike width, 
@@ -73,7 +79,7 @@ classify_neurons.py 		Calculates mean firing rates and average waveforms, from w
 				automate the identification of principal and interneurons; for now, go 
 				through the plots, and manually enter a spike-width cut-off. 
 
-restrict_spikes_to_trials.py	As the title says. 
+
 
 
 				

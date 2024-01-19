@@ -353,12 +353,11 @@ if __name__ == "__main__":
         start_and_end = (video_startpoint, video_endpoint)
 
         # create the video with the dlc data
-        if i > 0:
-            create_cropped_video_with_dlc_data(dlc_processed_data[d], 
-                                        video_path, start_and_end)
+        # create_cropped_video_with_dlc_data(dlc_processed_data[d], 
+        #                                video_path, start_and_end)
             
-        # create_full_video_with_dlc_data(video_time, dlc_final_data[d], 
-        #                                data_dir, start_and_end)
+        create_full_video_with_dlc_data(video_time, dlc_final_data[d], 
+                                               data_dir, start_and_end)
 
     
     # create a gif from video "video_2023-11-08_16.52.26.avi" using frames

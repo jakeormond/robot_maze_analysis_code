@@ -2,8 +2,8 @@ import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import pickle
 from get_directories import get_data_dir 
+from load_and_save_data import save_pickle
 
 sample_freq = 30000
 

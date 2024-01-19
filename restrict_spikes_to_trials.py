@@ -2,9 +2,9 @@ import os
 import numpy as np
 import pandas as pd
 import pickle
-
 from get_directories import get_data_dir 
 from process_dlc_data import load_dlc_processed_pickle
+from load_and_save_data import save_pickle, load_pickle
 
 def restrict_times_to_interval(times_to_restrict, interval):
 
@@ -39,30 +39,20 @@ def restrict_spikes_to_trials(units, dlc_data):
 
 
 if __name__ == "__main__":
-    animal = 'Rat64'
-    session = '08-11-2023'
+    
+    animal = 'Rat65'
+    session = '10-11-2023'
     data_dir = get_data_dir(animal, session)
     
     # load the dlc data, which contains the trial times
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
-    dlc_pickle_path = os.path.join(dlc_dir, 'dlc_final.pkl')
-    dlc_data = load_dlc_processed_pickle(dlc_pickle_path)
-
-    
+    dlc_data = load_pickle('dlc_final', dlc_dir)
+       
     # load the spike data
     unit_dir = os.path.join(data_dir, 'spike_sorting')
-    units_file = os.path.join(unit_dir, 'unit_spike_times.pickle')
-    with open(units_file, 'rb') as handle:
-        units = pickle.load(handle)
+    units = load_pickle('unit_spike_times', unit_dir)
     
     restricted_units = restrict_spikes_to_trials(units, dlc_data)
-    restricted_units_file = os.path.join(unit_dir, 'restricted_units.pickle')
-    with open(restricted_units_file, 'wb') as handle:
-        pickle.dump(restricted_units, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-    del restricted_units
-
-    with open(restricted_units_file, 'rb') as handle:
-        restricted_units = pickle.load(handle)
+    save_pickle(restricted_units, 'restricted_units', unit_dir)
 
     pass
