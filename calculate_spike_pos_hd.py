@@ -2,7 +2,7 @@ import os
 import numpy as np
 import pandas as pd
 import pickle
-from scipy import interpolate
+from scipy import interpolate, ndimage
 
 from get_directories import get_data_dir, get_robot_maze_directory
 from load_and_save_data import load_pickle, save_pickle
@@ -120,6 +120,59 @@ def bin_spikes_by_position(units, positional_occupancy):
     return spike_rates_by_position
 
 
+def smooth_rate_maps(rate_maps):
+     # make smoothed_rate_maps a copy of rate_maps
+    smoothed_rate_maps = rate_maps.copy()
+    occupancy = rate_maps['occupancy']
+
+    for u in rate_maps['rate_maps'].keys():
+        rate_map_copy = rate_maps['rate_maps'][u].copy()
+
+        # make any bin with occupancy less than 1 into nan
+        rate_map_copy[occupancy < 1] = np.nan
+
+        # create a masked array
+        masked_array = np.ma.array(rate_map_copy, mask=np.isnan(rate_map_copy))
+
+        # make all the nans the average of the surrounding non-nan values.
+        # this is only for smoothing, and they will all be set to white after
+        # smoothing
+        while True:
+            for x in range(rate_map_copy.shape[1]):
+                for y in range(rate_map_copy.shape[0]):
+                    if np.isnan(rate_map_copy[y, x]):
+                        if x == 0:
+                            x_ind = [x, x+1]
+                        elif x == rate_map_copy.shape[1] - 1:
+                            x_ind = [x-1, x]
+                        else:
+                            x_ind = [x-1, x, x+1]  
+
+                        if y == 0:
+                            y_ind = [y, y+1]
+                        elif y == rate_map_copy.shape[0] - 1:
+                            y_ind = [y-1, y]
+                        else:
+                            y_ind = [y-1, y, y+1]  
+
+                        # get the indices correspoding to rows y_ind and columns x_ind
+                        x_ind, y_ind = np.meshgrid(x_ind, y_ind)
+
+                        rate_map_copy[y, x] = np.nanmean(rate_map_copy[y_ind, x_ind])
+            
+            if np.isnan(rate_map_copy).sum() == 0:
+                break
+
+        rate_map_smoothed = ndimage.gaussian_filter(rate_map_copy, sigma=1)
+
+        # use masked array to set all the nans to white
+        rate_map_smoothed = np.where(masked_array.mask, np.nan, rate_map_smoothed)
+
+        smoothed_rate_maps['rate_maps'][u] = np.around(rate_map_smoothed, 3)
+
+    return smoothed_rate_maps
+
+
 def bin_spikes_by_direction(units, directional_occupancy):
     
     direction_bins_og = directional_occupancy['bins']
@@ -198,8 +251,8 @@ def bin_spikes_by_direction(units, directional_occupancy):
 
 
 if __name__ == "__main__":
-    animal = 'Rat64'
-    session = '08-11-2023'
+    animal = 'Rat65'
+    session = '10-11-2023'
     data_dir = get_data_dir(animal, session)
 
     # load spike data
@@ -207,19 +260,18 @@ if __name__ == "__main__":
     restricted_units = load_pickle('restricted_units', spike_dir)
 
     # load neuron classification data
-    neuron_types_dir = os.path.join(spike_dir, 'average_waveforms') 
-    neuron_types = load_pickle('neuron_types', neuron_types_dir)
+    neuron_types = load_pickle('neuron_types', spike_dir)
 
     # load positional data
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
     dlc_data = load_pickle('dlc_final', dlc_dir)
 
     # loop through units and calculate positions and various directional correlates
-    # for unit in restricted_units.keys():
-    #     restricted_units[unit] = get_unit_position_and_directions(dlc_data, restricted_units[unit])
+    for unit in restricted_units.keys():
+        restricted_units[unit] = get_unit_position_and_directions(dlc_data, restricted_units[unit])
 
     # save the restricted units
-    # save_pickle(restricted_units, 'units_w_behav_correlates', spike_dir)
+    save_pickle(restricted_units, 'units_w_behav_correlates', spike_dir)
 
     # bin spikes by position
     positional_occupancy = load_pickle('positional_occupancy', dlc_dir)
@@ -229,6 +281,10 @@ if __name__ == "__main__":
     rate_maps = bin_spikes_by_position(units, positional_occupancy)
     # save the spike counts by position
     save_pickle(rate_maps, 'rate_maps', spike_dir)
+
+    # create smoothed rate_maps
+    smoothed_rate_maps = smooth_rate_maps(rate_maps)
+    save_pickle(smoothed_rate_maps, 'smoothed_rate_maps', spike_dir) 
 
     # bin spikes by direction
     directional_occupancy = load_pickle('directional_occupancy', dlc_dir)
@@ -249,10 +305,13 @@ if __name__ == "__main__":
 
     # bin spikes by position by goal
     rate_maps_by_goal = {}
+    smoothed_rate_maps_by_goal = {}
     for g in units_by_goal.keys():
         rate_maps_by_goal[g] = bin_spikes_by_position(units_by_goal[g], positional_occupancy_by_goal[g])
-    
+        smoothed_rate_maps_by_goal[g] = smooth_rate_maps(rate_maps_by_goal[g])
+
     save_pickle(rate_maps_by_goal, 'rate_maps_by_goal', spike_dir)  
+    save_pickle(smoothed_rate_maps_by_goal, 'smoothed_rate_maps_by_goal', spike_dir)
 
     # load the directional occupancy data by goal
     directional_occupancy_by_goal = load_pickle('directional_occupancy_by_goal', dlc_dir)

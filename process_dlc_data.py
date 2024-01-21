@@ -264,6 +264,7 @@ def load_dlc_processed_pickle(pickle_path):
     
     return dlc_processed_data
 
+
 # a function to identify consecutive number, used below to get 
 # continuous chunks of bad tracking for interpolation
 def get_consec(nums):
@@ -272,6 +273,66 @@ def get_consec(nums):
     edges = iter(nums[:1] + [item for sublist in gaps for item in sublist] + nums[-1:])
     return list(zip(edges, edges))
 
+
+def interpolate_out_nans(dlc_data):
+
+    save_flag = False
+
+    for t in dlc_data.keys():
+        d = dlc_data[t]
+        x_vals = d['x'].values
+        y_vals = d['y'].values
+
+        n_vals = len(x_vals)
+
+        # find the indices of the NaNs
+        x_nan_ind = np.where(np.isnan(x_vals))[0]
+        y_nan_ind = np.where(np.isnan(y_vals))[0]
+
+        # combine the NaN indices, and keep only the unique values
+        nan_ind = np.unique(np.concatenate((x_nan_ind, y_nan_ind)))
+
+        # if there are NaNs in the x values
+        if len(nan_ind) > 0:
+            # get the indices of the consecutive NaNs
+            consec_nan_ind = get_consec(nan_ind)
+
+            # loop through the consecutive NaNs and interpolate them out
+            for i in range(len(consec_nan_ind)):
+                start_ind = consec_nan_ind[i][0]
+                end_ind = consec_nan_ind[i][1]
+
+                # if the NaNs are at the beginning or end of the data,
+                # then just chop them off
+                if start_ind == 0 or end_ind == n_vals-1:
+                    # remove the rows from start_ind to end_ind
+                    d = d.drop(d.index[start_ind:end_ind+1])
+
+                else: # interpolate the NaNs
+                    # the required code is below, but for now, throw an error 
+                    # until we test it
+                    raise ValueError('interpolation of NaNs not yet implemented')
+
+                    # get the x and y values before and after the NaNs
+                    x_before = x_vals[start_ind-1]
+                    x_after = x_vals[end_ind]
+                    y_before = y_vals[start_ind-1]
+                    y_after = y_vals[end_ind]
+
+                    # interpolate the x and y values
+                    x_interp = np.linspace(x_before, x_after, end_ind-start_ind+2)
+                    y_interp = np.linspace(y_before, y_after, end_ind-start_ind+2)
+
+                    # replace the NaNs with the interpolated values
+                    d.loc[start_ind:end_ind, 'x'] = x_interp[1:-1]
+                    d.loc[start_ind:end_ind, 'y'] = y_interp[1:-1]
+            save_flag = True
+
+        dlc_data[t] = d
+
+    return dlc_data, save_flag
+
+
 if __name__ == "__main__":
     animal = 'Rat65'
     session = '10-11-2023'
@@ -279,26 +340,34 @@ if __name__ == "__main__":
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
     # dlc_processed_data = process_dlc_data(dlc_dir)
     # save_pickle(dlc_processed_data, 'dlc_processed_data', dlc_dir)
-    dlc_processed_data = load_pickle('dlc_processed_data', dlc_dir) 
+    # dlc_processed_data = load_pickle('dlc_processed_data', dlc_dir) 
 
     # get the video startpoints
-    video_startpoints = get_video_startpoints(dlc_processed_data)
+    # video_startpoints = get_video_startpoints(dlc_processed_data)
 
     # load the pulses, which contains both the bonsai and spikeglx pulses in 
     # ms and samples, respectively
-    pulses = load_bonsai_pulses(data_dir)
+    # pulses = load_bonsai_pulses(data_dir)
 
-    dlc_processed_with_samples = get_video_times_in_samples(dlc_processed_data, pulses)
-    save_pickle(dlc_processed_with_samples, 'dlc_processed_with_samples', dlc_dir)
+    # dlc_processed_with_samples = get_video_times_in_samples(dlc_processed_data, pulses)
+    # save_pickle(dlc_processed_with_samples, 'dlc_processed_with_samples', dlc_dir)
        
     # Once we have aligned the video data with the pulses recorded by the imec system, 
     # we can restrict the video data to the start and end of the video. 
-    video_dir = os.path.join(data_dir, 'video_files')
-    video_startpoints = load_pickle('video_startpoints', video_dir)
-    video_endpoints = load_pickle('video_endpoints', video_dir)
+    # video_dir = os.path.join(data_dir, 'video_files')
+    # video_startpoints = load_pickle('video_startpoints', video_dir)
+    # video_endpoints = load_pickle('video_endpoints', video_dir)
 
-    dlc_final = restrict_dlc_to_video_start_and_end(dlc_processed_with_samples, 
-                                            video_startpoints, video_endpoints)
+    # dlc_final = restrict_dlc_to_video_start_and_end(dlc_processed_with_samples, 
+    #                                        video_startpoints, video_endpoints)
+    
+    # identify any NaN in the data, and if found, interpolate them out,
+    # or chop them off if they are at the beginning or end of the data
+    dlc_final = load_pickle('dlc_final', dlc_dir)
+    dlc_final, save_flag = interpolate_out_nans(dlc_final)
+
+
+
     save_pickle(dlc_final, 'dlc_final', dlc_dir)
 
     pass

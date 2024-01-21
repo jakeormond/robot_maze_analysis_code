@@ -101,3 +101,13 @@ through the plots, and manually enter a spike-width cut-off.
 ![spike width](media/cluster_7.png)
 
 ![cell classification](media/halfwidth_vs_mean_firing_rate.png)
+
+
+# calculate_occupancy.py
+
+
+# calculate_spike_pos_hd.py
+
+
+# plot_spike_pos_hd.py
+
