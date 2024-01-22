@@ -133,6 +133,76 @@ def plot_trial_path(dlc_data, limits, dlc_dir, d):
     plt.close()
 
 
+def get_directional_occupancy_by_position(dlc_data, limits):
+
+    # NOTE THAT IN THE OUTPUT, THE FIRST INDEX IS THE Y AXIS, 
+    # AND THE SECOND INDEX IS THE X AXIS
+
+    # get the x and y limits of the maze
+    x_min = limits['x_min']
+    x_max = limits['x_max']
+    x_width = limits['x_width']
+
+    y_min = limits['y_min']
+    y_max = limits['y_max']
+    y_height = limits['y_height']
+
+    # we want roughly 100 bins
+    n_bins = 100
+    pixels_per_bin = np.sqrt(x_width*y_height/n_bins)
+    n_x_bins = int(np.round(x_width/pixels_per_bin)) # note that n_bins is actually one more than the number of bins
+    n_y_bins = int(np.round(y_height/pixels_per_bin))
+
+    # create bins
+    x_bins_og = np.linspace(x_min, x_max, n_x_bins + 1)
+    x_bins = x_bins_og.copy()
+    x_bins[-1] = x_bins[-1] + 1e-6 # add a small number to the last bin so that the last value is included in the bin
+    
+    y_bins_og = np.linspace(y_min, y_max, n_y_bins + 1)
+    y_bins = y_bins_og.copy()
+    y_bins[-1] = y_bins[-1] + 1e-6 # add a small number to the last bin so that the last value is included in the bin
+
+    # create directional occupancy by position array
+    n_dir_bins=12 # 12 bins of 30 degrees each
+    directional_occupancy_temp = np.zeros((n_y_bins, n_x_bins, n_dir_bins))
+
+    # get x and y data 
+    x = dlc_data['x']
+    y = dlc_data['y']
+
+    x_bin = np.digitize(x, x_bins) - 1
+    y_bin = np.digitize(y, y_bins) - 1 
+
+    # get the head direction
+    hd = dlc_data['hd']
+
+    # get the durations
+    durations = dlc_data['durations']
+
+    for i in range(np.max(x_bin)+1):
+        for j in range(np.max(y_bin)+1):
+            # get the indices where x_bin == i and y_bin == j
+            indices = np.where((x_bin == i) & (y_bin == j))[0]
+
+            # get the head directions and durations for these indices
+            hd_temp = hd[indices]
+            durations_temp = durations[indices]
+
+            # get the directional occupancy for these indices
+            directional_occupancy, direction_bins = \
+                get_directional_occupancy(hd_temp, durations_temp, n_bins=n_dir_bins)
+
+            # add the directional occupancy to positional_occupancy_temp
+            directional_occupancy_temp[j, i, :] = directional_occupancy
+
+    directional_occupancy_temp = np.round(directional_occupancy_temp, 3)
+
+    directional_occupancy_by_position = {'occupancy': directional_occupancy_temp, 
+                            'x_bins': x_bins_og, 'y_bins': y_bins_og, 'direction_bins': direction_bins}
+
+    return directional_occupancy_by_position
+
+
 def get_positional_occupancy(dlc_data, limits):    
 
     # NOTE THAT IN THE OUTPUT, THE FIRST INDEX IS THE Y AXIS, 
@@ -171,7 +241,7 @@ def get_positional_occupancy(dlc_data, limits):
     x_bin = np.digitize(x, x_bins) - 1
     y_bin = np.digitize(y, y_bins) - 1 
 
-    # sort the x and y bins into the spike_counts array
+    # sort the x and y bins into the positional occupancy matrix
     for i, (x_ind, y_ind) in enumerate(zip(x_bin, y_bin)):        
         positional_occupancy_temp[y_ind, x_ind] += dlc_data['durations'][i]
         
@@ -243,14 +313,30 @@ def concatenate_dlc_data_by_goal(dlc_data, behaviour_data):
     return dlc_data_concat_by_goal
 
 
-def get_directional_occupancy(dlc_data):
+def get_directional_occupancy(directions, durations, n_bins=24):
 
     # create 24 bins, each 15 degrees
-    n_bins = 24
     direction_bins_og = np.linspace(-np.pi, np.pi, n_bins+1)
     direction_bins = direction_bins_og.copy()
     direction_bins[0] = direction_bins_og[0] - 0.1 # subtract a small number from the first bin so that the first value is included in the bin
     direction_bins[-1] = direction_bins_og[-1] + 0.1 # add a small number to the last bin so that the last value is included in the bin
+
+    # get the bin indices for each value in directions
+    bin_indices = np.digitize(directions, direction_bins, right=True) - 1
+    # any bin_indices that are -1 should be 0
+    bin_indices[bin_indices==-1] = 0
+    # any bin_indices that are n_bins should be n_bins-1
+    bin_indices[bin_indices==n_bins] = n_bins-1
+
+    # get the occupancy for each bin, so a vector of length n_bins
+    occupancy = np.zeros(n_bins)
+    for i in range(n_bins):
+        occupancy[i] = np.sum(durations[bin_indices==i])
+
+    return occupancy, direction_bins_og
+
+
+def get_directional_occupancy_from_dlc(dlc_data):
 
     # create list of dlc_data with directional data
     direction_data = {}
@@ -267,7 +353,7 @@ def get_directional_occupancy(dlc_data):
 
     # create list of dlc_data with relative direction data
     direction_data['egocentric'] = []
-    # find columns  that bign with 'relative_direction'
+    # find columns that begin with 'relative_direction'
     for d in dlc_data.keys():
         if 'relative_direction' in d:
             direction_data['egocentric'].append(d)
@@ -276,21 +362,11 @@ def get_directional_occupancy(dlc_data):
     directional_occupancy = {'allocentric': {}, 'egocentric': {}}
     for direction_type in direction_data.keys():
         for d in direction_data[direction_type]:
-            # get the bin indices for each value in dlc_data[d]
-            bin_indices = np.digitize(dlc_data[d], direction_bins, right=True) - 1
-            # any bin_indices that are -1 should be 0
-            bin_indices[bin_indices==-1] = 0
-            # any bin_indices that are n_bins should be n_bins-1
-            bin_indices[bin_indices==n_bins] = n_bins-1
 
-            # get the occupancy for each bin, so a vector of length n_bins
-            occupancy = np.zeros(n_bins)
-            for i in range(n_bins):
-                occupancy[i] = np.sum(dlc_data['durations'][bin_indices==i])
-
+            occupancy, direction_bins = get_directional_occupancy(dlc_data[d], dlc_data['durations'], n_bins=24)
             directional_occupancy[direction_type][d] = occupancy
 
-    directional_occupancy = {'occupancy': directional_occupancy, 'bins': direction_bins_og} 
+    directional_occupancy = {'occupancy': directional_occupancy, 'bins': direction_bins} 
 
     return directional_occupancy
 
@@ -356,26 +432,33 @@ if __name__ == "__main__":
     limits = get_axes_limits(dlc_data_concat)
 
     # calculate positional occupancy
-    positional_occupancy = get_positional_occupancy(dlc_data_concat, limits)
+    # positional_occupancy = get_positional_occupancy(dlc_data_concat, limits)
     # save the positional_occupancy
-    save_pickle(positional_occupancy, 'positional_occupancy', dlc_dir)
+    # save_pickle(positional_occupancy, 'positional_occupancy', dlc_dir)
     positional_occupancy = load_pickle('positional_occupancy', dlc_dir)
 
     # plot the the trial paths
-    for d in dlc_data.keys():
-        plot_trial_path(dlc_data[d], limits, dlc_dir, d)
+    # for d in dlc_data.keys():
+    #     plot_trial_path(dlc_data[d], limits, dlc_dir, d)
 
     # plot the heat map of occupancy
-    plot_occupancy_heatmap(positional_occupancy, goal_coordinates, dlc_dir)
+    # plot_occupancy_heatmap(positional_occupancy, goal_coordinates, dlc_dir)
     
     # calculate directional occupancy
-    directional_occupancy = get_directional_occupancy(dlc_data_concat)  
+    # directional_occupancy = get_directional_occupancy_from_dlc(dlc_data_concat)  
     # save the directional_occupancy
-    save_pickle(directional_occupancy, 'directional_occupancy', dlc_dir)
+    # save_pickle(directional_occupancy, 'directional_occupancy', dlc_dir)
 
     # plot the directional occupancy
     figure_dir = os.path.join(dlc_dir, 'directional_occupancy_plots')
-    plot_directional_occupancy(directional_occupancy, figure_dir)
+    # plot_directional_occupancy(directional_occupancy, figure_dir)
+
+    # get directional occupancy by position
+    directional_occupancy_by_position = get_directional_occupancy_by_position(dlc_data_concat, limits)
+    # save the directional_occupancy_by_position
+    save_pickle(directional_occupancy_by_position, 'directional_occupancy_by_position', dlc_dir)
+
+
 
     # calculate occupancy by goal
     behaviour_dir = get_behaviour_dir(data_dir)
@@ -398,7 +481,7 @@ if __name__ == "__main__":
 
         # calculate directional occupancy
         directional_occupancy_by_goal[g] = \
-            get_directional_occupancy(dlc_data_concat_by_goal[g])  
+            get_directional_occupancy_from_dlc(dlc_data_concat_by_goal[g])  
         
         figure_dir = os.path.join(dlc_dir, 'directional_occupancy_by_goal', f'goal_{g}')        
         plot_directional_occupancy(directional_occupancy_by_goal[g], figure_dir)

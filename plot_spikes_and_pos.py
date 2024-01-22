@@ -323,49 +323,53 @@ def plot_spike_rates_by_direction(spike_rates_by_direction, plot_dir):
     pass
 
 
-def plot_spike_rates_by_direction_2goals():
+def plot_spike_rates_by_direction_2goals(spike_rates_by_direction, plot_dir):
 
     if not os.path.exists(plot_dir):
         os.mkdir(plot_dir)
 
+    goals = list(spike_rates_by_direction.keys())
+
     # note that polar plot converts radian to degrees. 0 degrees = 0 radians,
     # 90 degrees = pi/2 radians, 180 degrees = +/- pi radians, etc.
         
-    bins = spike_rates_by_direction['bins']
+    bins = spike_rates_by_direction[goals[0]]['bins']
     # polar plot ticks are the centres of the bins
     tick_positions = np.round(bins[:-1] + np.diff(bins)/2, 2)
     tick_positions = np.append(tick_positions, tick_positions[0])
 
-    spike_rates = spike_rates_by_direction['units']
+    units = list(spike_rates_by_direction[goals[0]]['units'].keys())
 
-    for u in spike_rates.keys():
-        # create plot with 8 subplots. Currently we only 
-        # need 7 plots, but easiest to arrange in two rows of 4
+    for u in units:
+        # create plot with 2 rows of 7 polar plots
+        fig, ax = plt.subplots(2, 7, figsize=(20, 10), subplot_kw=dict(polar=True))
+        plt.subplots_adjust(wspace=0.5)
 
-        fig, ax = plt.subplots(2, 4, figsize=(20, 10), subplot_kw=dict(polar=True))
+        for i, g in enumerate(goals):
+            spike_rates = spike_rates_by_direction[g]['units'][u]
         
-        for i, d in enumerate(spike_rates[u].keys()):
+            for j, d in enumerate(spike_rates.keys()):
 
-            # get the spike rates for this direction
-            spike_rates_temp = spike_rates[u][d]
-            # concatenate the first value to the end so that the plot is closed
-            spike_rates_temp = np.append(spike_rates_temp, spike_rates_temp[0])
+                # get the spike rates for this direction
+                spike_rates_temp = spike_rates[d]
+                # concatenate the first value to the end so that the plot is closed
+                spike_rates_temp = np.append(spike_rates_temp, spike_rates_temp[0])
 
-            # make a polar plot
-            ax[i//4, i%4].plot(tick_positions, spike_rates_temp, 'b-')
-            # ax[i//4, i%4].polar(tick_positions, spike_rates_temp, 'k.-', markersize=10)
-            # ax[i//4, i%4].set_xticks(tick_positions)
-            # ax[i//4, i%4].set_xticklabels(tick_positions)
-            # ax[i//4, i%4].set_ylim([0, 10])
-            # ax[i//4, i%4].set_yticks([0, 5, 10])
-            ax[i//4, i%4].tick_params(axis='x', labelsize=15) # these are the degrees
-            ax[i//4, i%4].tick_params(axis='y', labelsize=15) # these are the rates
-            
-            if d != 'hd':
-                ax[i//4, i%4].set_theta_zero_location('N')
-            # ax[i//4, i%4].set_theta_direction(-1)
+                # make a polar plot
+                ax[i, j].plot(tick_positions, spike_rates_temp, 'b-')
+                # ax[i//4, i%4].polar(tick_positions, spike_rates_temp, 'k.-', markersize=10)
+                # ax[i//4, i%4].set_xticks(tick_positions)
+                # ax[i//4, i%4].set_xticklabels(tick_positions)
+                # ax[i//4, i%4].set_ylim([0, 10])
+                # ax[i//4, i%4].set_yticks([0, 5, 10])
+                ax[i, j].tick_params(axis='x', labelsize=8) # these are the degrees
+                ax[i, j].tick_params(axis='y', labelsize=8) # these are the rates
+                
+                if d != 'hd':
+                    ax[i, j].set_theta_zero_location('N')
+                # ax[i//4, i%4].set_theta_direction(-1)
 
-            ax[i//4, i%4].set_title(f'{u} - {d}', fontsize=15)
+                ax[i, j].set_title(f'{u} - {d}', fontsize=8)
 
         # plt.show()
         fig.savefig(os.path.join(plot_dir, f'{u}.png'))
