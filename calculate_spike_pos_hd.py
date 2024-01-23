@@ -61,6 +61,7 @@ def get_unit_position_and_directions(dlc_data, unit):
 
     return unit
 
+
 def bin_spikes_by_position(units, positional_occupancy):
 
     # get the x and y bins
@@ -217,7 +218,7 @@ def bin_spikes_by_direction(units, directional_occupancy):
                     directional_data = np.concatenate((directional_data, units[u][t][d]))
             
             # sort the directional data into bins
-            # get the bin indices for each value in dlc_data[d]
+            # get the bin indices for each value in directional data
             bin_indices = np.digitize(directional_data, direction_bins, right=True) - 1
             # any bin_indices that are -1 should be 0
             bin_indices[bin_indices==-1] = 0
@@ -250,6 +251,85 @@ def bin_spikes_by_direction(units, directional_occupancy):
     return spike_rates, spike_counts
 
 
+def bin_spikes_by_position_and_direction(units, directional_occupancy_by_position):
+    
+    # get the x and y bins
+    x_bins_og = directional_occupancy_by_position['x_bins']
+    x_bins = x_bins_og.copy()
+    x_bins[-1] = x_bins[-1] + 1e-6 # add a small number to the last bin so that the last value is included in the bin
+
+    y_bins_og = directional_occupancy_by_position['y_bins']
+    y_bins = y_bins_og.copy()
+    y_bins[-1] = y_bins[-1] + 1e-6 # add a small number to the last bin so that the last value is included in the bin
+
+    # get the direction bins
+    direction_bins_og = directional_occupancy_by_position['direction_bins']
+    direction_bins = direction_bins_og.copy()
+    direction_bins[0] = direction_bins_og[0] - 0.1 # subtract a small number from the first bin so that the first value is included in the bin
+    direction_bins[-1] = direction_bins_og[-1] + 0.1 # add a small number to the last bin so that the last value is included in the bin
+
+    n_bins = len(direction_bins) - 1
+
+    # loop through the units
+    spike_rates_by_position_and_direction = {'units': {}, 'x_bins': x_bins_og, 
+                    'y_bins': y_bins_og, 'direction_bins': direction_bins_og}
+    
+    for u in units.keys():
+
+        spike_rates_by_position_and_direction['units'][u] = \
+            np.zeros((len(y_bins)-1, len(x_bins)-1, n_bins))
+        
+        # loop through the trials getting all the spike positions
+        for i, t in enumerate(units[u].keys()):
+            # get the x and y positions
+            if i == 0:
+                x = units[u][t]['x']
+                y = units[u][t]['y']
+                hd = units[u][t]['hd']
+                samples = units[u][t]['samples']
+            else:
+                x = np.concatenate((x, units[u][t]['x']))
+                y = np.concatenate((y, units[u][t]['y']))
+                hd = np.concatenate((hd, units[u][t]['hd']))
+                samples = np.concatenate((samples, units[u][t]['samples']))
+               
+        # sort the spike positions into bins
+        x_bin = np.digitize(x, x_bins) - 1
+        y_bin = np.digitize(y, y_bins) - 1
+
+        for i in range(np.max(x_bin)+1):
+            for j in range(np.max(y_bin)+1):
+
+                # get the directional occupancy for x_bin == i and y_bin == j
+                directional_occupancy = directional_occupancy_by_position['occupancy'][j, i]
+
+                # get the indices where x_bin == i and y_bin == j
+                indices = np.where((x_bin == i) & (y_bin == j))[0]
+
+                # get the head directions for these indices
+                hd_temp = hd[indices]
+
+                # sort the head directions into bins
+                bin_indices = np.digitize(hd_temp, direction_bins, right=True) - 1
+                bin_indices[bin_indices==-1] = 0
+                # any bin_indices that are n_bins should be n_bins-1
+                bin_indices[bin_indices==n_bins] = n_bins-1
+
+                # get the spike counts and rates
+                spike_counts_temp = np.zeros(n_bins)
+                spike_rates_temp = np.zeros(n_bins)
+
+                for b in range(n_bins):
+                    # get the spike counts for the current bin
+                    spike_counts_temp[b] = np.sum(bin_indices==b)
+                    spike_rates_temp[b] = np.round(spike_counts_temp[b] / directional_occupancy[b], 3)
+
+                # place the spike rates in the correct position in the array
+                spike_rates_by_position_and_direction['units'][u][j, i, :] = spike_rates_temp
+
+    return spike_rates_by_position_and_direction
+
+
 if __name__ == "__main__":
     animal = 'Rat65'
     session = '10-11-2023'
@@ -257,42 +337,55 @@ if __name__ == "__main__":
 
     # load spike data
     spike_dir = os.path.join(data_dir, 'spike_sorting')
-    restricted_units = load_pickle('restricted_units', spike_dir)
+    # restricted_units = load_pickle('restricted_units', spike_dir)
 
     # load neuron classification data
-    neuron_types = load_pickle('neuron_types', spike_dir)
+    # neuron_types = load_pickle('neuron_types', spike_dir)
 
     # load positional data
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
     dlc_data = load_pickle('dlc_final', dlc_dir)
 
     # loop through units and calculate positions and various directional correlates
-    for unit in restricted_units.keys():
-        restricted_units[unit] = get_unit_position_and_directions(dlc_data, restricted_units[unit])
+    # for unit in restricted_units.keys():
+    #     restricted_units[unit] = get_unit_position_and_directions(dlc_data, restricted_units[unit])
 
     # save the restricted units
-    save_pickle(restricted_units, 'units_w_behav_correlates', spike_dir)
+    # save_pickle(restricted_units, 'units_w_behav_correlates', spike_dir)
 
     # bin spikes by position
     positional_occupancy = load_pickle('positional_occupancy', dlc_dir)
     # load units
     units = load_pickle('units_w_behav_correlates', spike_dir)
     # bin spikes by position
-    rate_maps = bin_spikes_by_position(units, positional_occupancy)
+    # rate_maps = bin_spikes_by_position(units, positional_occupancy)
     # save the spike counts by position
-    save_pickle(rate_maps, 'rate_maps', spike_dir)
+    # save_pickle(rate_maps, 'rate_maps', spike_dir)
 
     # create smoothed rate_maps
-    smoothed_rate_maps = smooth_rate_maps(rate_maps)
-    save_pickle(smoothed_rate_maps, 'smoothed_rate_maps', spike_dir) 
+    # smoothed_rate_maps = smooth_rate_maps(rate_maps)
+    # save_pickle(smoothed_rate_maps, 'smoothed_rate_maps', spike_dir) 
 
     # bin spikes by direction
-    directional_occupancy = load_pickle('directional_occupancy', dlc_dir)
-    spike_rates_by_direction, spike_counts = bin_spikes_by_direction(units, 
-                                            directional_occupancy)
+    # directional_occupancy = load_pickle('directional_occupancy', dlc_dir)
+    # spike_rates_by_direction, spike_counts = bin_spikes_by_direction(units, 
+    #                                         directional_occupancy)
     # save the spike counts and rates by direction
-    save_pickle(spike_rates_by_direction, 'spike_rates_by_direction', spike_dir)
-    save_pickle(spike_counts, 'spike_counts_by_direction', spike_dir)
+    # save_pickle(spike_rates_by_direction, 'spike_rates_by_direction', spike_dir)
+    # save_pickle(spike_counts, 'spike_counts_by_direction', spike_dir)
+
+    # load the directional occupancy by position data
+    directional_occupancy_by_position = load_pickle('directional_occupancy_by_position', dlc_dir)
+    # bin spikes by position and direction
+    spike_rates_by_position_and_direction = bin_spikes_by_position_and_direction(units, 
+                                            directional_occupancy_by_position)
+    
+    # save the spike rates by position and direction
+    save_pickle(spike_rates_by_position_and_direction, 'spike_rates_by_position_and_direction', spike_dir)
+
+
+
+
 
     # sort spike data by goal
     behaviour_dir = get_behaviour_dir(data_dir)
