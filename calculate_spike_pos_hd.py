@@ -274,6 +274,8 @@ def bin_spikes_by_position_and_direction(units, directional_occupancy_by_positio
     spike_rates_by_position_and_direction = {'units': {}, 'x_bins': x_bins_og, 
                     'y_bins': y_bins_og, 'direction_bins': direction_bins_og}
     
+    bad_vals = {}
+    
     for u in units.keys():
 
         spike_rates_by_position_and_direction['units'][u] = \
@@ -322,12 +324,61 @@ def bin_spikes_by_position_and_direction(units, directional_occupancy_by_positio
                 for b in range(n_bins):
                     # get the spike counts for the current bin
                     spike_counts_temp[b] = np.sum(bin_indices==b)
+
+                    # if spike_counts_temp[b] is greater than 0 and directional_occupancy[b] is 0
+                    # throw an error
+                    if spike_counts_temp[b] > 0 and directional_occupancy[b] == 0:
+                        # save the samples numbers and head directions to check against
+                        # the dlc_data and make sure the codes not broken
+                        # if bad_vals doesn't have u as a key, create it
+                        if u not in bad_vals.keys():
+                            bad_vals[u] = {'samples': samples[indices[bin_indices == b]], 
+                                           'hd': hd[indices[bin_indices == b]]}
+                        # otherwise append the samples and hd
+                        else:
+                            bad_vals[u]['samples'] = np.concatenate((bad_vals[u]['samples'], 
+                                                                     samples[indices[bin_indices == b]]))
+                            bad_vals[u]['hd'] = np.concatenate((bad_vals[u]['hd'], 
+                                                                     hd[indices[bin_indices == b]]))
+
                     spike_rates_temp[b] = np.round(spike_counts_temp[b] / directional_occupancy[b], 3)
 
                 # place the spike rates in the correct position in the array
                 spike_rates_by_position_and_direction['units'][u][j, i, :] = spike_rates_temp
 
-    return spike_rates_by_position_and_direction
+    return spike_rates_by_position_and_direction, bad_vals
+
+
+def check_bad_vals(bad_vals, dlc_data):
+
+    # concatenate the dlc_data
+    for i, d in enumerate(dlc_data.keys()):
+        if i == 0:
+            dlc_data_concat = dlc_data[d]
+        else:
+            dlc_data_concat = pd.concat([dlc_data_concat, dlc_data[d]], ignore_index=True)
+   
+    # loop through the units
+    for u in bad_vals.keys():
+        # loop through the samples
+        for i, s in enumerate(bad_vals[u]['samples']):
+            # get the index of the sample in dlc_data_concat that is smaller but closest to s
+            ind1 = dlc_data_concat['video_samples'][dlc_data_concat['video_samples'] < s].idxmax()
+            # get the index of the sample in dlc_data_concat that is larger but closest to s
+            ind2 = dlc_data_concat['video_samples'][dlc_data_concat['video_samples'] > s].idxmin()
+
+            # get the head direction from dlc_data_concat at ind1 and ind2
+            hd1 = dlc_data_concat['hd'][ind1]
+            hd2 = dlc_data_concat['hd'][ind2]
+
+            # get the hd at i from bad values
+            hd = bad_vals[u]['hd'][i]
+
+            # print the values for manual inspection
+            print('hd before: ', hd1)
+            print('hd after: ', hd2)
+            print('hd from bad_vals: ', hd)
+    pass
 
 
 if __name__ == "__main__":
@@ -377,9 +428,12 @@ if __name__ == "__main__":
     # load the directional occupancy by position data
     directional_occupancy_by_position = load_pickle('directional_occupancy_by_position', dlc_dir)
     # bin spikes by position and direction
-    spike_rates_by_position_and_direction = bin_spikes_by_position_and_direction(units, 
+    spike_rates_by_position_and_direction, bad_vals = bin_spikes_by_position_and_direction(units, 
                                             directional_occupancy_by_position)
     
+    check_bad_vals(bad_vals, dlc_data)
+
+
     # save the spike rates by position and direction
     save_pickle(spike_rates_by_position_and_direction, 'spike_rates_by_position_and_direction', spike_dir)
 
