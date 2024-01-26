@@ -381,6 +381,13 @@ def check_bad_vals(bad_vals, dlc_data):
     pass
 
 
+def create_artificial_unit(units, directional_occupancy_by_position)
+
+    pass
+
+    return artifial_unit
+
+
 if __name__ == "__main__":
     animal = 'Rat65'
     session = '10-11-2023'
@@ -428,17 +435,18 @@ if __name__ == "__main__":
     # load the directional occupancy by position data
     directional_occupancy_by_position = load_pickle('directional_occupancy_by_position', dlc_dir)
     # bin spikes by position and direction
-    spike_rates_by_position_and_direction, bad_vals = bin_spikes_by_position_and_direction(units, 
-                                            directional_occupancy_by_position)
+    # spike_rates_by_position_and_direction, bad_vals = bin_spikes_by_position_and_direction(units, 
+    #                                         directional_occupancy_by_position)
     
-    check_bad_vals(bad_vals, dlc_data)
+    # check_bad_vals(bad_vals, dlc_data)
 
 
-    # save the spike rates by position and direction
-    save_pickle(spike_rates_by_position_and_direction, 'spike_rates_by_position_and_direction', spike_dir)
+    # # save the spike rates by position and direction
+    # save_pickle(spike_rates_by_position_and_direction, 'spike_rates_by_position_and_direction', spike_dir)
 
 
-
+    # create an artificial unit for testing vector field code
+    artifial_unit = create_artificial_unit(units, directional_occupancy_by_position)
 
 
     # sort spike data by goal
