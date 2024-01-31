@@ -125,3 +125,4 @@ if __name__ == "__main__":
     # plot vector fields
     plot_dir = os.path.join(spike_dir, 'vector_fields')
     plot_vector_fields(vector_fields, plot_dir)
+    
