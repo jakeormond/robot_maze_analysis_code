@@ -381,11 +381,11 @@ def check_bad_vals(bad_vals, dlc_data):
     pass
 
 
-def create_artificial_unit(units, directional_occupancy_by_position)
+def create_artificial_unit(units, directional_occupancy_by_position):
 
     pass
 
-    return artifial_unit
+    return 
 
 
 if __name__ == "__main__":
