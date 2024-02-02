@@ -170,9 +170,6 @@ def cat_dlc(windowed_dlc):
 
     dlc_array = np.round(dlc_array, 3)
 
-    # transpose the array
-    dlc_array = dlc_array.T
-
     return dlc_array
 
 
@@ -199,6 +196,9 @@ def cat_spike_trains(spike_trains):
         else:
             spike_array = np.concatenate((spike_array, temp_array), axis=1)
 
+    spike_array = np.round(spike_array, 3)
+    spike_array = np.transpose(spike_array)
+
     return spike_array, unit_list
 
 
@@ -217,17 +217,17 @@ if __name__ == "__main__":
 
     # create positional and spike trains with overlapping windows
     # and save as a pickle file
-    # windowed_dlc, window_edges = create_positional_trains(dlc_data, window_size=100)
-    # windowed_data = {'windowed_dlc': windowed_dlc, 'window_edges': window_edges}
-    # save_pickle(windowed_data, 'windowed_data', dlc_dir)
+    windowed_dlc, window_edges = create_positional_trains(dlc_data, window_size=100)
+    windowed_data = {'windowed_dlc': windowed_dlc, 'window_edges': window_edges}
+    save_pickle(windowed_data, 'windowed_data', dlc_dir)
 
     windowed_data = load_pickle('windowed_data', dlc_dir)
     windowed_dlc = windowed_data['windowed_dlc']
     window_edges = windowed_data['window_edges']
 
     # create spike trains
-    # spike_trains = create_spike_trains(units, window_edges, windowed_data)
-    # save_pickle(spike_trains, 'spike_trains', spike_dir)
+    spike_trains = create_spike_trains(units, window_edges, windowed_data)
+    save_pickle(spike_trains, 'spike_trains', spike_dir)
 
     spike_trains = load_pickle('spike_trains', spike_dir)
 
@@ -237,6 +237,6 @@ if __name__ == "__main__":
 
     # concatenate spike trains into np.arrays for training
     model_inputs, unit_list = cat_spike_trains(spike_trains)
-    np.save(f'{spike_dir}/labels.npy', model_inputs)
+    np.save(f'{spike_dir}/inputs.npy', model_inputs)
     save_pickle(unit_list, 'unit_list', spike_dir)
     pass 
