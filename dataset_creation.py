@@ -152,7 +152,7 @@ def cat_dlc(windowed_dlc):
                 count += 1
 
             else:
-                # angular data needs to be converted to sin and cos
+                # angular data needs to be converted to sin and cos             
                 temp_array[:, count] = np.sin(windowed_dlc[k][c].values)
                 temp_array[:, count+1] = np.cos(windowed_dlc[k][c].values)
                 count += 2
@@ -162,9 +162,8 @@ def cat_dlc(windowed_dlc):
         else:
             dlc_array = np.concatenate((dlc_array, temp_array), axis=0)
         
-    # columns corresponding to x, y, distance_to_goal x2 need to be normalized
-    # to the range 0-1
-    for i in range(4):
+    # all columns need to be scaled to the range 0-1
+    for i in range(dlc_array.shape[1]) :
         dlc_array[:, i] = (dlc_array[:, i] - np.min(dlc_array[:, i])) / \
                             (np.max(dlc_array[:, i]) - np.min(dlc_array[:, i]))
 
@@ -233,10 +232,14 @@ if __name__ == "__main__":
 
     # concatenate data from all trials into np.arrays for training
     labels = cat_dlc(windowed_dlc)
+    # convert labels to float32
+    labels = labels.astype(np.float32)
     np.save(f'{dlc_dir}/labels.npy', labels)
 
     # concatenate spike trains into np.arrays for training
     model_inputs, unit_list = cat_spike_trains(spike_trains)
+    # convert model_inputs to float32
+    model_inputs = model_inputs.astype(np.float32)
     np.save(f'{spike_dir}/inputs.npy', model_inputs)
     save_pickle(unit_list, 'unit_list', spike_dir)
     pass 

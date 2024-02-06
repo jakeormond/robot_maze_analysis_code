@@ -2,6 +2,7 @@ import torch
 from torch.utils.data import Dataset
 import numpy as np
 import os
+from sklearn.model_selection import KFold
 
 from get_directories import get_data_dir
 from load_and_save_data import load_pickle, save_pickle
@@ -32,13 +33,16 @@ class NNDataset(Dataset):
         if torch.is_tensor(idx):
             idx = idx.tolist()
 
-        sample = {'spike_trains': self.spike_trains[idx],
-                  'positional_trains': self.positional_trains[idx]}
+        # sample = {'spike_trains': self.spike_trains[idx],
+        #          'positional_trains': self.positional_trains[idx]}
+
+        spike_train = self.spike_trains[idx]
+        positional_train = self.positional_trains[idx]
 
         if self.transform:
-            sample = self.transform(sample)
+            spike_train = self.transform(spike_train)
 
-        return sample
+        return spike_train, positional_train
     
 
 # load the spike data and positional data
@@ -54,8 +58,12 @@ inputs = np.load(f'{spike_dir}/inputs.npy')
 dlc_dir = os.path.join(data_dir, 'deeplabcut')
 labels = np.load(f'{dlc_dir}/labels.npy')
 
+# create the k folds splits
+n_splits = 5
+kf = KFold(n_splits=n_splits, shuffle=True)
+kf.split(inputs)
+for i, (train_index, test_index) in enumerate(kf.split(inputs)):
+    training_data = NNDataset(inputs[train_index, :], labels[train_index, :])
+    testing_data = NNDataset(inputs[test_index, :], labels[test_index, :])
 
-spike_pos_dataset = NNDataset(inputs, labels)
-
-spike_pos_dataset[0]
-pass
+    # then train the model
