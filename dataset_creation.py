@@ -87,7 +87,10 @@ def create_spike_trains(units, window_edges, windowed_data, overlap=0.5, window_
                 spike_trains[u] = {}
             
             # get the spike times for the unit
-            spike_times = units[u][k]['samples'] 
+            spike_times = units[u][k]
+
+            if not isinstance(spike_times, np.ndarray): 
+                spike_times = spike_times['samples'] 
 
             # bin spike times into the windows
             binned_spikes = np.histogram(spike_times, window_edges[k])[0]
@@ -202,17 +205,26 @@ def cat_spike_trains(spike_trains):
 
 
 if __name__ == "__main__":
-    animal = 'Rat65'
-    session = '10-11-2023'
-    data_dir = get_data_dir(animal, session)
+    # animal = 'Rat65'
+    # session = '10-11-2023'
+    # data_dir = get_data_dir(animal, session)
     
+    data_dir = 'D:/analysis/og_honeycomb/rat7/6-12-2019'
+
     # load spike data
-    spike_dir = os.path.join(data_dir, 'spike_sorting')
-    units = load_pickle('units_w_behav_correlates', spike_dir)
+    # spike_dir = os.path.join(data_dir, 'spike_sorting')
+    # units = load_pickle('units_w_behav_correlates', spike_dir)
+
+    spike_dir = os.path.join(data_dir, 'physiology_data')
+    units = load_pickle('restricted_units', spike_dir)
 
     # load positional data
-    dlc_dir = os.path.join(data_dir, 'deeplabcut')
-    dlc_data = load_pickle('dlc_final', dlc_dir)
+    # dlc_dir = os.path.join(data_dir, 'deeplabcut')
+    # dlc_data = load_pickle('dlc_final', dlc_dir)
+
+    dlc_dir = os.path.join(data_dir, 'positional_data')
+    dlc_data  = load_pickle('dlc_data', dlc_dir)
+    dlc_data = dlc_data['hComb']
 
     # create positional and spike trains with overlapping windows
     # and save as a pickle file

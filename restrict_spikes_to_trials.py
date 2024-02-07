@@ -19,7 +19,10 @@ def restrict_spikes_to_trials(units, dlc_data):
 
     for u in units.keys():
         # get the spike times for the unit
-        spike_times = units[u]['samples']
+
+        spike_times = units[u]
+        if not isinstance(spike_times, np.ndarray): 
+            spike_times = spike_times['samples']
 
         restricted_units[u] = {}
 
@@ -40,19 +43,28 @@ def restrict_spikes_to_trials(units, dlc_data):
 
 if __name__ == "__main__":
     
-    animal = 'Rat65'
-    session = '10-11-2023'
-    data_dir = get_data_dir(animal, session)
+    # animal = 'Rat65'
+    # session = '10-11-2023'
+    # data_dir = get_data_dir(animal, session)
+
+    data_dir = 'D:/analysis/og_honeycomb/rat7/6-12-2019'
     
     # load the dlc data, which contains the trial times
-    dlc_dir = os.path.join(data_dir, 'deeplabcut')
-    dlc_data = load_pickle('dlc_final', dlc_dir)
+    # dlc_dir = os.path.join(data_dir, 'deeplabcut')
+    # dlc_data = load_pickle('dlc_final', dlc_dir)
+
+    pos_dir = os.path.join(data_dir, 'positional_data')
+    dlc_data = load_pickle('dlc_data', pos_dir)
+
        
     # load the spike data
-    unit_dir = os.path.join(data_dir, 'spike_sorting')
+    # unit_dir = os.path.join(data_dir, 'spike_sorting')
+
+    unit_dir = 'D:/analysis/og_honeycomb/rat7/6-12-2019/physiology_data'
     units = load_pickle('unit_spike_times', unit_dir)
+    units = units['pyramid']
     
-    restricted_units = restrict_spikes_to_trials(units, dlc_data)
+    restricted_units = restrict_spikes_to_trials(units, dlc_data['hComb'])
     save_pickle(restricted_units, 'restricted_units', unit_dir)
 
     pass

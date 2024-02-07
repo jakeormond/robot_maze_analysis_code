@@ -89,18 +89,24 @@ if __name__ == "__main__":
 
     # create dataset
     # load the spike data and positional data
-    animal = 'Rat65'
-    session = '10-11-2023'
-    data_dir = get_data_dir(animal, session)    
-    
-    spike_dir = os.path.join(data_dir, 'spike_sorting')
+    # animal = 'Rat65'
+    # session = '10-11-2023'
+    # data_dir = get_data_dir(animal, session)    
+    data_dir = 'D:/analysis/og_honeycomb/rat7/6-12-2019'
+
+
+    # spike_dir = os.path.join(data_dir, 'spike_sorting')
+    spike_dir = os.path.join(data_dir, 'physiology_data')
     # load spike train inputs.npy
     inputs = np.load(f'{spike_dir}/inputs.npy')
     n_units = inputs.shape[1]
 
     # load position train labels.npy
-    dlc_dir = os.path.join(data_dir, 'deeplabcut')
+    # dlc_dir = os.path.join(data_dir, 'deeplabcut')
+    dlc_dir = os.path.join(data_dir, 'positional_data')
     labels = np.load(f'{dlc_dir}/labels.npy')
+    labels = labels[:, 0:2] # only use x and y position    
+    
     n_outputs = labels.shape[1]   
    
     n_hidden = 512
