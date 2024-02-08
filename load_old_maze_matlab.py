@@ -60,7 +60,9 @@ def create_ps_dataframes(positional_data_dir):
         sample_rate = int((np.round(samples[0][0]/ts[0][0]) * 1000)[0])
 
         # extract the x and y coordinates
+        # xy = pos_data['dlc_XYsmooth']
         xy = pos_data['dlc_XYsmooth']
+        
         xy = round_matlab_data(xy, 2)
 
         # extract the head angle
@@ -137,7 +139,8 @@ def create_spike_arrays(spike_data_dir):
 
 if __name__ == '__main__':
     
-    data_dir = 'D:/analysis/og_honeycomb'
+    # data_dir = 'D:/analysis/og_honeycomb'
+    data_dir = '/media/jake/DataStorage_6TB/DATA/neural_network/og_honeycomb'
 
     rat = 7
     date = '6-12-2019'

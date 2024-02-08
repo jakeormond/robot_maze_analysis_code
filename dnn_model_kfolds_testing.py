@@ -20,8 +20,8 @@ from nn_dataset import NNDataset
 ############# HYPEPARAMETERS #########################
 learning_rate = 0.01
 batch_size = 64
-n_epochs = 1000
-n_hidden = 526
+n_epochs = 200
+n_hidden = 64
 loss_fn = nn.MSELoss()
 
 
@@ -47,8 +47,9 @@ class SeqNet(nn.Module):
 # train and test loops
 def train_loop(dataloader, model, loss_fn, optimizer, device):
     size = len(dataloader.dataset)
+    
     # Set the model to training mode - important for batch normalization and dropout layers
-    # Unnecessary in this situation but added for best practices
+    # Unnecessary in this situation but added for best practices   
     model.train()
     for batch, (X, y) in enumerate(dataloader):
         # Compute prediction and loss
@@ -56,10 +57,13 @@ def train_loop(dataloader, model, loss_fn, optimizer, device):
         loss = loss_fn(pred, y.to(device))
 
         # Backpropagation
+        # optimizer.zero_grad()
+        # loss.backward()
+        # optimizer.step()
         loss.backward()
         optimizer.step()
         optimizer.zero_grad()
-
+        
         if batch % 100 == 0:
             loss, current = loss.item(), batch * batch_size + len(X)
             print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
@@ -77,10 +81,10 @@ def test_loop(dataloader, model, loss_fn, device):
     with torch.no_grad():
         for X, y in dataloader:
             pred = model(X.to(device))
-            test_loss += loss_fn(pred, y.to(device)).item()
+            test_loss += loss_fn(pred, y.to(device)).item()            
 
     test_loss /= num_batches
-    print(f"Test Error: Avg loss: {test_loss:>8f} \n")
+    print(f"Avg loss: {test_loss:>8f} \n")
 
     return test_loss
 
@@ -97,45 +101,24 @@ if __name__ == "__main__":
         print(torch.cuda.get_device_name(0))
     else:
         # throw error if not using GPU  
-        raise Exception("Need a GPU to train the model")
+        raise Exception("Need a GPU to train the model")    
 
 
-    ############### LOAD DATA ############################
-    # create dataset
-    # load the spike data and positional data
-    # animal = 'Rat65'
-    # session = '10-11-2023'
-    # data_dir = get_data_dir(animal, session)    
-    # data_dir = 'D:/analysis/og_honeycomb/rat7/6-12-2019'
-    
-    data_dir = '/media/jake/DataStorage_6TB/DATA/neural_network/og_honeycomb/rat7/6-12-2019'
-    # spike_dir = os.path.join(data_dir, 'spike_sorting')
-    spike_dir = os.path.join(data_dir, 'physiology_data')
-    # load spike train inputs.npy
-    X = np.load(f'{spike_dir}/inputs.npy')
-
-    # load position train labels.npy
-    # dlc_dir = os.path.join(data_dir, 'deeplabcut')
-    dlc_dir = os.path.join(data_dir, 'positional_data')
-    labels = np.load(f'{dlc_dir}/labels.npy')
-    y = labels[:, 0:2] # only use x and y position    
+    ########### generate regression dataset ##########
+    X, y = make_regression(
+        n_samples=1000, n_features=100, n_informative= 50, n_targets = 10, noise=5, random_state=4)
     if y.ndim == 1:
         y = y.reshape(-1, 1)
-    
-    # data_dir = '/media/jake/DataStorage_6TB/DATA/neural_network'
-    # inputs = np.load(os.path.join(data_dir, 'features.npy'))
-    # labels = np.load(os.path.join(data_dir, 'target.npy'))
-    # # make labels 2d
-    # labels = np.expand_dims(labels, axis=1)
 
-    ######## SCALE THE DATA ###########################
+    
+    ######## scale the data ###########################
     X_scaler = MinMaxScaler()
     X_scaled = X_scaler.fit_transform(X)
     y_scaler = MinMaxScaler()
     y_scaled = y_scaler.fit_transform(y)
-
     
-    ############# TRAIN THE MODEL USING K_FOLDS ####################
+ 
+    ############# train the model using k_folds#####################
     n_splits = 5
     kf = KFold(n_splits=n_splits, shuffle=True)
     k_fold_splits = {}
@@ -188,7 +171,7 @@ if __name__ == "__main__":
         y_pred = y_pred.detach().cpu().numpy()
         
         figure = plt.figure()
-        plt.scatter(y_pred[:,0], y_test[:, 0])
+        plt.scatter(y_pred[:,1], y_test[:, 1])
         plt.xlabel('y_pred')
         plt.ylabel('y_test')
         plt.show()

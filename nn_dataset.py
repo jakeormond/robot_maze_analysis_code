@@ -22,8 +22,8 @@ class NNDataset(Dataset):
             transform (callable, optional): Optional transform to be applied
                 on a sample.
         """
-        self.spike_trains = torch.from_numpy(spike_trains)
-        self.positional_trains = torch.from_numpy(positional_trains)
+        self.spike_trains = torch.from_numpy(spike_trains.astype(np.float32))
+        self.positional_trains = torch.from_numpy(positional_trains.astype(np.float32))
         self.transform = transform
 
     def __len__(self):
@@ -44,26 +44,33 @@ class NNDataset(Dataset):
 
         return spike_train, positional_train
     
+if __name__ == '__main__':
+    # load the spike data and positional data
+    # animal = 'Rat65'
+    # session = '10-11-2023'
+    # data_dir = get_data_dir(animal, session)
 
-# load the spike data and positional data
-animal = 'Rat65'
-session = '10-11-2023'
-data_dir = get_data_dir(animal, session)
+    # spike_dir = os.path.join(data_dir, 'spike_sorting')
+    # # load spike train inputs.npy
+    # inputs = np.load(f'{spike_dir}/inputs.npy')
 
-spike_dir = os.path.join(data_dir, 'spike_sorting')
-# load spike train inputs.npy
-inputs = np.load(f'{spike_dir}/inputs.npy')
+    # # load position train labels.npy
+    # dlc_dir = os.path.join(data_dir, 'deeplabcut')
+    # labels = np.load(f'{dlc_dir}/labels.npy')
 
-# load position train labels.npy
-dlc_dir = os.path.join(data_dir, 'deeplabcut')
-labels = np.load(f'{dlc_dir}/labels.npy')
+    data_dir = '/media/jake/DataStorage_6TB/DATA/neural_network'
+    inputs = np.load(os.path.join(data_dir, 'features.npy'))
+    labels = np.load(os.path.join(data_dir, 'target.npy'))
+    # make labels 2d
+    labels = np.expand_dims(labels, axis=1)
 
-# create the k folds splits
-n_splits = 5
-kf = KFold(n_splits=n_splits, shuffle=True)
-kf.split(inputs)
-for i, (train_index, test_index) in enumerate(kf.split(inputs)):
-    training_data = NNDataset(inputs[train_index, :], labels[train_index, :])
-    testing_data = NNDataset(inputs[test_index, :], labels[test_index, :])
+    
+    # create the k folds splits
+    n_splits = 5
+    kf = KFold(n_splits=n_splits, shuffle=True)
+    kf.split(inputs)
+    for i, (train_index, test_index) in enumerate(kf.split(inputs)):
+        training_data = NNDataset(inputs[train_index, :], labels[train_index, :])
+        testing_data = NNDataset(inputs[test_index, :], labels[test_index, :])
 
-    # then train the model
+        # then train the model

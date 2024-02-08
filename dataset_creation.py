@@ -209,7 +209,8 @@ if __name__ == "__main__":
     # session = '10-11-2023'
     # data_dir = get_data_dir(animal, session)
     
-    data_dir = 'D:/analysis/og_honeycomb/rat7/6-12-2019'
+    # data_dir = 'D:/analysis/og_honeycomb/rat7/6-12-2019'
+    data_dir = '/media/jake/DataStorage_6TB/DATA/neural_network/og_honeycomb/rat7/6-12-2019'
 
     # load spike data
     # spike_dir = os.path.join(data_dir, 'spike_sorting')
