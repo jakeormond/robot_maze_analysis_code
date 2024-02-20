@@ -70,10 +70,10 @@ def process_dlc_data(dlc_dir):
         # HEAD TRACKING: identify frames where tracking hasn't been able to identify dots 1 and 4, which are 
         # the points used to track the animal and calculate head direction
         dot1_lklhood = dlc["dot1", "likelihood"]
-        dot1_bad_frames = [i for i,v in enumerate(dot1_lklhood) if v < .9]
+        dot1_bad_frames = [i for i,v in enumerate(dot1_lklhood) if v < .7]
         
         dot4_lklhood = dlc["dot1", "likelihood"]
-        dot4_bad_frames = [i for i,v in enumerate(dot4_lklhood) if v < .9]
+        dot4_bad_frames = [i for i,v in enumerate(dot4_lklhood) if v < .7]
         
         bad_frames = dot1_bad_frames + dot4_bad_frames
         bad_frames = list(set(bad_frames))
@@ -92,7 +92,7 @@ def process_dlc_data(dlc_dir):
         
         # BODY TRACKING
         body_lklhood = dlc[body_col, "likelihood"]
-        body_bad_frames = [i for i,v in enumerate(dot1_lklhood) if v < .9]
+        body_bad_frames = [i for i,v in enumerate(dot1_lklhood) if v < .7]
         consec_bad_body_frames = get_consec(body_bad_frames)
         
         dlc_body_interp = dlc[body_col]
@@ -334,36 +334,39 @@ def interpolate_out_nans(dlc_data):
 
 
 if __name__ == "__main__":
-    animal = 'Rat65'
-    session = '10-11-2023'
+    animal = 'Rat47'
+    session = '08-02-2024'
     data_dir = get_data_dir(animal, session)
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
-    # dlc_processed_data = process_dlc_data(dlc_dir)
-    # save_pickle(dlc_processed_data, 'dlc_processed_data', dlc_dir)
+    dlc_processed_data = process_dlc_data(dlc_dir)
+    save_pickle(dlc_processed_data, 'dlc_processed_data', dlc_dir)
     # dlc_processed_data = load_pickle('dlc_processed_data', dlc_dir) 
 
     # get the video startpoints
-    # video_startpoints = get_video_startpoints(dlc_processed_data)
+    video_dir = os.path.join(data_dir, 'video_files')
+    video_startpoints = get_video_startpoints(dlc_processed_data)
+    save_pickle(video_startpoints, 'video_startpoints', video_dir)
 
     # load the pulses, which contains both the bonsai and spikeglx pulses in 
     # ms and samples, respectively
     # pulses = load_bonsai_pulses(data_dir)
+    video_csv_dir = os.path.join(data_dir, 'video_csv_files')
+    pulses = load_pickle('pulses_dataframes', video_csv_dir)
 
-    # dlc_processed_with_samples = get_video_times_in_samples(dlc_processed_data, pulses)
-    # save_pickle(dlc_processed_with_samples, 'dlc_processed_with_samples', dlc_dir)
+    dlc_processed_with_samples = get_video_times_in_samples(dlc_processed_data, pulses)
+    save_pickle(dlc_processed_with_samples, 'dlc_processed_with_samples', dlc_dir)
        
     # Once we have aligned the video data with the pulses recorded by the imec system, 
     # we can restrict the video data to the start and end of the video. 
-    # video_dir = os.path.join(data_dir, 'video_files')
+    video_dir = os.path.join(data_dir, 'video_files')
     # video_startpoints = load_pickle('video_startpoints', video_dir)
-    # video_endpoints = load_pickle('video_endpoints', video_dir)
+    video_endpoints = load_pickle('video_endpoints', video_dir)
 
-    # dlc_final = restrict_dlc_to_video_start_and_end(dlc_processed_with_samples, 
-    #                                        video_startpoints, video_endpoints)
+    dlc_final = restrict_dlc_to_video_start_and_end(dlc_processed_with_samples, 
+                                           video_startpoints, video_endpoints)
     
     # identify any NaN in the data, and if found, interpolate them out,
     # or chop them off if they are at the beginning or end of the data
-    dlc_final = load_pickle('dlc_final', dlc_dir)
     dlc_final, save_flag = interpolate_out_nans(dlc_final)
 
 

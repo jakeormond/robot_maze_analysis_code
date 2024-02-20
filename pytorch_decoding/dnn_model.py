@@ -33,8 +33,10 @@ class SeqNet(nn.Module):
             nn.Linear(n_units, n_hidden),
             nn.ReLU(),
             nn.Linear(n_hidden, n_hidden),
+            nn.Dropout(0.5),
             nn.ReLU(),
             nn.Linear(n_hidden, n_hidden),
+            nn.Dropout(0.5),
             nn.ReLU(),
             nn.Linear(n_hidden, n_outputs),
         )
@@ -106,9 +108,9 @@ if __name__ == "__main__":
     # animal = 'Rat65'
     # session = '10-11-2023'
     # data_dir = get_data_dir(animal, session)    
-    # data_dir = 'D:/analysis/og_honeycomb/rat7/6-12-2019'
+    data_dir = 'D:/analysis/og_honeycomb/rat7/6-12-2019'
     
-    data_dir = '/media/jake/DataStorage_6TB/DATA/neural_network/og_honeycomb/rat7/6-12-2019'
+    # data_dir = '/media/jake/DataStorage_6TB/DATA/neural_network/og_honeycomb/rat7/6-12-2019'
     # spike_dir = os.path.join(data_dir, 'spike_sorting')
     spike_dir = os.path.join(data_dir, 'physiology_data')
     # load spike train inputs.npy
@@ -118,7 +120,7 @@ if __name__ == "__main__":
     # dlc_dir = os.path.join(data_dir, 'deeplabcut')
     dlc_dir = os.path.join(data_dir, 'positional_data')
     labels = np.load(f'{dlc_dir}/labels.npy')
-    y = labels[:, 0:2] # only use x and y position    
+    y = labels[:, :2] # only use x and y position    
     if y.ndim == 1:
         y = y.reshape(-1, 1)
     
@@ -188,7 +190,7 @@ if __name__ == "__main__":
         y_pred = y_pred.detach().cpu().numpy()
         
         figure = plt.figure()
-        plt.scatter(y_pred[:,0], y_test[:, 0])
+        plt.scatter(y_pred[:,1], y_test[:, 1])
         plt.xlabel('y_pred')
         plt.ylabel('y_test')
         plt.show()

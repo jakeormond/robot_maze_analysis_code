@@ -13,7 +13,7 @@ from load_and_save_data import load_pickle, save_pickle
 
 import cv2
 
-def get_video_endpoints(video_dir):
+def get_video_endpoints(video_dir, user_input=True):
     # get the list of .avi files
     avi_file_list = glob.glob(os.path.join(video_dir, '*.avi'))
 
@@ -33,14 +33,27 @@ def get_video_endpoints(video_dir):
         duration = num_frames / fps
         print('duration: {}'.format(duration))
 
-        # ask the user for the end time of the video in minutes:seconds
-        end_time = input('Enter the end time of the video in minutes:seconds: ')
+        if user_input:        
+            # ask the user for the end time of the video in
+            #  minutes:seconds
+            end_time = input('Enter the end time of the video in minutes:seconds: ')
+        else:
+            end_time = ''
         
-        # convert the end time to seconds
-        end_time_seconds = int(end_time.split(':')[0]) * 60 + int(end_time.split(':')[1])
-        # calculate the end frame
-        end_frame = end_time_seconds * fps
-        print('end frame: {}'.format(end_frame))
+        if len(end_time) > 0:
+            end_time = '0' + end_time
+            # convert the end time to seconds
+            end_time_seconds = int(end_time.split(':')[0]) * 60 + int(end_time.split(':')[1])
+            # calculate the end frame
+            end_frame = end_time_seconds * fps
+            print('end frame: {}'.format(end_frame))
+
+        else:
+            end_time_seconds = duration
+            end_time_minutes = int(end_time_seconds//60)
+            end_time_seconds = int(end_time_seconds%60)
+            end_time = '0' + str(end_time_minutes) + ':' + str(end_time_seconds)
+            end_frame = num_frames-1
 
         # create a dictionary with the video name, the end time, and end frame
         avi_file_name = os.path.basename(avi_file)
@@ -72,12 +85,12 @@ def get_video_startpoints(dlc_data):
 
 
 if __name__ == "__main__":
-    animal = 'Rat65'
-    session = '10-11-2023'
+    animal = 'Rat47'
+    session = '08-02-2024'
     data_dir = get_data_dir(animal, session)
     video_dir = os.path.join(data_dir, 'video_files')
 
-    endpoints = get_video_endpoints(video_dir)
+    endpoints = get_video_endpoints(video_dir, user_input=False)
     save_pickle(endpoints, 'video_endpoints', video_dir)
 
     # start_points IS RUN IN process_dlc_data.py NOT HERE!!!!!

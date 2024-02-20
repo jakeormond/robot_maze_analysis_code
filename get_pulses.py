@@ -13,6 +13,8 @@ import h5py
 from get_directories import get_home_dir, get_data_dir 
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+from load_and_save_data import load_pickle, save_pickle
+
 
 
 def get_spikeglx_pulses(animal, session):
@@ -43,8 +45,48 @@ def get_spikeglx_pulses(animal, session):
                                    [len(spikeglx_pulses) - (intertrial_indices[-1]+1)]))
     
     return trial_lengths
+
+
+def get_imec_intertrial_intervals(animal, session):
+    # get the data directory
+    data_dir = get_data_dir(animal, session)
+    imec_dir = os.path.join(data_dir, 'imec_files')
+    pulses = load_imec_pulses(imec_dir)
+
+    # convert pulses to seconds
+    pulses = [pulse/30000 for pulse in pulses]
+
+    # get the interpulse intervals
+    intervals = [np.diff(pulse) for pulse in pulses]
+
+    # find intervals greater than interval length
+    interval_length = 2
+    intertrial_indices = [np.where(interval > interval_length)[0] for interval in intervals]
+
+    # remove any intervals that are consecutive
+    intertrial_intervals = np.where(np.diff(intertrial_indices[0]) == 1)[0]
     
-def get_bonsai_pulses(data_dir):
+    # remove intertrial_indices that are consecutive
+    intertrial_indices = [np.delete(intertrial_indices[0], intertrial_intervals + 1)]
+
+    return intertrial_indices
+    
+def get_bonsai_n_pulses(data_dir):
+    # get the bonsai pulses
+    bonsai_dir = os.path.join(data_dir, 'video_csv_files')
+    bonsai_files = glob.glob(os.path.join(bonsai_dir, 'pulseTS*.csv'))
+    n_trials = len(bonsai_files)
+
+    n_bonsai_pulses = []
+
+    for i, bonsai_file in enumerate(bonsai_files):
+        # read the bonsai pulses
+        pulses = pd.read_csv(bonsai_file, header=None)
+        n_bonsai_pulses.append(len(pulses))
+
+    return n_bonsai_pulses
+
+def match_bonsai_and_imec_pulses_V1(data_dir):
     
     # get the bonsai pulses
     bonsai_dir = os.path.join(data_dir, 'video_csv_files')
@@ -121,6 +163,142 @@ def get_bonsai_pulses(data_dir):
                    
     return pulses
 
+
+def make_dataframe_pulse_numbers(n_pulses_and_samples, data_dir):
+    # get the bonsai pulses
+    bonsai_dir = os.path.join(data_dir, 'video_csv_files')
+    bonsai_files = glob.glob(os.path.join(bonsai_dir, 'pulseTS*.csv'))
+    n_trials = len(bonsai_files)
+
+    # get the imec pulses
+    imec_dir = os.path.join(data_dir, 'imec_files')
+    imec_pulses = load_imec_pulses(directory=imec_dir)
+    # n_imec_trials is equal to the number of datasets in imec_pulses
+    n_imec_trials = len(imec_pulses)
+
+    # n_pulses is a list of the same length as bonsai_files
+    n_pulses = {}  # a dictionary containing the number of pulses in each trial}
+    pulses = {}  # also a list containing the pulses dataframes; will susbsequently be saved as a pickle file
+ 
+    # assert that the we have the same number of bonsai and imec trials
+    assert n_trials == n_imec_trials
+
+    trial_times = []
+    n_bonsai_pulses = []
+    n_imec_pulses = []
+
+    for i, bonsai_file in enumerate(bonsai_files):
+        trial_time = bonsai_file[-23:-4]
+        trial_times.append(trial_time)
+
+        # read the bonsai pulses
+        bonsai_pulses = pd.read_csv(bonsai_file, header=None)
+        # name the column 'bonsai_pulses'
+        n_bonsai_pulses.append(len(bonsai_pulses))
+
+        imec_trial_pulses = imec_pulses[i]
+        n_imec_pulses.append(len(imec_trial_pulses))
+
+    # make a dataframe with trial_time, n_bonsai_pulses, n_imec_pulses
+    pulse_numbers = pd.DataFrame({'trial_time': trial_times, 'n_bonsai_pulses': n_bonsai_pulses, 'n_imec_pulses': n_imec_pulses})
+
+    return pulse_numbers
+
+
+
+
+def match_bonsai_and_imec_pulses(n_pulses_and_samples, data_dir):    
+  
+    # get the bonsai pulses
+    bonsai_dir = os.path.join(data_dir, 'video_csv_files')
+    bonsai_files = glob.glob(os.path.join(bonsai_dir, 'pulseTS*.csv'))
+    n_trials = len(bonsai_files)
+
+    # get the imec pulses
+    imec_dir = os.path.join(data_dir, 'imec_files')
+    imec_pulses = load_imec_pulses(directory=imec_dir)
+    # n_imec_trials is equal to the number of datasets in imec_pulses
+    n_imec_trials = len(imec_pulses)
+
+    # n_pulses is a list of the same length as bonsai_files
+    n_pulses = {}  # a dictionary containing the number of pulses in each trial}
+    pulses = {}  # also a list containing the pulses dataframes; will susbsequently be saved as a pickle file
+ 
+    # assert that the we have the same number of bonsai and imec trials
+    assert n_trials == n_imec_trials
+    
+    start_sample = 0
+    for i, bonsai_file in enumerate(bonsai_files):
+       
+        trial_time = bonsai_file[-23:-4]
+        # read the bonsai pulses
+        pulses[trial_time] = pd.read_csv(bonsai_file, header=None)
+        # name the column 'bonsai_pulses'
+        n_pulses[trial_time] = (len(pulses))
+
+        # convert bonsai_pulses to seconds
+        bonsai_seconds = pulses[trial_time][0]/1000
+        bonsai_seconds = bonsai_seconds - bonsai_seconds[0]
+        print('bonsai seconds: ' + str(bonsai_seconds[0:10]))
+
+        imec_trial_pulses = imec_pulses[i] + start_sample
+        
+        if len(imec_trial_pulses) != len(pulses[trial_time]):
+            bonsai_seconds = pulses[trial_time][0]/1000
+            bonsai_seconds = bonsai_seconds - bonsai_seconds[0]
+            print('bonsai seconds: ' + str(bonsai_seconds[0:10]))
+
+            imec_seconds = imec_trial_pulses/30000
+            imec_seconds = imec_seconds - imec_seconds[0]
+            print('imec seconds: ' + str(imec_seconds[0:10]))
+                        
+            if len(imec_trial_pulses) > len(pulses[trial_time]): 
+                
+                while len(imec_trial_pulses) > len(pulses[trial_time]):
+                
+                    n_extra_pulses = len(imec_trial_pulses) - len(pulses[trial_time])
+
+                    diff_imec = np.diff(imec_seconds)
+                    diff_bonsai = np.diff(bonsai_seconds)
+
+                    diff_diff = np.abs(diff_imec[:-n_extra_pulses] - diff_bonsai)
+
+                    # find first diff greater than 0.01
+                    first_diff = np.where(diff_diff > 0.01)[0][0]
+
+                    # remove the first_diff pulse from imec_trial_pulses
+                    imec_trial_pulses = np.delete(imec_trial_pulses, first_diff+1)
+                    imec_seconds = imec_trial_pulses/30000
+
+                    # OLD METHOD
+                    # subtract bonsai_seconds from imec_seconds, the values should be positive
+                    # get the index of the first negative value and append it to indices_to_remove
+                    # imec_bonsai_diff = imec_seconds[:-n_extra_pulses] - bonsai_seconds
+                    # negative_diff = np.where(imec_bonsai_diff < 0)[0][0]
+                   
+                    # imec_trial_pulses = np.delete(imec_trial_pulses, negative_diff)
+                    # imec_seconds = imec_trial_pulses/30000
+                    # imec_seconds = imec_seconds - imec_seconds[0]
+            
+            elif len(imec_trial_pulses) < len(pulses[trial_time]):
+                # for now, just throw an error
+                raise ValueError('Number of imec pulses less than number of bonsai pulses for trial ' + str(i))
+            
+            assert len(imec_trial_pulses) == len(pulses[trial_time])
+
+
+           
+        # add the imec pulses to the bonsai pulses dataframe
+        pulses[trial_time] = pulses[trial_time].assign(new_column=imec_trial_pulses)
+        pulses[trial_time].columns = ['bonsai_pulses_ms', 'imec_pulses_samples']
+        
+        start_sample = start_sample + n_pulses_and_samples[i]['n_samples']
+    
+    # save pulses as a pickle file
+    save_pickle(pulses, 'pulses_dataframes', bonsai_dir)
+                   
+    return pulses
+
 def load_imec_pulses(directory=None): # these are the pulses generated by extract_pulses_from_raw.py
     
     if directory is None:
@@ -131,11 +309,19 @@ def load_imec_pulses(directory=None): # these are the pulses generated by extrac
         pulse_file = filedialog.askopenfilename()
     
     else:
-        # get pulse file name; it ends with 'pulses.hdf5'
-        pulse_file = glob.glob(os.path.join(directory, '*pulses.hdf5'))[0]
+        # get pulse file name; it ends with 'pulses.hdf5'        
+        # pulse_file = glob.glob(os.path.join(directory, '*pulses.hdf5'))[0]
+        pulse_file = os.path.join(directory, 'imec_pulses.hdf5')
 
     with h5py.File(pulse_file, 'r') as hf:
-        pulses = [hf[f'dataset_{i}'][:] for i in range(len(hf.keys()))]
+        keys = list(hf.keys())
+
+        # reorder the keys by the integer value after the final 'g'
+        keys = sorted(keys, key=lambda x: int(x.split('g')[-1]))
+
+        # pulses = [hf[f'dataset_{i}'][:] for i in range(len(hf.keys()))]
+
+        pulses = [hf[key][:] for key in keys]
 
     return pulses 
 
@@ -148,7 +334,11 @@ def load_bonsai_pulses(directory=None): # this the h5 file generated by get_bons
         pulse_file = filedialog.askopenfilename()
     else:
         bonsai_dir = os.path.join(directory, 'video_csv_files')
-        pulse_file = os.path.join(bonsai_dir, 'pulseTS.hdf5')
+
+        # find file that ends with pulses.hdf5
+        pulse_file = glob.glob(os.path.join(bonsai_dir, '*pulses.hdf5'))[0]
+        pulse_file = os.path.join(bonsai_dir, pulse_file)
+        # pulse_file = os.path.join(bonsai_dir, 'pulseTS.hdf5')
 
     pulses = {}
     with pd.HDFStore(pulse_file) as hdf:
@@ -221,15 +411,22 @@ def plot_pulse_alignment(pulses, data_dir):
 
 
 if __name__ == "__main__":
-    animal = 'Rat65'
-    session = '10-11-2023'
+    animal = 'Rat46'
+    session = '17-02-2024'
 
     data_dir = get_data_dir(animal, session)
 
     # not currently using get_spikeglx_pulses, use extract_pulses_from_raw.py instead
     # spikeglx_pulses = get_spikeglx_pulses(animal, session)
-    
-    # pulses = get_bonsai_pulses(data_dir)
-    pulses = load_bonsai_pulses(data_dir)
+
+    imec_pulses = load_imec_pulses(os.path.join(data_dir, 'imec_files'))
+    n_pulses_and_samples = load_pickle('n_pulses_and_samples.pkl', os.path.join(data_dir, 'imec_files'))
+
+    pulses_df = make_dataframe_pulse_numbers(n_pulses_and_samples, data_dir)
+    # print the entire dataframe for visual inspection
+    print(pulses_df)
+
+    pulses = match_bonsai_and_imec_pulses(n_pulses_and_samples, data_dir)
+
     plot_pulse_alignment(pulses, data_dir)
     pass

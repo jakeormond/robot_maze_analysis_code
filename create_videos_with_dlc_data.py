@@ -171,7 +171,7 @@ def create_full_video_with_dlc_data(video_time, dlc_data, data_dir, start_and_en
         # fs_frame = blank_fs_frame
         fs_frame = fs_frame_og.copy()
         # fs_frame[y_crop_pos:y_crop_pos + 600, x_crop_pos:x_crop_pos + 600] = gray_frame
-        fs_frame[y_crop_pos:y_crop_pos + 600, x_crop_pos:x_crop_pos + 600] = frame
+        fs_frame[y_crop_pos:y_crop_pos + frame.shape[0], x_crop_pos:x_crop_pos + frame.shape[1]] = frame
         fs_frame = fs_frame.astype('uint8') 
 
         x1 = np.cos(hd_for_frame) * 1.5 * arrow_len
@@ -320,8 +320,8 @@ def get_video_paths_from_dlc(dlc_processed_data, data_dir):
 
 
 if __name__ == "__main__":
-    animal = 'Rat65'
-    session = '10-11-2023'
+    animal = 'Rat47'
+    session = '08-02-2024'
     data_dir = get_data_dir(animal, session)
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
     
@@ -353,8 +353,8 @@ if __name__ == "__main__":
         start_and_end = (video_startpoint, video_endpoint)
 
         # create the video with the dlc data
-        # create_cropped_video_with_dlc_data(dlc_processed_data[d], 
-        #                                video_path, start_and_end)
+        create_cropped_video_with_dlc_data(dlc_processed_data[d], 
+                                       video_path, start_and_end)
             
         create_full_video_with_dlc_data(video_time, dlc_final_data[d], 
                                                data_dir, start_and_end)
@@ -362,11 +362,11 @@ if __name__ == "__main__":
     
     # create a gif from video "video_2023-11-08_16.52.26.avi" using frames
     # from 70 seconds to 97 seconds
-    video_path = os.path.join(video_dir, "cropped_videos_with_tracking", "video_2023-11-08_16.52.26.avi")
-    gif_path = os.path.join(video_dir, "cropped_videos_with_tracking", "video_2023-11-08_16.52.26.gif")
-    start_time = 70
-    end_time = 90
-    create_gif_from_video(video_path, gif_path, (start_time, end_time))
+    # video_path = os.path.join(video_dir, "cropped_videos_with_tracking", "video_2023-11-08_16.52.26.avi")
+    # gif_path = os.path.join(video_dir, "cropped_videos_with_tracking", "video_2023-11-08_16.52.26.gif")
+    # start_time = 70
+    # end_time = 90
+    # create_gif_from_video(video_path, gif_path, (start_time, end_time))
 
 
     pass

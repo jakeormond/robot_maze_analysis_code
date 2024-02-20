@@ -63,11 +63,11 @@ def create_positional_trains(dlc_data, window_size=100): # we'll default to 100 
             windowed_dlc[k][c] = np.round(interpolate_rads(dlc_data[k].video_samples, \
                                     dlc_data[k][c], window_centres), 2)
            
-    return windowed_dlc, window_edges
+    return windowed_dlc, window_edges, window_size
 
 
-def create_spike_trains(units, window_edges, windowed_data, overlap=0.5, window_size=100): 
-    # overlap is the proportion of overlap between windows
+def create_spike_trains(units, window_edges, window_size): 
+    # windows overlap by 50%
     # window_size in ms - just hard coded, not checked, so be careful!!!!!
        
     # create a dictionary to hold the spike trains  
@@ -209,8 +209,8 @@ if __name__ == "__main__":
     # session = '10-11-2023'
     # data_dir = get_data_dir(animal, session)
     
-    # data_dir = 'D:/analysis/og_honeycomb/rat7/6-12-2019'
-    data_dir = '/media/jake/DataStorage_6TB/DATA/neural_network/og_honeycomb/rat7/6-12-2019'
+    data_dir = 'D:/analysis/og_honeycomb/rat7/6-12-2019'
+    # data_dir = '/media/jake/DataStorage_6TB/DATA/neural_network/og_honeycomb/rat7/6-12-2019'
 
     # load spike data
     # spike_dir = os.path.join(data_dir, 'spike_sorting')
@@ -229,7 +229,8 @@ if __name__ == "__main__":
 
     # create positional and spike trains with overlapping windows
     # and save as a pickle file
-    windowed_dlc, window_edges = create_positional_trains(dlc_data, window_size=100)
+    windowed_dlc, window_edges, window_size = \
+        create_positional_trains(dlc_data, window_size=500)
     windowed_data = {'windowed_dlc': windowed_dlc, 'window_edges': window_edges}
     save_pickle(windowed_data, 'windowed_data', dlc_dir)
 
@@ -238,7 +239,7 @@ if __name__ == "__main__":
     window_edges = windowed_data['window_edges']
 
     # create spike trains
-    spike_trains = create_spike_trains(units, window_edges, windowed_data)
+    spike_trains = create_spike_trains(units, window_edges, window_size=window_size)
     save_pickle(spike_trains, 'spike_trains', spike_dir)
 
     spike_trains = load_pickle('spike_trains', spike_dir)

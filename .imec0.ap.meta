@@ -1,0 +1,8 @@
+catGTCmdline=<CatGT -t=cat -no_run_fld -ap -prb=0 -xd=2,0,-1,6,0 -supercat={D:/CatGT_output,Rat47_08-02-2024-09h40_g0}{D:/CatGT_output,Rat47_08-02-2024-09h40_g1}{D:/CatGT_output,Rat47_08-02-2024-09h40_g2}{D:/CatGT_output,Rat47_08-02-2024-09h40_g3}{D:/CatGT_output,Rat47_08-02-2024-09h40_g4}{D:/CatGT_output,Rat47_08-02-2024-09h40_g6}{D:/CatGT_output,Rat47_08-02-2024-09h40_g7}{D:/CatGT_output,Rat47_08-02-2024-09h40_g8}{D:/CatGT_output,Rat47_08-02-2024-09h40_g9}{D:/CatGT_output,Rat47_08-02-2024-09h40_g10}{D:/CatGT_output,Rat47_08-02-2024-09h40_g11}{D:/CatGT_output,Rat47_08-02-2024-09h40_g12}{D:/CatGT_output,Rat47_08-02-2024-09h40_g13}{D:/CatGT_output,Rat47_08-02-2024-09h40_g14}{D:/CatGT_output,Rat47_08-02-2024-09h40_g15}{D:/CatGT_output,Rat47_08-02-2024-09h40_g16}{D:/CatGT_output,Rat47_08-02-2024-09h40_g17}{D:/CatGT_output,Rat47_08-02-2024-09h40_g18}{D:/CatGT_output,Rat47_08-02-2024-09h40_g19}{D:/CatGT_output,Rat47_08-02-2024-09h40_g21}{D:/CatGT_output,Rat47_08-02-2024-09h40_g22}{D:/CatGT_output,Rat47_08-02-2024-09h40_g23}{D:/CatGT_output,Rat47_08-02-2024-09h40_g24}{D:/CatGT_output,Rat47_08-02-2024-09h40_g26}{D:/CatGT_output,Rat47_08-02-2024-09h40_g27}{D:/CatGT_output,Rat47_08-02-2024-09h40_g28}{D:/CatGT_output,Rat47_08-02-2024-09h40_g29}{D:/CatGT_output,Rat47_08-02-2024-09h40_g30}{D:/CatGT_output,Rat47_08-02-2024-09h40_g31}{D:/CatGT_output,Rat47_08-02-2024-09h40_g32}{D:/CatGT_output,Rat47_08-02-2024-09h40_g33}{D:/CatGT_output,Rat47_08-02-2024-09h40_g35}{D:/CatGT_output,Rat47_08-02-2024-09h40_g37}{D:/CatGT_output,Rat47_08-02-2024-09h40_g38} -dest=D:/supercat>
+catNRuns=0
+fileCreateTime=2024-02-09T14:17:56
+fileCreateTime_original=
+fileName=
+fileSHA1=0
+fileSizeBytes=0
+fileTimeSecs=0
