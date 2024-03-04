@@ -43,29 +43,27 @@ def restrict_spikes_to_trials(units, dlc_data):
 
 if __name__ == "__main__":
     
-    # animal = 'Rat65'
-    # session = '10-11-2023'
-    # data_dir = get_data_dir(animal, session)
+    animal = 'Rat46'
+    session = '20-02-2024'
+    data_dir = get_data_dir(animal, session)
 
     # data_dir = 'D:/analysis/og_honeycomb/rat7/6-12-2019'
-    data_dir = '/media/jake/DataStorage_6TB/DATA/neural_network/og_honeycomb/rat7/6-12-2019'
+    # data_dir = '/media/jake/DataStorage_6TB/DATA/neural_network/og_honeycomb/rat7/6-12-2019'
     
     # load the dlc data, which contains the trial times
-    # dlc_dir = os.path.join(data_dir, 'deeplabcut')
-    # dlc_data = load_pickle('dlc_final', dlc_dir)
-
-    pos_dir = os.path.join(data_dir, 'positional_data')
-    dlc_data = load_pickle('dlc_data', pos_dir)
+    dlc_dir = os.path.join(data_dir, 'deeplabcut')
+    dlc_data = load_pickle('dlc_final', dlc_dir)
 
        
     # load the spike data
-    # unit_dir = os.path.join(data_dir, 'spike_sorting')
+    unit_dir = os.path.join(data_dir, 'spike_sorting')
 
-    unit_dir = os.path.join(data_dir, 'physiology_data')
+    # unit_dir = os.path.join(data_dir, 'physiology_data')
     units = load_pickle('unit_spike_times', unit_dir)
-    units = units['pyramid']
+    # units = units['pyramid']
     
-    restricted_units = restrict_spikes_to_trials(units, dlc_data['hComb'])
+    # restricted_units = restrict_spikes_to_trials(units, dlc_data['hComb'])
+    restricted_units = restrict_spikes_to_trials(units, dlc_data)
     save_pickle(restricted_units, 'restricted_units', unit_dir)
 
     pass

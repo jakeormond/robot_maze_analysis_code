@@ -406,8 +406,8 @@ def plot_directional_occupancy(directional_occupancy, figure_dir):
 
 
 if __name__ == "__main__":
-    animal = 'Rat65'
-    session = '10-11-2023'
+    animal = 'Rat46'
+    session = '20-02-2024'
     data_dir = get_data_dir(animal, session)
 
     # load dlc_data which has the trial times
@@ -432,33 +432,31 @@ if __name__ == "__main__":
     limits = get_axes_limits(dlc_data_concat)
 
     # calculate positional occupancy
-    # positional_occupancy = get_positional_occupancy(dlc_data_concat, limits)
+    positional_occupancy = get_positional_occupancy(dlc_data_concat, limits)
     # save the positional_occupancy
-    # save_pickle(positional_occupancy, 'positional_occupancy', dlc_dir)
-    positional_occupancy = load_pickle('positional_occupancy', dlc_dir)
+    save_pickle(positional_occupancy, 'positional_occupancy', dlc_dir)
+    # positional_occupancy = load_pickle('positional_occupancy', dlc_dir)
 
     # plot the the trial paths
-    # for d in dlc_data.keys():
-    #     plot_trial_path(dlc_data[d], limits, dlc_dir, d)
+    for d in dlc_data.keys():
+        plot_trial_path(dlc_data[d], limits, dlc_dir, d)
 
     # plot the heat map of occupancy
-    # plot_occupancy_heatmap(positional_occupancy, goal_coordinates, dlc_dir)
+    plot_occupancy_heatmap(positional_occupancy, goal_coordinates, dlc_dir)
     
     # calculate directional occupancy
-    # directional_occupancy = get_directional_occupancy_from_dlc(dlc_data_concat)  
+    directional_occupancy = get_directional_occupancy_from_dlc(dlc_data_concat)  
     # save the directional_occupancy
-    # save_pickle(directional_occupancy, 'directional_occupancy', dlc_dir)
+    save_pickle(directional_occupancy, 'directional_occupancy', dlc_dir)
 
     # plot the directional occupancy
     figure_dir = os.path.join(dlc_dir, 'directional_occupancy_plots')
-    # plot_directional_occupancy(directional_occupancy, figure_dir)
+    plot_directional_occupancy(directional_occupancy, figure_dir)
 
     # get directional occupancy by position
     directional_occupancy_by_position = get_directional_occupancy_by_position(dlc_data_concat, limits)
     # save the directional_occupancy_by_position
     save_pickle(directional_occupancy_by_position, 'directional_occupancy_by_position', dlc_dir)
-
-
 
     # calculate occupancy by goal
     behaviour_dir = get_behaviour_dir(data_dir)
@@ -490,3 +488,5 @@ if __name__ == "__main__":
     save_pickle(positional_occupancy_by_goal, 'positional_occupancy_by_goal', dlc_dir)
     # save the directional_occupancy_by_goal
     save_pickle(directional_occupancy_by_goal, 'directional_occupancy_by_goal', dlc_dir)
+
+    pass

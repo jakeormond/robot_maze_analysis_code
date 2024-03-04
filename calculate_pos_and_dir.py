@@ -333,8 +333,8 @@ def get_x_and_y_limits(dlc_data):
     return x_and_y_limits
 
 if __name__ == "__main__":
-    animal = 'Rat65'
-    session = '10-11-2023'
+    animal = 'Rat46'
+    session = '20-02-2024'
     data_dir = get_data_dir(animal, session)
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
 
@@ -384,4 +384,6 @@ if __name__ == "__main__":
 
     # save the dlc_data
     save_pickle(dlc_data, 'dlc_final', dlc_dir)
+
+    pass
     

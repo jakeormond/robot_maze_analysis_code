@@ -334,8 +334,8 @@ def interpolate_out_nans(dlc_data):
 
 
 if __name__ == "__main__":
-    animal = 'Rat47'
-    session = '08-02-2024'
+    animal = 'Rat46'
+    session = '20-02-2024'
     data_dir = get_data_dir(animal, session)
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
     dlc_processed_data = process_dlc_data(dlc_dir)
@@ -374,8 +374,6 @@ if __name__ == "__main__":
     save_pickle(dlc_final, 'dlc_final', dlc_dir)
 
     pass
-
-
 
 
 

@@ -39,8 +39,8 @@ def load_sorted_spikes(spike_dir):
     return units
 
 if __name__ == "__main__":
-    animal = 'Rat65'
-    session = '10-11-2023'
+    animal = 'Rat46'
+    session = '20-02-2024'
     data_dir = get_data_dir(animal, session)
     
     # load the spike data
@@ -48,3 +48,5 @@ if __name__ == "__main__":
     units = load_sorted_spikes(spike_dir)
 
     save_pickle(units, 'unit_spike_times', spike_dir)
+
+    pass

@@ -34,17 +34,8 @@ load_behaviour.py		Loads in the behavioural csv files, and saves the data as a d
 				with trial times as the keys (saved as behaviour_data.pkl). Also sorts 
 				trials according to the goal, and saves them as a dictionary (with the 
 				goal as key) of dictionaries (behaviour_data_by_goal.pkl).
-				
 
-create_videos_with_dlc_data.py	create_cropped_video_with_dlc_data produces videos with a red arrow 
-				tracking head position and direction. In the cropped videos it produces, 
-				it super-imposes a red END over the frames that come past the endpoint 
-				for manual verification.  
-				
-				create_full_video_with_dlc_data produces videos with relative directions,
-				so can only be run AFTER calculate_pos_and_dir.py
-				
-				
+
 calculate_pos_and_dir.py	Calculates the animal's current platform, as well as the goal directions 
 				from its current position, and its head direction relative to each of the 
 				goals and the TV screens. 
@@ -61,6 +52,21 @@ calculate_pos_and_dir.py	Calculates the animal's current platform, as well as th
 				screens is included, in which case this code has already been run. You 
 				can use the function load_pickle from load_and_save_data.py 
 				(dlc_final = load_pickle('dlc_final', dlc_dir)). 
+
+
+
+				
+
+create_videos_with_dlc_data.py	create_cropped_video_with_dlc_data produces videos with a red arrow 
+				tracking head position and direction. In the cropped videos it produces, 
+				it super-imposes a red END over the frames that come past the endpoint 
+				for manual verification.  
+				
+				create_full_video_with_dlc_data produces videos with relative directions,
+				so can only be run AFTER calculate_pos_and_dir.py
+				
+				
+
 				
 
 load_sorted_spikes.py		Loads the clusters classified as good in Phy (need to verify the cluster 
@@ -78,6 +84,16 @@ classify_neurons.py 		Calculates mean firing rates and average waveforms, from w
 				have more sessions to look at, we can determine thresholds/cutoffs to 
 				automate the identification of principal and interneurons; for now, go 
 				through the plots, and manually enter a spike-width cut-off. 
+
+
+calculate_occupancy.py
+
+
+calculate_spike_pos_hd.py
+
+
+plot_spike_pos_hd.py
+
 
 
 

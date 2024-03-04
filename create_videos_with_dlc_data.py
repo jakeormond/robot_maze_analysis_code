@@ -320,8 +320,8 @@ def get_video_paths_from_dlc(dlc_processed_data, data_dir):
 
 
 if __name__ == "__main__":
-    animal = 'Rat47'
-    session = '08-02-2024'
+    animal = 'Rat46'
+    session = '20-02-2024'
     data_dir = get_data_dir(animal, session)
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
     

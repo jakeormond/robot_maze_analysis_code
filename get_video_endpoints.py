@@ -50,9 +50,17 @@ def get_video_endpoints(video_dir, user_input=True):
 
         else:
             end_time_seconds = duration
-            end_time_minutes = int(end_time_seconds//60)
-            end_time_seconds = int(end_time_seconds%60)
-            end_time = '0' + str(end_time_minutes) + ':' + str(end_time_seconds)
+
+            end_time_minutes = str(int(end_time_seconds//60))
+            if len(end_time_minutes) < 2:
+                end_time_minutes = '0' + end_time_minutes
+            
+
+            end_time_seconds = str(int(end_time_seconds%60))
+            if len(end_time_seconds) < 2:
+                end_time_seconds = '0' + end_time_seconds
+
+            end_time = end_time_minutes + ':' + end_time_seconds
             end_frame = num_frames-1
 
         # create a dictionary with the video name, the end time, and end frame
@@ -85,8 +93,8 @@ def get_video_startpoints(dlc_data):
 
 
 if __name__ == "__main__":
-    animal = 'Rat47'
-    session = '08-02-2024'
+    animal = 'Rat46'
+    session = '20-02-2024'
     data_dir = get_data_dir(animal, session)
     video_dir = os.path.join(data_dir, 'video_files')
 

@@ -8,6 +8,7 @@ from get_directories import get_data_dir, get_robot_maze_directory
 from load_and_save_data import load_pickle, save_pickle
 from load_behaviour import get_behaviour_dir
 
+
 def sort_units_by_goal(behaviour_data_by_goal, units):
 
     units_by_goal = {}
@@ -64,6 +65,9 @@ def get_unit_position_and_directions(dlc_data, unit):
 
 def bin_spikes_by_position(units, positional_occupancy):
 
+    
+    # np.seterr(divide='raise', invalid='raise')
+
     # get the x and y bins
     x_bins_og = positional_occupancy['x_bins']
     x_bins = x_bins_og.copy()
@@ -113,9 +117,16 @@ def bin_spikes_by_position(units, positional_occupancy):
         # throw an error if there are any
         if zero_occupancy_ind.size > 0:
             raise ValueError('There are bins with zero occupancy but non-zero spike counts.')
-        
+   
         # divide the spike counts by the occupancy
-        spike_rates = spike_counts / positional_occupancy['occupancy']
+        spike_rates = np.where(positional_occupancy['occupancy'] > 0, spike_counts / positional_occupancy['occupancy'], 0.)
+        # spike_rates = spike_counts / positional_occupancy['occupancy']
+        indices = np.where(np.isnan(spike_rates))
+
+        if len(indices[0]) > 0:
+            print('There are nans in the spike rates for unit: ', u)
+            print('The indices are: ', indices)
+
         spike_rates_by_position['rate_maps'][u] = np.around(spike_rates, 3)
             
     return spike_rates_by_position
@@ -341,7 +352,12 @@ def bin_spikes_by_position_and_direction(units, directional_occupancy_by_positio
                             bad_vals[u]['hd'] = np.concatenate((bad_vals[u]['hd'], 
                                                                      hd[indices[bin_indices == b]]))
 
-                    spike_rates_temp[b] = np.round(spike_counts_temp[b] / directional_occupancy[b], 3)
+                    
+                    if directional_occupancy[b] == 0:
+                        spike_rates_temp[b] = 0.
+                    else:
+                        # divide the spike counts by the occupancy
+                        spike_rates_temp[b] = np.round(spike_counts_temp[b] / directional_occupancy[b], 3)
 
                 # place the spike rates in the correct position in the array
                 spike_rates_by_position_and_direction['units'][u][j, i, :] = spike_rates_temp
@@ -389,16 +405,16 @@ def create_artificial_unit(units, directional_occupancy_by_position):
 
 
 if __name__ == "__main__":
-    animal = 'Rat65'
-    session = '10-11-2023'
+    animal = 'Rat46'
+    session = '20-02-2024'
     data_dir = get_data_dir(animal, session)
 
     # load spike data
     spike_dir = os.path.join(data_dir, 'spike_sorting')
-    # restricted_units = load_pickle('restricted_units', spike_dir)
+    restricted_units = load_pickle('restricted_units', spike_dir)
 
     # load neuron classification data
-    # neuron_types = load_pickle('neuron_types', spike_dir)
+    neuron_types = load_pickle('neuron_types', spike_dir)
 
     # load positional data
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
@@ -408,46 +424,52 @@ if __name__ == "__main__":
     # for unit in restricted_units.keys():
     #     restricted_units[unit] = get_unit_position_and_directions(dlc_data, restricted_units[unit])
 
-    # save the restricted units
+    # # save the restricted units
     # save_pickle(restricted_units, 'units_w_behav_correlates', spike_dir)
 
     # bin spikes by position
     positional_occupancy = load_pickle('positional_occupancy', dlc_dir)
+
+    # find any NaNs or infs in the positional occupancy['occupancy']
+    if np.isnan(positional_occupancy['occupancy']).sum() > 0:
+        raise ValueError('There are NaNs in the positional occupancy.')
+    if np.isinf(positional_occupancy['occupancy']).sum() > 0:
+        raise ValueError('There are infs in the positional occupancy.')
+
+
     # load units
     units = load_pickle('units_w_behav_correlates', spike_dir)
     # bin spikes by position
-    # rate_maps = bin_spikes_by_position(units, positional_occupancy)
+    rate_maps = bin_spikes_by_position(units, positional_occupancy)
     # save the spike counts by position
-    # save_pickle(rate_maps, 'rate_maps', spike_dir)
+    save_pickle(rate_maps, 'rate_maps', spike_dir)
 
     # create smoothed rate_maps
-    # smoothed_rate_maps = smooth_rate_maps(rate_maps)
-    # save_pickle(smoothed_rate_maps, 'smoothed_rate_maps', spike_dir) 
+    smoothed_rate_maps = smooth_rate_maps(rate_maps)
+    save_pickle(smoothed_rate_maps, 'smoothed_rate_maps', spike_dir) 
 
     # bin spikes by direction
-    # directional_occupancy = load_pickle('directional_occupancy', dlc_dir)
-    # spike_rates_by_direction, spike_counts = bin_spikes_by_direction(units, 
-    #                                         directional_occupancy)
+    directional_occupancy = load_pickle('directional_occupancy', dlc_dir)
+    spike_rates_by_direction, spike_counts = bin_spikes_by_direction(units, 
+                                            directional_occupancy)
     # save the spike counts and rates by direction
-    # save_pickle(spike_rates_by_direction, 'spike_rates_by_direction', spike_dir)
-    # save_pickle(spike_counts, 'spike_counts_by_direction', spike_dir)
+    save_pickle(spike_rates_by_direction, 'spike_rates_by_direction', spike_dir)
+    save_pickle(spike_counts, 'spike_counts_by_direction', spike_dir)
 
     # load the directional occupancy by position data
     directional_occupancy_by_position = load_pickle('directional_occupancy_by_position', dlc_dir)
     # bin spikes by position and direction
-    # spike_rates_by_position_and_direction, bad_vals = bin_spikes_by_position_and_direction(units, 
-    #                                         directional_occupancy_by_position)
+    spike_rates_by_position_and_direction, bad_vals = bin_spikes_by_position_and_direction(units, 
+                                            directional_occupancy_by_position)
     
-    # check_bad_vals(bad_vals, dlc_data)
+    check_bad_vals(bad_vals, dlc_data)
 
 
-    # # save the spike rates by position and direction
-    # save_pickle(spike_rates_by_position_and_direction, 'spike_rates_by_position_and_direction', spike_dir)
-
+    # save the spike rates by position and direction
+    save_pickle(spike_rates_by_position_and_direction, 'spike_rates_by_position_and_direction', spike_dir)
 
     # create an artificial unit for testing vector field code
-    artifial_unit = create_artificial_unit(units, directional_occupancy_by_position)
-
+    # artifial_unit = create_artificial_unit(units, directional_occupancy_by_position)
 
     # sort spike data by goal
     behaviour_dir = get_behaviour_dir(data_dir)

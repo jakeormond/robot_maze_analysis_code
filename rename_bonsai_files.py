@@ -169,6 +169,31 @@ def re_date_video_files(behaviour_and_matching_video_datestamps, video_dir):
     re_date_files(behaviour_and_matching_video_datestamps, video_files)
 
 
+def revert_dlc_file_names(dlc_dir):
+    # dlc doesn't like our file names, since we have periods between hours, minutes, and seconds
+    # so we change these to hyphes. Now, we change the hyphens back to periods for consistency 
+    # with our other files
+    dlc_file_types = [".h5", ".pickle"]
+    for t in dlc_file_types:
+        dlc_files = glob.glob(os.path.join(dlc_dir, "*" + t))
+
+        for d in dlc_files:
+            # get the file name
+            d_name = os.path.basename(d)
+            # find indices of third and fourth hyphen
+            hyphen_inds = [i for i in range(len(d_name)) if d_name[i] == "-"]
+            
+            # replace the third and fourth hyphen with periods
+            for i in range(2, 4):
+                d_new = d_name[:hyphen_inds[i]] + '.' + d_name[hyphen_inds[i]+1:]
+                d_name = d_new
+
+            # add the full path back to d_new
+            d_new_path = os.path.join(dlc_dir, d_name)
+
+            os.rename(d, d_new_path)
+           
+
 def re_date_dlc_files(behaviour_and_matching_video_datestamps, dlc_dir):
     dlc_file_types = [".h5", ".pickle"]
     for t in dlc_file_types:
@@ -184,8 +209,8 @@ def re_date_dlc_files(behaviour_and_matching_video_datestamps, dlc_dir):
     
 
 if __name__ == "__main__":
-    animal = 'Rat47'
-    session = '08-02-2024'
+    animal = 'Rat46'
+    session = '20-02-2024'
     data_dir = get_data_dir(animal, session)
     behaviour_dir = os.path.join(data_dir, 'behaviour')
     video_dir = os.path.join(data_dir, 'video_files')
@@ -195,14 +220,16 @@ if __name__ == "__main__":
         match_behaviour_and_bonsai_datestamps(behaviour_dir, video_dir)
     
     # redate bonsai files
-    re_date_bonsai_files(behaviour_and_matching_bonsai_datestamps, \
-                        video_csv_dir)
+    # re_date_bonsai_files(behaviour_and_matching_bonsai_datestamps, \
+    #                     video_csv_dir)
+        
     
-    # redate video files
-    re_date_video_files(behaviour_and_matching_bonsai_datestamps, \
-                        video_dir)
-    
+    revert_dlc_file_names(dlc_dir)
+
     # redate dlc files
     re_date_dlc_files(behaviour_and_matching_bonsai_datestamps, \
-                        dlc_dir)
+                        dlc_dir)    
     
+   # redate video files
+    re_date_video_files(behaviour_and_matching_bonsai_datestamps, \
+                        video_dir) 

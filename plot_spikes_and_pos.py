@@ -383,8 +383,8 @@ def plot_spike_rates_by_direction_2goals(spike_rates_by_direction, plot_dir):
 
 
 if __name__ == "__main__":
-    animal = 'Rat65'
-    session = '10-11-2023'
+    animal = 'Rat46'
+    session = '20-02-2024'
     data_dir = get_data_dir(animal, session)
 
     # get goal coordinates
@@ -409,7 +409,7 @@ if __name__ == "__main__":
 
     # plot spikes and position
     plot_dir = os.path.join(spike_dir, 'spikes_and_pos')
-    # plot_spikes_and_pos(units, dlc_data, goal_coordinates, x_and_y_limits, plot_dir)
+    plot_spikes_and_pos(units, dlc_data, goal_coordinates, x_and_y_limits, plot_dir)
 
     # plot spike and position by goal
     units_by_goal = {}
@@ -417,24 +417,24 @@ if __name__ == "__main__":
         units_by_goal[u] = split_dictionary_by_goal(units[u], data_dir)
     
     plot_dir = os.path.join(spike_dir, 'spikes_and_pos_by_goal')
-    # plot_spikes_2goals(units_by_goal, dlc_data, goal_coordinates, x_and_y_limits, plot_dir)
+    plot_spikes_2goals(units_by_goal, dlc_data, goal_coordinates, x_and_y_limits, plot_dir)
 
     # plot spike rates by direction
     plot_dir = os.path.join(spike_dir, 'spike_rates_by_direction')
-    # spike_rates_by_direction = load_pickle('spike_rates_by_direction', spike_dir)
+    spike_rates_by_direction = load_pickle('spike_rates_by_direction', spike_dir)
 
-    # plot_spike_rates_by_direction(spike_rates_by_direction, plot_dir)
+    plot_spike_rates_by_direction(spike_rates_by_direction, plot_dir)
 
     # plot rate maps 
     plot_dir = os.path.join(spike_dir, 'rate_maps')
     rate_maps = load_pickle('rate_maps', spike_dir)
     smoothed_rate_maps = load_pickle('smoothed_rate_maps', spike_dir)  
-    # plot_rate_maps(rate_maps, smoothed_rate_maps, goal_coordinates, plot_dir)
+    plot_rate_maps(rate_maps, smoothed_rate_maps, goal_coordinates, plot_dir)
 
     # plot smoothed rate maps by goal
     plot_dir = os.path.join(spike_dir, 'rate_maps_by_goal')
     rate_maps_by_goal = load_pickle('smoothed_rate_maps_by_goal', spike_dir)
-    # plot_rate_maps_2goals(rate_maps_by_goal, goal_coordinates, plot_dir)
+    plot_rate_maps_2goals(rate_maps_by_goal, goal_coordinates, plot_dir)
 
     # plot spike rates by direction by goal
     spike_rates_by_direction = load_pickle('spike_rates_by_direction_by_goal', spike_dir)
@@ -444,22 +444,21 @@ if __name__ == "__main__":
 
     plot_spike_rates_by_direction_2goals(spike_rates_by_direction, plot_dir)
 
-
-    
-
-    # for g in spike_rates_by_direction.keys():
-    #     plot_dir = os.path.join(spike_dir, 'spike_rates_by_direction_by_goal', f'goal_{g}')
-    #     plot_spike_rates_by_direction(spike_rates_by_direction[g], plot_dir)
+    for g in spike_rates_by_direction.keys():
+        plot_dir = os.path.join(spike_dir, 'spike_rates_by_direction_by_goal', f'goal_{g}')
+        plot_spike_rates_by_direction(spike_rates_by_direction[g], plot_dir)
 
     # plot rate maps by goal
     rate_maps_by_goal = load_pickle('rate_maps_by_goal', spike_dir)
+    smoothed_rate_maps_by_goal = load_pickle('smoothed_rate_maps_by_goal', spike_dir)
+
     plot_dir = os.path.join(spike_dir, 'rate_maps_by_goal')
     if not os.path.exists(plot_dir):
         os.mkdir(plot_dir)
 
-    # for g  in rate_maps_by_goal.keys():
-    #     plot_dir = os.path.join(spike_dir, 'rate_maps_by_goal', f'goal_{g}')     
-    #     plot_rate_maps(rate_maps_by_goal[g], goal_coordinates, plot_dir)
+    for g  in rate_maps_by_goal.keys():
+        plot_dir = os.path.join(spike_dir, 'rate_maps_by_goal', f'goal_{g}')     
+        plot_rate_maps(rate_maps_by_goal[g], smoothed_rate_maps_by_goal[g], goal_coordinates, plot_dir)
 
     
     # create combined plots, with goal 1 in subplot 1 and goal 2 in subplot 2

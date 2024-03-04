@@ -254,7 +254,7 @@ def classify_neurons(halfwidths, mean_rates):
     mean_rate_cutoff = float(input('Enter mean firing rate cutoff (Hz): '))
 
     for u in halfwidths.keys():
-        if halfwidths[u] <= halfwidth_cutoff or mean_rates[u] >= mean_rate_cutoff:
+        if halfwidths[u] <= halfwidth_cutoff and mean_rates[u] >= mean_rate_cutoff:
             neuron_types[u] = 'interneuron'
         else:
             neuron_types[u] = 'pyramidal'
@@ -263,8 +263,8 @@ def classify_neurons(halfwidths, mean_rates):
 
 
 if __name__ == "__main__":
-    animal = 'Rat65'
-    session = '10-11-2023'
+    animal = 'Rat46'
+    session = '20-02-2024'
     data_dir = get_data_dir(animal, session)
 
     # load dlc_data which has the trial times
@@ -277,18 +277,25 @@ if __name__ == "__main__":
     
     # hardcoding the directory of the neuropixel bin file, as
     # it's not in the data directory
-    bin_dir = '/media/jake/LaCie/' + animal + '/' + session
-    bin_path = glob.glob(bin_dir + '/*.ap.bin')[0]
+    # bin_dir = '/media/jake/LaCie/' + animal + '/' + session
+    # bin_path = glob.glob(bin_dir + '/*.ap.bin')[0]
+
+    # allow user to select bin_path interactively
+    import tkinter as tk
+    from tkinter import filedialog
+    root = tk.Tk()
+    root.withdraw()
+    bin_path = filedialog.askopenfilename(title='Select the .ap.bin file')
 
     # calculate mean firing rates
     mean_rates = calculate_mean_rates(units, dlc_data)
 
     # get average waveforms
-    # average_waveforms = get_average_waveforms(units, spike_dir, bin_path)
-    # save_pickle(average_waveforms, 'average_waveforms', spike_dir)
+    average_waveforms = get_average_waveforms(units, spike_dir, bin_path)
+    save_pickle(average_waveforms, 'average_waveforms', spike_dir)
 
     # plot average waveforms
-    average_waveforms = load_pickle('average_waveforms', spike_dir)
+    # average_waveforms = load_pickle('average_waveforms', spike_dir)
     # plot_average_waveforms(average_waveforms, mean_rates, spike_dir)
 
     # manually remove any clusters that don't look like neurons
@@ -314,6 +321,9 @@ if __name__ == "__main__":
     # classify neurons
     neuron_types = classify_neurons(halfwidths, mean_rates)
     save_pickle(neuron_types, 'neuron_types', spike_dir)
+
+    for k in neuron_types.keys():
+        print(k, neuron_types[k])
     
 
     pass

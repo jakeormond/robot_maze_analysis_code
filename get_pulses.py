@@ -264,10 +264,17 @@ def match_bonsai_and_imec_pulses(n_pulses_and_samples, data_dir):
                     diff_diff = np.abs(diff_imec[:-n_extra_pulses] - diff_bonsai)
 
                     # find first diff greater than 0.01
-                    first_diff = np.where(diff_diff > 0.01)[0][0]
+                    first_diff = np.where(diff_diff > 0.01)[0]
 
-                    # remove the first_diff pulse from imec_trial_pulses
-                    imec_trial_pulses = np.delete(imec_trial_pulses, first_diff+1)
+                    if first_diff.shape[0] == 0:
+                        # remove the last pulse from imec_trial_pulses
+                        imec_trial_pulses = imec_trial_pulses[:-1]
+
+                    else:
+                        first_diff = first_diff[0]
+                        # remove the first_diff pulse from imec_trial_pulses
+                        imec_trial_pulses = np.delete(imec_trial_pulses, first_diff+1)
+                    
                     imec_seconds = imec_trial_pulses/30000
 
                     # OLD METHOD
@@ -412,7 +419,7 @@ def plot_pulse_alignment(pulses, data_dir):
 
 if __name__ == "__main__":
     animal = 'Rat46'
-    session = '17-02-2024'
+    session = '20-02-2024'
 
     data_dir = get_data_dir(animal, session)
 
