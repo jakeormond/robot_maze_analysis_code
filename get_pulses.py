@@ -419,7 +419,7 @@ def plot_pulse_alignment(pulses, data_dir):
 
 if __name__ == "__main__":
     animal = 'Rat46'
-    session = '20-02-2024'
+    session = '19-02-2024'
 
     data_dir = get_data_dir(animal, session)
 

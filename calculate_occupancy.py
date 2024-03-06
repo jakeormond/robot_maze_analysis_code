@@ -2,7 +2,11 @@ import os
 import numpy as np
 import pandas as pd
 import pickle
+
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from get_directories import get_data_dir, get_robot_maze_directory
@@ -81,11 +85,11 @@ def plot_occupancy_heatmap(positional_occupancy, goal_coordinates, figure_dir):
     ax.set_yticklabels(ytick_values)
     ax.tick_params(axis='y', labelsize=15)
 
-    plt.show()
+    # plt.show()
     # save the figure
     figure_path = os.path.join(figure_dir, 'occupancy_heatmap.png')
     plt.savefig(figure_path)
-    plt.close()
+    # plt.close()
 
 
 def plot_trial_path(dlc_data, limits, dlc_dir, d):
@@ -118,7 +122,7 @@ def plot_trial_path(dlc_data, limits, dlc_dir, d):
     plt.gca().invert_yaxis()
 
     plt.title(d)
-    plt.show()
+    # plt.show()
 
     # if trial_paths directory doesn't exist, create it
     trial_paths_dir = os.path.join(dlc_dir, 'trial_paths')
@@ -130,7 +134,7 @@ def plot_trial_path(dlc_data, limits, dlc_dir, d):
     plt.savefig(fig_path)
 
     # close the figure
-    plt.close()
+    # plt.close()
 
 
 def get_directional_occupancy_by_position(dlc_data, limits):
@@ -237,6 +241,8 @@ def get_positional_occupancy(dlc_data, limits):
     # get x and y data 
     x = dlc_data['x']
     y = dlc_data['y']
+
+
 
     x_bin = np.digitize(x, x_bins) - 1
     y_bin = np.digitize(y, y_bins) - 1 
@@ -397,17 +403,17 @@ def plot_directional_occupancy(directional_occupancy, figure_dir):
             plt.polar(tick_positions, occupancy)
 
             plt.title(d)
-            plt.show()
+            # plt.show()
             
             # save the figure
             fig_path = os.path.join(figure_dir, f'{direction_type}_{d}.png')
             plt.savefig(fig_path)
-            plt.close()
+            # plt.close()
 
 
 if __name__ == "__main__":
     animal = 'Rat46'
-    session = '20-02-2024'
+    session = '19-02-2024'
     data_dir = get_data_dir(animal, session)
 
     # load dlc_data which has the trial times
@@ -439,7 +445,8 @@ if __name__ == "__main__":
 
     # plot the the trial paths
     for d in dlc_data.keys():
-        plot_trial_path(dlc_data[d], limits, dlc_dir, d)
+        # plot_trial_path(dlc_data[d], limits, dlc_dir, d)
+        pass
 
     # plot the heat map of occupancy
     plot_occupancy_heatmap(positional_occupancy, goal_coordinates, dlc_dir)

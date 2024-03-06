@@ -2,6 +2,8 @@ import os
 import numpy as np
 import pandas as pd
 import pickle
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
@@ -66,7 +68,7 @@ def plot_spikes_and_pos(units, dlc_data, goal_coordinates, x_and_y_limits, plot_
         basic_spike_pos_plot(ax, units[u], dlc_data, goal_coordinates, x_and_y_limits)
         
         fig.savefig(os.path.join(plot_dir, f'{u}.png'))
-        plt.close(fig)
+        # plt.close(fig)
 
 def plot_spikes_2goals(units_by_goal, dlc_data, goal_coordinates, x_and_y_limits, plot_dir):
 
@@ -85,7 +87,7 @@ def plot_spikes_2goals(units_by_goal, dlc_data, goal_coordinates, x_and_y_limits
         
         # plt.show()
         fig.savefig(os.path.join(plot_dir, f'{u}.png'))
-        plt.close(fig)
+        # plt.close(fig)
 
 
 def plot_rate_maps(rate_maps, smoothed_rate_maps, goal_coordinates, plot_dir):
@@ -177,7 +179,7 @@ def plot_rate_maps(rate_maps, smoothed_rate_maps, goal_coordinates, plot_dir):
         
         fig.savefig(os.path.join(plot_dir, f'{u}.png'))
 
-        plt.close()
+        # plt.close()
 
 
 def plot_rate_maps_2goals(rate_maps_by_goal, goal_coordinates, plot_dir):
@@ -267,7 +269,7 @@ def plot_rate_maps_2goals(rate_maps_by_goal, goal_coordinates, plot_dir):
         # plt.show()
         
         fig.savefig(os.path.join(plot_dir, f'{u}.png'))
-        plt.close()
+        # plt.close()
 
     pass
 
@@ -318,7 +320,7 @@ def plot_spike_rates_by_direction(spike_rates_by_direction, plot_dir):
 
         # plt.show()
         fig.savefig(os.path.join(plot_dir, f'{u}.png'))
-        plt.close()
+        # plt.close()
 
     pass
 
@@ -373,18 +375,14 @@ def plot_spike_rates_by_direction_2goals(spike_rates_by_direction, plot_dir):
 
         # plt.show()
         fig.savefig(os.path.join(plot_dir, f'{u}.png'))
-        plt.close()
+        # plt.close()
 
     pass
     
     
-    
-    pass
-
-
 if __name__ == "__main__":
     animal = 'Rat46'
-    session = '20-02-2024'
+    session = '19-02-2024'
     data_dir = get_data_dir(animal, session)
 
     # get goal coordinates

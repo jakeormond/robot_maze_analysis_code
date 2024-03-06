@@ -30,8 +30,8 @@ def get_behaviour_file_path(animal, session, time):
     behaviour_file : str
         The behaviour file name.
     """
-    animal = 'Rat64'
-    session = '08-11-2023'
+    # animal = 'Rat64'
+     #session = '08-11-2023'
     data_dir = get_data_dir(animal, session)
     behaviour_dir = os.path.join(data_dir, 'behaviour')
     behaviour_file = f'{reverse_date(session)}_{time}.csv'
@@ -169,7 +169,7 @@ def split_dictionary_by_goal(dictionary, data_dir):
 
 if __name__ == "__main__":
     animal = 'Rat46'
-    session = '20-02-2024'
+    session = '19-02-2024'
     data_dir = get_data_dir(animal, session)
     behaviour_dir = get_behaviour_dir(data_dir)
 

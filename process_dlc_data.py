@@ -15,7 +15,9 @@ from load_and_save_data import save_pickle, load_pickle
 # create global variable for sample rate
 sample_rate = 30000
 
-def process_dlc_data(dlc_dir):  
+def process_dlc_data(data_dir):
+
+    dlc_dir = os.path.join(data_dir, 'deeplabcut')  
     # load tracking data
     tracking_files = glob.glob(os.path.join(dlc_dir, '*.h5'))
     tracking_files.sort()
@@ -297,6 +299,10 @@ def interpolate_out_nans(dlc_data):
             # get the indices of the consecutive NaNs
             consec_nan_ind = get_consec(nan_ind)
 
+            if len(consec_nan_ind) > 1:
+                # reverse the list so that we can pop from the end
+                consec_nan_ind = consec_nan_ind[::-1]
+
             # loop through the consecutive NaNs and interpolate them out
             for i in range(len(consec_nan_ind)):
                 start_ind = consec_nan_ind[i][0]
@@ -335,10 +341,12 @@ def interpolate_out_nans(dlc_data):
 
 if __name__ == "__main__":
     animal = 'Rat46'
-    session = '20-02-2024'
+    session = '19-02-2024'
     data_dir = get_data_dir(animal, session)
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
-    dlc_processed_data = process_dlc_data(dlc_dir)
+
+    # process the dlc data
+    dlc_processed_data = process_dlc_data(data_dir)
     save_pickle(dlc_processed_data, 'dlc_processed_data', dlc_dir)
     # dlc_processed_data = load_pickle('dlc_processed_data', dlc_dir) 
 
@@ -368,8 +376,6 @@ if __name__ == "__main__":
     # identify any NaN in the data, and if found, interpolate them out,
     # or chop them off if they are at the beginning or end of the data
     dlc_final, save_flag = interpolate_out_nans(dlc_final)
-
-
 
     save_pickle(dlc_final, 'dlc_final', dlc_dir)
 

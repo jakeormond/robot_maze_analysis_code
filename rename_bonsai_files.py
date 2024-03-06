@@ -19,7 +19,6 @@ def match_behaviour_and_bonsai_datestamps(behaviour_dir, video_dir):
     csv_times = [(t.tm_hour, t.tm_min) for t in csv_times]
 
     # find the video files in the video_files directory
-    video_dir = os.path.join(data_dir, 'video_files')
     video_files = glob.glob(os.path.join(video_dir, '*.avi'))
     # get the time that each video file was created
     video_times = [os.path.getmtime(f) for f in video_files]
@@ -210,7 +209,7 @@ def re_date_dlc_files(behaviour_and_matching_video_datestamps, dlc_dir):
 
 if __name__ == "__main__":
     animal = 'Rat46'
-    session = '20-02-2024'
+    session = '19-02-2024'
     data_dir = get_data_dir(animal, session)
     behaviour_dir = os.path.join(data_dir, 'behaviour')
     video_dir = os.path.join(data_dir, 'video_files')
@@ -220,11 +219,11 @@ if __name__ == "__main__":
         match_behaviour_and_bonsai_datestamps(behaviour_dir, video_dir)
     
     # redate bonsai files
-    # re_date_bonsai_files(behaviour_and_matching_bonsai_datestamps, \
-    #                     video_csv_dir)
+    re_date_bonsai_files(behaviour_and_matching_bonsai_datestamps, \
+                        video_csv_dir)
         
     
-    revert_dlc_file_names(dlc_dir)
+    # revert_dlc_file_names(dlc_dir)
 
     # redate dlc files
     re_date_dlc_files(behaviour_and_matching_bonsai_datestamps, \

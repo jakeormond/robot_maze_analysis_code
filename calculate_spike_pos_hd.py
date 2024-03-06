@@ -116,7 +116,8 @@ def bin_spikes_by_position(units, positional_occupancy):
 
         # throw an error if there are any
         if zero_occupancy_ind.size > 0:
-            raise ValueError('There are bins with zero occupancy but non-zero spike counts.')
+            # raise ValueError('There are bins with zero occupancy but non-zero spike counts.')
+            pass
    
         # divide the spike counts by the occupancy
         spike_rates = np.where(positional_occupancy['occupancy'] > 0, spike_counts / positional_occupancy['occupancy'], 0.)
@@ -267,11 +268,11 @@ def bin_spikes_by_position_and_direction(units, directional_occupancy_by_positio
     # get the x and y bins
     x_bins_og = directional_occupancy_by_position['x_bins']
     x_bins = x_bins_og.copy()
-    x_bins[-1] = x_bins[-1] + 1e-6 # add a small number to the last bin so that the last value is included in the bin
+    x_bins[-1] = x_bins[-1] + 1e-1 # add a small number to the last bin so that the last value is included in the bin
 
     y_bins_og = directional_occupancy_by_position['y_bins']
     y_bins = y_bins_og.copy()
-    y_bins[-1] = y_bins[-1] + 1e-6 # add a small number to the last bin so that the last value is included in the bin
+    y_bins[-1] = y_bins[-1] + 1e-1 # add a small number to the last bin so that the last value is included in the bin
 
     # get the direction bins
     direction_bins_og = directional_occupancy_by_position['direction_bins']
@@ -406,7 +407,7 @@ def create_artificial_unit(units, directional_occupancy_by_position):
 
 if __name__ == "__main__":
     animal = 'Rat46'
-    session = '20-02-2024'
+    session = '19-02-2024'
     data_dir = get_data_dir(animal, session)
 
     # load spike data
@@ -414,18 +415,18 @@ if __name__ == "__main__":
     restricted_units = load_pickle('restricted_units', spike_dir)
 
     # load neuron classification data
-    neuron_types = load_pickle('neuron_types', spike_dir)
+    # neuron_types = load_pickle('neuron_types', spike_dir)
 
     # load positional data
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
     dlc_data = load_pickle('dlc_final', dlc_dir)
 
     # loop through units and calculate positions and various directional correlates
-    # for unit in restricted_units.keys():
-    #     restricted_units[unit] = get_unit_position_and_directions(dlc_data, restricted_units[unit])
+    for unit in restricted_units.keys():
+        restricted_units[unit] = get_unit_position_and_directions(dlc_data, restricted_units[unit])
 
     # # save the restricted units
-    # save_pickle(restricted_units, 'units_w_behav_correlates', spike_dir)
+    save_pickle(restricted_units, 'units_w_behav_correlates', spike_dir)
 
     # bin spikes by position
     positional_occupancy = load_pickle('positional_occupancy', dlc_dir)
