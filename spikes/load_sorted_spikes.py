@@ -7,6 +7,15 @@ from load_and_save_data import save_pickle
 
 sample_freq = 30000
 
+''' 
+spike sorting files required:
+
+- cluster_group.tsv
+- spike_clusters.npy
+- spike_times.npy
+
+'''
+
 def load_sorted_spikes(spike_dir):
     cluster_quality = pd.read_csv(os.path.join(spike_dir, 
                             'cluster_group.tsv'), sep='\t')

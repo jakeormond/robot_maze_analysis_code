@@ -19,15 +19,15 @@ from plot_spikes_and_pos import get_x_and_y_limits, plot_spikes_and_pos, plot_sp
 
 
 if __name__ == "__main__":
-    animal = 'Rat46'
-    session = '17-02-2024'
+    animal = 'Rat47'
+    session = '08-02-2024'
     data_dir = get_data_dir(animal, session)
     behaviour_dir = os.path.join(data_dir, 'behaviour')
     video_dir = os.path.join(data_dir, 'video_files')
     video_csv_dir = os.path.join(data_dir, 'video_csv_files')
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
 
-    starting_code_block = 9
+    starting_code_block = 3
 
     ################ CODE BLOCK 0 ##################
     ################ REDATE FILES ##################
