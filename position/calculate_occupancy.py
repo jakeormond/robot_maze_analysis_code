@@ -9,10 +9,12 @@ import matplotlib.pyplot as plt
 
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-from get_directories import get_data_dir, get_robot_maze_directory
-from calculate_pos_and_dir import get_goal_coordinates, cm_per_pixel
-from load_and_save_data import load_pickle, save_pickle
-from load_behaviour import get_behaviour_dir
+import sys
+sys.path.append('C:/Users/Jake/Documents/python_code/robot_maze_analysis_code')
+from utilities.get_directories import get_data_dir, get_robot_maze_directory
+from position.calculate_pos_and_dir import get_goal_coordinates, cm_per_pixel
+from utilities.load_and_save_data import load_pickle, save_pickle
+from behaviour.load_behaviour import get_behaviour_dir
 
 
 def plot_occupancy_heatmap(positional_occupancy, goal_coordinates, figure_dir):
@@ -413,7 +415,7 @@ def plot_directional_occupancy(directional_occupancy, figure_dir):
 
 if __name__ == "__main__":
     animal = 'Rat46'
-    session = '19-02-2024'
+    session = '17-02-2024'
     data_dir = get_data_dir(animal, session)
 
     # load dlc_data which has the trial times
@@ -474,6 +476,7 @@ if __name__ == "__main__":
 
     positional_occupancy_by_goal = {}
     directional_occupancy_by_goal = {}
+    directional_occupancy_by_position_by_goal = {}
 
     for g in behaviour_data.keys():
         
@@ -488,6 +491,11 @@ if __name__ == "__main__":
         directional_occupancy_by_goal[g] = \
             get_directional_occupancy_from_dlc(dlc_data_concat_by_goal[g])  
         
+        # calculate directional occupancy by position
+        directional_occupancy_by_position_by_goal[g] = \
+            get_directional_occupancy_by_position(dlc_data_concat_by_goal[g], limits)
+
+        
         figure_dir = os.path.join(dlc_dir, 'directional_occupancy_by_goal', f'goal_{g}')        
         plot_directional_occupancy(directional_occupancy_by_goal[g], figure_dir)
    
@@ -495,5 +503,7 @@ if __name__ == "__main__":
     save_pickle(positional_occupancy_by_goal, 'positional_occupancy_by_goal', dlc_dir)
     # save the directional_occupancy_by_goal
     save_pickle(directional_occupancy_by_goal, 'directional_occupancy_by_goal', dlc_dir)
+    # save the directional_occupancy_by_position_by_goal
+    save_pickle(directional_occupancy_by_position_by_goal, 'directional_occupancy_by_position_by_goal', dlc_dir)
 
     pass

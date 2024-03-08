@@ -5,8 +5,12 @@ import pandas as pd
 import scipy.io
 import pickle
 import re 
-from get_directories import get_data_dir, reverse_date
-from load_and_save_data import load_pickle, save_pickle
+
+import sys
+sys.path.append('C:/Users/Jake/Documents/python_code/robot_maze_analysis_code')
+from utilities.get_directories import get_data_dir, reverse_date
+from utilities.load_and_save_data import load_pickle, save_pickle
+
 
 def get_behaviour_dir(data_dir):
     behaviour_dir = os.path.join(data_dir, 'behaviour')

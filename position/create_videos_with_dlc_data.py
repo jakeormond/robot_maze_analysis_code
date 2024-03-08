@@ -4,16 +4,17 @@ import pandas as pd
 import numpy as np
 from numpy import matlib as mb
 import re
-
 from matplotlib import pyplot as plt
 import pickle
 import math
-from get_directories import get_data_dir 
-from load_and_save_data import load_pickle, save_pickle
-from calculate_pos_and_dir import get_goal_coordinates
-
 import imageio
 import cv2
+
+import sys
+sys.path.append('C:/Users/Jake/Documents/python_code/robot_maze_analysis_code')
+from utilities.get_directories import get_data_dir 
+from utilities.load_and_save_data import load_pickle, save_pickle
+from position.calculate_pos_and_dir import get_goal_coordinates
 
 
 def create_cropped_video_with_dlc_data(dlc_data, 
@@ -121,6 +122,9 @@ def create_full_video_with_dlc_data(video_time, dlc_data, data_dir, start_and_en
     video_path = os.path.join(video_dir, 'video_' + video_time + '.avi')
     cap = cv2.VideoCapture(video_path)
 
+    # get number of frames
+    num_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
     # properties
     height = 1024
     width = 1224
@@ -141,7 +145,7 @@ def create_full_video_with_dlc_data(video_time, dlc_data, data_dir, start_and_en
                                cv2.VideoWriter_fourcc(*'XVID'), 
                                fps, (width, height), isColor=True)
     
-    num_frames = dlc_data.shape[0]
+    # num_frames = dlc_data.shape[0]
 
     for frame_idx in range(num_frames):
         _, frame = cap.read()
@@ -155,8 +159,10 @@ def create_full_video_with_dlc_data(video_time, dlc_data, data_dir, start_and_en
         if frame_idx % 10 != 0:
             continue
 
-        # get the dlc data for this frame
-        dlc_for_frame = dlc_data.iloc[frame_idx, :]
+        # get the row from dlc_data with index frame_idx
+        dlc_for_frame = dlc_data.loc[frame_idx, :]       
+        # dlc_for_frame = dlc_data.iloc[frame_idx, :]
+        
         hd_for_frame = dlc_for_frame[ 'hd']
 
         if math.isnan(hd_for_frame):
@@ -321,7 +327,7 @@ def get_video_paths_from_dlc(dlc_processed_data, data_dir):
 
 if __name__ == "__main__":
     animal = 'Rat46'
-    session = '19-02-2024'
+    session = '20-02-2024'
     data_dir = get_data_dir(animal, session)
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
     

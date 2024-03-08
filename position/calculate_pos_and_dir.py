@@ -6,9 +6,13 @@ import matplotlib.pyplot as plt
 import re
 import shutil
 import cv2 
-from get_directories import get_data_dir, get_robot_maze_directory
-from load_and_save_data import save_pickle, load_pickle
 import glob
+
+import sys
+sys.path.append('C:/Users/Jake/Documents/python_code/robot_maze_analysis_code')
+from utilities.get_directories import get_data_dir, get_robot_maze_directory
+from utilities.load_and_save_data import save_pickle, load_pickle
+
 
 # screen platforms is a dictionary where each key is the screen number and each
 # value is the number of the platfom that is directly adjacent to the screen
@@ -334,7 +338,7 @@ def get_x_and_y_limits(dlc_data):
 
 if __name__ == "__main__":
     animal = 'Rat46'
-    session = '19-02-2024'
+    session = '20-02-2024'
     data_dir = get_data_dir(animal, session)
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
 

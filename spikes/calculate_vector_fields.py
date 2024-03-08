@@ -1,27 +1,37 @@
 import os
 import numpy as np
 import pycircstat as circ
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
+import sys
+sys.path.append('C:/Users/Jake/Documents/python_code/robot_maze_analysis_code')
+from utilities.get_directories import get_data_dir
+from utilities.load_and_save_data import load_pickle, save_pickle
+from behaviour.load_behaviour import get_behaviour_dir
+from position.calculate_pos_and_dir import get_goal_coordinates, get_x_and_y_limits, cm_per_pixel
 
-from get_directories import get_data_dir, get_robot_maze_directory
-from load_and_save_data import load_pickle, save_pickle
-from load_behaviour import get_behaviour_dir
 
-def calculate_vector_fields(spike_rates_by_position_and_direction):
+def calculate_vector_fields(spike_rates_by_position_and_direction, x_bins, y_bins, direction_bins):
 
-    direction_bins = spike_rates_by_position_and_direction['direction_bins']
     bin_centres = direction_bins[:-1] + np.diff(direction_bins)/2
 
-    vector_fields = {'units': {}, 'x_bins': spike_rates_by_position_and_direction['x_bins'], 
-                     'y_bins': spike_rates_by_position_and_direction['y_bins'], 
-                     'direction_bins': spike_rates_by_position_and_direction['direction_bins']} 
-    mean_resultant_lengths = {'units': {}, 'x_bins': spike_rates_by_position_and_direction['x_bins'], 
-                     'y_bins': spike_rates_by_position_and_direction['y_bins'], 
-                     'direction_bins': spike_rates_by_position_and_direction['direction_bins']} 
+    vector_fields = {'units': {}, 'x_bins': x_bins, 
+                     'y_bins': y_bins, 'direction_bins': direction_bins}
+    mean_resultant_lengths = {'units': {}, 'x_bins': x_bins, 
+                     'y_bins': y_bins, 'direction_bins': direction_bins} 
     
-    for u in spike_rates_by_position_and_direction['units'].keys():
-        rates_by_pos_dir = spike_rates_by_position_and_direction['units'][u]
+
+    # poss_unit_keys = ['units', 'popn']
+    # data_keys = list(spike_rates_by_position_and_direction.keys())
+    # # find the key common to both lists
+    # unit_key = [k for k in poss_unit_keys if k in data_keys][0]
+
+    units = list(spike_rates_by_position_and_direction.keys())
+
+    for u in units:
+        rates_by_pos_dir = spike_rates_by_position_and_direction[u]
         array_shape = rates_by_pos_dir.shape
 
         # initialize vector field as array of nans
@@ -49,7 +59,76 @@ def calculate_vector_fields(spike_rates_by_position_and_direction):
         mean_resultant_lengths['units'][u] = mrl_field
 
     return vector_fields, mean_resultant_lengths
-    
+
+
+def calculate_vector_fields_2goals(spike_rates_by_position_and_direction_by_goal, behaviour_data):
+    vector_fields_by_goal = {}
+    mean_resultant_lengths_by_goal = {}
+    for i, g in enumerate(behaviour_data.keys()):
+        vector_fields_temp, mean_resultant_lengths_temp = calculate_vector_fields(spike_rates_by_position_and_direction_by_goal[g], 
+                spike_rates_by_position_and_direction_by_goal['x_bins'], spike_rates_by_position_and_direction_by_goal['y_bins'], 
+                spike_rates_by_position_and_direction_by_goal['direction_bins'])
+        
+        if i == 0:
+            vector_fields_by_goal['x_bins'] = vector_fields_temp['x_bins']
+            vector_fields_by_goal['y_bins'] = vector_fields_temp['y_bins']
+            vector_fields_by_goal['direction_bins'] = vector_fields_temp['direction_bins']
+
+            mean_resultant_lengths_by_goal['x_bins'] = mean_resultant_lengths_temp['x_bins']
+            mean_resultant_lengths_by_goal['y_bins'] = mean_resultant_lengths_temp['y_bins']
+            mean_resultant_lengths_by_goal['direction_bins'] = mean_resultant_lengths_temp['direction_bins']
+        
+        vector_fields_by_goal[g] = vector_fields_temp['units']
+        mean_resultant_lengths_by_goal[g] = mean_resultant_lengths_temp['units']
+
+    return vector_fields_by_goal, mean_resultant_lengths_by_goal
+
+
+def plot_vector_field_test(vector_fields, plot_dir):
+    x_bins = vector_fields['x_bins']
+    x_centres = x_bins[:-1] + np.diff(x_bins)/2
+    y_bins = vector_fields['y_bins']
+    y_centres = y_bins[:-1] + np.diff(y_bins)/2
+
+    fig, ax = plt.subplots(1, 1, figsize=(10, 10))
+    ax.set_title('test vector field')
+    ax.set_xlabel('x position (cm)')
+    ax.set_ylabel('y position (cm)')
+
+    unit = list(vector_fields['units'].keys())[0]
+    vector_field = vector_fields['units'][unit]
+
+    # get number of elements in vector_field
+    n_elements = vector_field.size
+
+    # make a vector of the same size as vector_field with elements incrementing from -pi to pi
+    increasing_directions = np.linspace(-np.pi, np.pi, n_elements)
+
+    # arrange direction_bins into an array of the same shape as vector_field
+    increasing_directions = increasing_directions.reshape(vector_field.shape)
+
+    # plot vector field
+    ax.quiver(x_centres, y_centres, np.cos(increasing_directions), 
+              np.sin(increasing_directions), color='k', scale=15, 
+              headlength=5, headaxislength=4, headwidth=4)
+
+    # flip y axis
+    ax.invert_yaxis()
+
+    # increase the range of the axes by 10% to make room for the arrows
+    x_lim = ax.get_xlim()
+    y_lim = ax.get_ylim()
+    x_range = x_lim[1] - x_lim[0]
+    y_range = y_lim[1] - y_lim[0]
+    ax.set_xlim(x_lim[0] - 0.1*x_range, x_lim[1] + 0.1*x_range)
+    ax.set_ylim(y_lim[0] - 0.1*y_range, y_lim[1] + 0.1*y_range)
+
+    plt.show()
+
+    fig.savefig(os.path.join(plot_dir, 'test vector field.png'))
+
+    plt.close(fig)
+
     
 def plot_vector_fields(vector_fields, plot_dir):
     if not os.path.exists(plot_dir):
@@ -67,13 +146,6 @@ def plot_vector_fields(vector_fields, plot_dir):
         ax.set_ylabel('y position (cm)')
 
         vector_field = vector_fields['units'][u]
-
-        # make first row of vector field all zeros
-        vector_field[0, :] = 0
-        vector_field[1, :] = np.pi/2
-        vector_field[2, :] = np.pi
-        vector_field[3, :] = -np.pi
-        vector_field[4, :] = -np.pi/2
 
         # plot vector field
         ax.quiver(x_centres, y_centres, np.cos(vector_field), np.sin(vector_field), color='k', scale=10)
@@ -97,32 +169,152 @@ def plot_vector_fields(vector_fields, plot_dir):
         plt.close(fig)
 
 
+def plot_vector_fields_2goals(vector_fields, goal_coordinates, x_centres, y_centres, plot_name, plot_dir):
+
+    fig, ax = plt.subplots(1, 2, figsize=(20, 10))
+    fig.suptitle(plot_name)
+
+    goals = [g for g in vector_fields.keys() if isinstance(g, int)]
+
+    for i, g in enumerate(goals):
+        ax[i].set_title(f'goal {g}')
+        ax[i].set_xlabel('x position (cm)')
+        ax[i].set_ylabel('y position (cm)')
+
+        # plot the goal positions
+        colours = ['b', 'g']
+        for i2, g2 in enumerate(goal_coordinates.keys()):
+            # draw a circle with radius 80 around the goal on ax
+            circle = plt.Circle((goal_coordinates[g2][0], 
+                goal_coordinates[g2][1]), 80, color=colours[i2], 
+                fill=False, linewidth=5)
+            ax[i].add_artist(circle)       
+        
+        
+        vector_field = vector_fields[g][plot_name]
+
+        # plot vector field
+        ax[i].quiver(x_centres, y_centres, np.cos(vector_field), np.sin(vector_field), color='k', scale=10)
+        
+        # flip y axis
+        ax[i].invert_yaxis()
+
+        # increase the range of the axes by 10% to make room for the arrows
+        x_lim = ax[i].get_xlim()
+        y_lim = ax[i].get_ylim()
+        x_range = x_lim[1] - x_lim[0]
+        y_range = y_lim[1] - y_lim[0]
+        ax[i].set_xlim(x_lim[0] - 0.1*x_range, x_lim[1] + 0.1*x_range)
+        ax[i].set_ylim(y_lim[0] - 0.1*y_range, y_lim[1] + 0.1*y_range)
+
+        # set the axes to have identical scales
+        ax[i].set_aspect('equal')
+        
+
+    fig.savefig(os.path.join(plot_dir, f'{plot_name}.png'))
 
 
 
+def plot_vector_fields_2goals_all_units(vector_fields, goal_coordinates, plot_dir):
+    if not os.path.exists(plot_dir):
+        os.mkdir(plot_dir)
 
-    pass
+    # goals are the two numeric keys in vector_fields
+    goals = [g for g in vector_fields.keys() if isinstance(g, int)]
+    
+    x_bins = vector_fields['x_bins']
+    x_centres = x_bins[:-1] + np.diff(x_bins)/2
+    y_bins = vector_fields['y_bins']
+    y_centres = y_bins[:-1] + np.diff(y_bins)/2
+
+    units = list(vector_fields[goals[0]].keys())
+    for u in units:
+
+        plot_vector_fields_2goals(vector_fields, goal_coordinates, x_centres, y_centres, u, plot_dir)
+
 
 
 if __name__ == "__main__":
-    animal = 'Rat65'
-    session = '10-11-2023'
+    animal = 'Rat46'
+    session = '17-02-2024'
     data_dir = get_data_dir(animal, session)
+
+    # get goal coordinates
+    goal_coordinates = get_goal_coordinates(data_dir=data_dir)
 
     # load spike data
     spike_dir = os.path.join(data_dir, 'spike_sorting')
 
-    # load spike_rates_by_position_and_direction
-    spike_rates_by_position_and_direction = load_pickle('spike_rates_by_position_and_direction', spike_dir)
+    code_to_run = [2]
 
-    # vector_fields, mean_resultant_lengths = calculate_vector_fields(spike_rates_by_position_and_direction)
-    # save_pickle(vector_fields, 'vector_fields', spike_dir)
-    # save_pickle(mean_resultant_lengths, 'mean_resultant_lengths', spike_dir)
+    ###################### VECTOR FIELDS ACROSS WHOLE SESSSION (I.E. NOT SPLIT BY GOAL) #####################
+    if 1 in code_to_run:
+        # load spike_rates_by_position_and_direction
+        spike_rates_by_position_and_direction = load_pickle('spike_rates_by_position_and_direction', spike_dir)
+        
+        vector_fields, mean_resultant_lengths = calculate_vector_fields(spike_rates_by_position_and_direction)
+        save_pickle(vector_fields, 'vector_fields', spike_dir)
+        save_pickle(mean_resultant_lengths, 'mean_resultant_lengths', spike_dir)
 
-    # load vector fields
-    vector_fields = load_pickle('vector_fields', spike_dir)
+        # load vector fields
+        vector_fields = load_pickle('vector_fields', spike_dir)
 
-    # plot vector fields
-    plot_dir = os.path.join(spike_dir, 'vector_fields')
-    plot_vector_fields(vector_fields, plot_dir)
+        plot_dir = os.path.join(spike_dir, 'vector_fields')
+
+        # plot test field
+        plot_vector_field_test(vector_fields, plot_dir)
+
+        # plot vector fields
+        # plot_vector_fields(vector_fields, plot_dir)
+
+
+    ########################## BOTH GOALS ############################
+    behaviour_dir = os.path.join(data_dir, 'behaviour')
+    behaviour_data = load_pickle('behaviour_data_by_goal', behaviour_dir)
+
+    if 2 in code_to_run:
+
+        spike_rates_by_position_and_direction_by_goal = load_pickle('spike_rates_by_position_and_direction_by_goal', spike_dir)
+
+        vector_fields_by_goal, mean_resultant_lengths_by_goal = calculate_vector_fields_2goals(spike_rates_by_position_and_direction_by_goal, behaviour_data)
+            
+        save_pickle(vector_fields_by_goal, 'vector_fields_by_goal', spike_dir)
+        save_pickle(mean_resultant_lengths_by_goal, 'mean_resultant_lengths_by_goal', spike_dir)
+
+        # plot vector fields by goal
+        plot_dir = os.path.join(spike_dir, 'vector_fields_by_goal')
+        plot_vector_fields_2goals_all_units(vector_fields_by_goal, goal_coordinates, plot_dir)
+
+
+    ############################# BOTH GOALS - COMBINED PRINCIPAL CELLS ############################
+    
+    if 3 in code_to_run:
+
+        # load data 
+        spike_rates_by_position_and_direction_by_goal_popn = load_pickle('spike_rates_by_position_and_direction_by_goal_popn', spike_dir)
+
+        vector_fields_by_goal, mean_resultant_lengths_by_goal = calculate_vector_fields_2goals(spike_rates_by_position_and_direction_by_goal_popn, behaviour_data)
+        
+        save_pickle(vector_fields_by_goal, 'vector_fields_by_goal_popn', spike_dir)
+        save_pickle(mean_resultant_lengths_by_goal, 'mean_resultant_lengths_by_goal_popn', spike_dir)
+
+        # plot vector fields by goal
+        plot_dir = os.path.join(spike_dir, 'vector_fields_by_goal')
+        plot_name = 'pyramidal_popn'
+        plot_vector_fields_2goals_all_units(vector_fields_by_goal, goal_coordinates, plot_dir)
+
+    pass
+
+        
+
+
+
+
+
+
+
+
+
+
+
     
