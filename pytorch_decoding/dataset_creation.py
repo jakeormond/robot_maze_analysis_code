@@ -3,9 +3,11 @@ import os
 import numpy as np
 import pandas as pd
 
-from get_directories import get_data_dir, get_robot_maze_directory
-from load_and_save_data import load_pickle, save_pickle
-from calculate_spike_pos_hd import interpolate_rads
+import sys
+sys.path.append('C:/Users/Jake/Documents/python_code/robot_maze_analysis_code')
+from utilities.get_directories import get_data_dir, get_robot_maze_directory
+from utilities.load_and_save_data import load_pickle, save_pickle
+from spikes.calculate_spike_pos_hd import interpolate_rads
 
 sample_freq = 30000 # Hz
 
@@ -72,7 +74,6 @@ def create_spike_trains(units, window_edges, window_size):
        
     # create a dictionary to hold the spike trains  
     spike_trains = {}
-
 
     for i, k in enumerate(window_edges.keys()):
 
@@ -205,55 +206,55 @@ def cat_spike_trains(spike_trains):
 
 
 if __name__ == "__main__":
-    # animal = 'Rat65'
-    # session = '10-11-2023'
-    # data_dir = get_data_dir(animal, session)
+    animal = 'Rat46'
+    session = '19-02-2024'
+    data_dir = get_data_dir(animal, session)
     
-    data_dir = 'D:/analysis/og_honeycomb/rat7/6-12-2019'
+   #  data_dir = 'D:/analysis/og_honeycomb/rat7/6-12-2019'
     # data_dir = '/media/jake/DataStorage_6TB/DATA/neural_network/og_honeycomb/rat7/6-12-2019'
 
     # load spike data
-    # spike_dir = os.path.join(data_dir, 'spike_sorting')
-    # units = load_pickle('units_w_behav_correlates', spike_dir)
-
-    spike_dir = os.path.join(data_dir, 'physiology_data')
-    units = load_pickle('restricted_units', spike_dir)
+    spike_dir = os.path.join(data_dir, 'spike_sorting')
+    units = load_pickle('units_w_behav_correlates', spike_dir)
+    # units = load_pickle('restricted_units', spike_dir)
 
     # load positional data
-    # dlc_dir = os.path.join(data_dir, 'deeplabcut')
-    # dlc_data = load_pickle('dlc_final', dlc_dir)
-
     dlc_dir = os.path.join(data_dir, 'positional_data')
-    dlc_data  = load_pickle('dlc_data', dlc_dir)
+    dlc_data  = load_pickle('dlc_final', dlc_dir)
     dlc_data = dlc_data['hComb']
 
     # create positional and spike trains with overlapping windows
     # and save as a pickle file
+    window_size = 500
     windowed_dlc, window_edges, window_size = \
-        create_positional_trains(dlc_data, window_size=500)
+        create_positional_trains(dlc_data, window_size=window_size)    
     windowed_data = {'windowed_dlc': windowed_dlc, 'window_edges': window_edges}
-    save_pickle(windowed_data, 'windowed_data', dlc_dir)
+    dlc_train_file_name = f'windowed_dlc_{window_size}'
+    save_pickle(windowed_data, dlc_train_file_name, dlc_dir)
 
-    windowed_data = load_pickle('windowed_data', dlc_dir)
+    windowed_data = load_pickle(dlc_train_file_name, dlc_dir)
     windowed_dlc = windowed_data['windowed_dlc']
     window_edges = windowed_data['window_edges']
 
     # create spike trains
     spike_trains = create_spike_trains(units, window_edges, window_size=window_size)
-    save_pickle(spike_trains, 'spike_trains', spike_dir)
+    spike_train_file_name = f'spike_trains_{window_size}'
+    save_pickle(spike_trains, spike_train_file_name, spike_dir)
 
-    spike_trains = load_pickle('spike_trains', spike_dir)
+    spike_trains = load_pickle(spike_train_file_name, spike_dir)
 
     # concatenate data from all trials into np.arrays for training
     labels = cat_dlc(windowed_dlc)
     # convert labels to float32
     labels = labels.astype(np.float32)
-    np.save(f'{dlc_dir}/labels.npy', labels)
+    labels_file_name = f'labels_{window_size}'
+    np.save(f'{dlc_dir}/{labels_file_name}.npy', labels)
 
     # concatenate spike trains into np.arrays for training
     model_inputs, unit_list = cat_spike_trains(spike_trains)
     # convert model_inputs to float32
     model_inputs = model_inputs.astype(np.float32)
+    inputs_file_name = f'inputs_{window_size}'
     np.save(f'{spike_dir}/inputs.npy', model_inputs)
     save_pickle(unit_list, 'unit_list', spike_dir)
     pass 

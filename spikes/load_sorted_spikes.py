@@ -2,8 +2,11 @@ import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from get_directories import get_data_dir 
-from load_and_save_data import save_pickle
+
+import sys
+sys.path.append('C:/Users/Jake/Documents/python_code/robot_maze_analysis_code')
+from utilities.get_directories import get_data_dir 
+from utilities.load_and_save_data import save_pickle
 
 sample_freq = 30000
 

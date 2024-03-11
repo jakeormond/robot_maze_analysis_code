@@ -511,12 +511,12 @@ def create_artificial_unit(units, directional_occupancy_by_position):
 
 
 if __name__ == "__main__":
-    animal = 'Rat46'
-    session = '17-02-2024'
+    animal = 'Rat47'
+    session = '08-02-2024'
     data_dir = get_data_dir(animal, session)
 
-    code_to_run = range(8)
-    # code_to_run = [7]
+    # code_to_run = range(8)
+    code_to_run = [7]
 
 
     ################## LOAD DATA ##################

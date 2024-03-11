@@ -3,31 +3,36 @@ import glob
 import shutil
 import numpy as np
 
-from get_directories import get_data_dir, get_robot_maze_directory
-from rename_bonsai_files import match_behaviour_and_bonsai_datestamps, re_date_bonsai_files, re_date_video_files, re_date_dlc_files
-from load_and_save_data import load_pickle, save_pickle
-from get_pulses import load_imec_pulses, make_dataframe_pulse_numbers, match_bonsai_and_imec_pulses, plot_pulse_alignment
-from get_video_endpoints import get_video_endpoints, get_video_startpoints
-from process_dlc_data import process_dlc_data, get_video_times_in_samples, restrict_dlc_to_video_start_and_end, interpolate_out_nans
-from load_behaviour import get_behaviour_dir, load_behaviour_file, split_behaviour_data_by_goal, split_dictionary_by_goal
-from calculate_pos_and_dir import get_screen_coordinates, get_uncropped_platform_coordinates, get_current_platform, get_relative_head_direction, get_distances
-from load_sorted_spikes import load_sorted_spikes
-from restrict_spikes_to_trials import restrict_spikes_to_trials
-from calculate_occupancy import get_goal_coordinates, calculate_frame_durations, concatenate_dlc_data, get_axes_limits, get_positional_occupancy, plot_occupancy_heatmap, get_directional_occupancy_from_dlc, plot_directional_occupancy, get_directional_occupancy_by_position, concatenate_dlc_data_by_goal
-from calculate_spike_pos_hd import get_unit_position_and_directions, bin_spikes_by_position, smooth_rate_maps, bin_spikes_by_direction, bin_spikes_by_position_and_direction, check_bad_vals, sort_units_by_goal
-from plot_spikes_and_pos import get_x_and_y_limits, plot_spikes_and_pos, plot_spikes_2goals, plot_spike_rates_by_direction, plot_rate_maps, plot_rate_maps_2goals, plot_spike_rates_by_direction_2goals
 
+import sys
+sys.path.append('C:/Users/Jake/Documents/python_code/robot_maze_analysis_code')
+from utilities.get_directories import get_data_dir, get_robot_maze_directory
+from utilities.rename_bonsai_files import match_behaviour_and_bonsai_datestamps, re_date_bonsai_files, re_date_video_files, re_date_dlc_files
+from utilities.load_and_save_data import load_pickle, save_pickle
+from utilities.get_pulses import load_imec_pulses, make_dataframe_pulse_numbers, match_bonsai_and_imec_pulses, plot_pulse_alignment
+from utilities.get_video_endpoints import get_video_endpoints, get_video_startpoints
+from position.process_dlc_data import process_dlc_data, get_video_times_in_samples, restrict_dlc_to_video_start_and_end, interpolate_out_nans
+from behaviour.load_behaviour import get_behaviour_dir, load_behaviour_file, split_behaviour_data_by_goal, split_dictionary_by_goal
+from position.calculate_pos_and_dir import get_screen_coordinates, get_uncropped_platform_coordinates, get_current_platform, get_relative_head_direction, get_distances
+from spikes.load_sorted_spikes import load_sorted_spikes
+from spikes.restrict_spikes_to_trials import restrict_spikes_to_trials
+from position.calculate_occupancy import get_goal_coordinates, calculate_frame_durations, concatenate_dlc_data, get_axes_limits, get_positional_occupancy, plot_occupancy_heatmap, get_directional_occupancy_from_dlc, plot_directional_occupancy, get_directional_occupancy_by_position, concatenate_dlc_data_by_goal
+from spikes.calculate_spike_pos_hd import get_unit_position_and_directions, bin_spikes_by_position, smooth_rate_maps, \
+    bin_spikes_by_direction, check_bad_vals, sort_units_by_goal, \
+    bin_spikes_by_position_and_direction_individual_units
+from spikes.plot_spikes_and_pos import get_x_and_y_limits, plot_spikes_and_pos, plot_spikes_2goals, plot_spike_rates_by_direction, plot_rate_maps, plot_rate_maps_2goals, plot_spike_rates_by_direction_2goals
+from spikes.calculate_vector_fields import calculate_vector_fields_2goals, plot_vector_fields_2goals_all_units
 
 if __name__ == "__main__":
-    animal = 'Rat47'
-    session = '08-02-2024'
+    animal = 'Rat64'
+    session = '08-11-2023'
     data_dir = get_data_dir(animal, session)
     behaviour_dir = os.path.join(data_dir, 'behaviour')
     video_dir = os.path.join(data_dir, 'video_files')
     video_csv_dir = os.path.join(data_dir, 'video_csv_files')
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
 
-    starting_code_block = 3
+    starting_code_block = 5
 
     ################ CODE BLOCK 0 ##################
     ################ REDATE FILES ##################
@@ -228,6 +233,7 @@ if __name__ == "__main__":
     ##################### CODE BLOCK 7 ############################
     ############################### CALCULATE OCCUPANCY MAPS ############################
     if starting_code_block <= 7:
+        dlc_data = load_pickle('dlc_final', dlc_dir)
         # load the platform coordinates, from which we can get the goal coordinates
         robot_maze_dir = get_robot_maze_directory()
         platform_dir = os.path.join(robot_maze_dir, 'workstation', 'map_files')
@@ -282,6 +288,7 @@ if __name__ == "__main__":
 
         positional_occupancy_by_goal = {}
         directional_occupancy_by_goal = {}
+        directional_occupancy_by_position_by_goal = {}
 
         for g in behaviour_data.keys():
             
@@ -298,11 +305,18 @@ if __name__ == "__main__":
             
             figure_dir = os.path.join(dlc_dir, 'directional_occupancy_by_goal', f'goal_{g}')        
             plot_directional_occupancy(directional_occupancy_by_goal[g], figure_dir)
+
+            # calculate directional occupancy by position
+            directional_occupancy_by_position_by_goal[g] = \
+                get_directional_occupancy_by_position(dlc_data_concat_by_goal[g], limits)
+
     
         # save the positional_occupancy_by_goal
         save_pickle(positional_occupancy_by_goal, 'positional_occupancy_by_goal', dlc_dir)
         # save the directional_occupancy_by_goal
         save_pickle(directional_occupancy_by_goal, 'directional_occupancy_by_goal', dlc_dir)
+        # save the directional_occupancy_by_position_by_goal
+        save_pickle(directional_occupancy_by_position_by_goal, 'directional_occupancy_by_position_by_goal', dlc_dir)
 
 
     ##################### CODE BLOCK 8 ############################
@@ -358,7 +372,7 @@ if __name__ == "__main__":
         # load the directional occupancy by position data
         directional_occupancy_by_position = load_pickle('directional_occupancy_by_position', dlc_dir)
         # bin spikes by position and direction
-        spike_rates_by_position_and_direction, bad_vals = bin_spikes_by_position_and_direction(units, 
+        spike_rates_by_position_and_direction, bad_vals = bin_spikes_by_position_and_direction_individual_units(units, 
                                                 directional_occupancy_by_position)
         
         check_bad_vals(bad_vals, dlc_data)
@@ -400,6 +414,34 @@ if __name__ == "__main__":
                 = bin_spikes_by_direction(units_by_goal[g], directional_occupancy_by_goal[g])
 
         save_pickle(spike_rates_by_direction_by_goal, 'spike_rates_by_direction_by_goal', spike_dir)
+
+        # bin spikes by position and direction by goal
+        directional_occupancy_by_position_by_goal = load_pickle('directional_occupancy_by_position_by_goal', dlc_dir)
+
+        spike_rates_by_position_and_direction_by_goal = {}
+        for i, g in enumerate(units_by_goal.keys()):  
+            spike_rates_by_position_and_direction_by_goal[g], bad_vals = \
+                bin_spikes_by_position_and_direction_individual_units(units_by_goal[g], 
+                directional_occupancy_by_position_by_goal[g])
+
+            if i == 0:
+                spike_rates_by_position_and_direction_by_goal['x_bins'] = \
+                    spike_rates_by_position_and_direction_by_goal[g]['x_bins']
+                spike_rates_by_position_and_direction_by_goal['y_bins'] = \
+                    spike_rates_by_position_and_direction_by_goal[g]['y_bins']
+                spike_rates_by_position_and_direction_by_goal['direction_bins'] = \
+                    spike_rates_by_position_and_direction_by_goal[g]['direction_bins']  
+
+            # remove the x_bins, y_bins and direction_bins from the spike_rates_by_position_and_direction_by_goal[g]
+            spike_rates_by_position_and_direction_by_goal[g].pop('x_bins')
+            spike_rates_by_position_and_direction_by_goal[g].pop('y_bins')
+            spike_rates_by_position_and_direction_by_goal[g].pop('direction_bins')       
+
+            spike_rates_by_position_and_direction_by_goal[g] = spike_rates_by_position_and_direction_by_goal[g]['units']
+          
+        save_pickle(spike_rates_by_position_and_direction_by_goal, 'spike_rates_by_position_and_direction_by_goal', spike_dir)
+
+
 
 
     ########################## CODE BLOCK 9 ############################
@@ -462,26 +504,20 @@ if __name__ == "__main__":
 
         plot_spike_rates_by_direction_2goals(spike_rates_by_direction, plot_dir)
 
-        for g in spike_rates_by_direction.keys():
-            plot_dir = os.path.join(spike_dir, 'spike_rates_by_direction_by_goal', f'goal_{g}')
-            plot_spike_rates_by_direction(spike_rates_by_direction[g], plot_dir)
+        # for g in spike_rates_by_direction.keys():
+        #     plot_dir = os.path.join(spike_dir, 'spike_rates_by_direction_by_goal', f'goal_{g}')
+        #     plot_spike_rates_by_direction(spike_rates_by_direction[g], plot_dir)
 
-        # plot rate maps by goal
-        rate_maps_by_goal = load_pickle('rate_maps_by_goal', spike_dir)
-        smoothed_rate_maps_by_goal = load_pickle('smoothed_rate_maps_by_goal', spike_dir)
+        # plot vector fields by goal
+        spike_rates_by_position_and_direction_by_goal = load_pickle('spike_rates_by_position_and_direction_by_goal', spike_dir)
+        vector_fields_by_goal, mean_resultant_lengths_by_goal = calculate_vector_fields_2goals(spike_rates_by_position_and_direction_by_goal, behaviour_data)
+            
+        save_pickle(vector_fields_by_goal, 'vector_fields_by_goal', spike_dir)
+        save_pickle(mean_resultant_lengths_by_goal, 'mean_resultant_lengths_by_goal', spike_dir)
 
-        plot_dir = os.path.join(spike_dir, 'rate_maps_by_goal')
-        if not os.path.exists(plot_dir):
-            os.mkdir(plot_dir)
-
-        for g  in rate_maps_by_goal.keys():
-            plot_dir = os.path.join(spike_dir, 'rate_maps_by_goal', f'goal_{g}')     
-            plot_rate_maps(rate_maps_by_goal[g], smoothed_rate_maps_by_goal[g], goal_coordinates, plot_dir)
-
-        
-        # create combined plots, with goal 1 in subplot 1 and goal 2 in subplot 2
-        plot_dir = os.path.join(spike_dir, 'rate_maps_by_goal', 'both_goals') 
-        plot_rate_maps_2goals(rate_maps_by_goal, goal_coordinates, plot_dir)    
+        # plot vector fields by goal
+        plot_dir = os.path.join(spike_dir, 'vector_fields_by_goal')
+        plot_vector_fields_2goals_all_units(vector_fields_by_goal, goal_coordinates, plot_dir)
 
         
 

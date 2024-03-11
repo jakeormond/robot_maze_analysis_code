@@ -4,14 +4,17 @@ import pandas as pd
 import numpy as np
 from numpy import matlib as mb
 import re
-
 from matplotlib import pyplot as plt
 import pickle
 import math
-from get_directories import get_data_dir 
-from load_and_save_data import load_pickle, save_pickle
-
 import cv2
+
+import sys
+sys.path.append('C:/Users/Jake/Documents/python_code/robot_maze_analysis_code')
+from utilities.get_directories import get_data_dir 
+from utilities.load_and_save_data import load_pickle, save_pickle
+
+
 
 def get_video_endpoints(video_dir, user_input=True):
     # get the list of .avi files

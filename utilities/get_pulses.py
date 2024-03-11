@@ -10,11 +10,13 @@ import pandas as pd
 import tkinter as tk
 from tkinter import filedialog
 import h5py
-from get_directories import get_home_dir, get_data_dir 
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
-from load_and_save_data import load_pickle, save_pickle
 
+import sys
+sys.path.append('C:/Users/Jake/Documents/python_code/robot_maze_analysis_code')
+from utilities.get_directories import get_home_dir, get_data_dir 
+from utilities.load_and_save_data import load_pickle, save_pickle
 
 
 def get_spikeglx_pulses(animal, session):

@@ -2,9 +2,12 @@ import os
 import numpy as np
 import pandas as pd
 import pickle
-from get_directories import get_data_dir 
-from process_dlc_data import load_dlc_processed_pickle
-from load_and_save_data import save_pickle, load_pickle
+
+import sys
+sys.path.append('C:/Users/Jake/Documents/python_code/robot_maze_analysis_code')
+from utilities.get_directories import get_data_dir 
+from position.process_dlc_data import load_dlc_processed_pickle
+from utilities.load_and_save_data import save_pickle, load_pickle
 
 def restrict_times_to_interval(times_to_restrict, interval):
 

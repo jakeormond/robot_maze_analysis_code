@@ -6,10 +6,13 @@ import numpy.matlib as mb
 import re
 import pickle
 import copy
-from get_directories import get_data_dir
-from get_pulses import load_bonsai_pulses
-from get_video_endpoints import get_video_startpoints
-from load_and_save_data import save_pickle, load_pickle
+
+import sys
+sys.path.append('C:/Users/Jake/Documents/python_code/robot_maze_analysis_code')
+from utilities.get_directories import get_data_dir
+from utilities.get_pulses import load_bonsai_pulses
+from utilities.get_video_endpoints import get_video_startpoints
+from utilities.load_and_save_data import save_pickle, load_pickle
 
 # note that sample rate is hardcoded as 30000
 # create global variable for sample rate

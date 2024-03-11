@@ -4,9 +4,12 @@
 # correct name.
 
 import os
-from get_directories import get_data_dir 
 import glob
 import time
+
+import sys
+sys.path.append('C:/Users/Jake/Documents/python_code/robot_maze_analysis_code')
+from utilities.get_directories import get_data_dir 
 
 
 def match_behaviour_and_bonsai_datestamps(behaviour_dir, video_dir):  
