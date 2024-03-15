@@ -170,6 +170,12 @@ def split_dictionary_by_goal(dictionary, data_dir):
         
     return split_dictionary 
 
+def get_goals(data_dir):
+    behaviour_dir = get_behaviour_dir(data_dir)
+    behav_data_by_goal = load_pickle('behaviour_data_by_goal', behaviour_dir)
+    goals = list(behav_data_by_goal.keys())
+    return goals
+    
 
 if __name__ == "__main__":
     animal = 'Rat46'
