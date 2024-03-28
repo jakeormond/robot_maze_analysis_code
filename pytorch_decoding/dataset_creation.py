@@ -20,6 +20,7 @@ def smooth_positional_data(dlc_data, window_size=100):
 
 
 def create_positional_trains(dlc_data, window_size=100): # we'll default to 100 ms windows for now
+
     # first, get the start and end time of the video
     window_in_samples = window_size * sample_freq / 1000 # convert window size to samples
     windowed_dlc = {}
@@ -256,12 +257,12 @@ if __name__ == "__main__":
 
     # create positional and spike trains with overlapping windows
     # and save as a pickle file
-    window_size = 100
-    # windowed_dlc, window_edges, window_size = \
-    #     create_positional_trains(dlc_data, window_size=window_size)    
-    # windowed_data = {'windowed_dlc': windowed_dlc, 'window_edges': window_edges}
+    window_size = 250
+    windowed_dlc, window_edges, window_size = \
+        create_positional_trains(dlc_data, window_size=window_size)    
+    windowed_data = {'windowed_dlc': windowed_dlc, 'window_edges': window_edges}
     dlc_train_file_name = f'windowed_dlc_{window_size}'
-    # save_pickle(windowed_data, dlc_train_file_name, dlc_dir)
+    save_pickle(windowed_data, dlc_train_file_name, dlc_dir)
 
     windowed_data = load_pickle(dlc_train_file_name, dlc_dir)
     windowed_dlc = windowed_data['windowed_dlc']
@@ -285,9 +286,9 @@ if __name__ == "__main__":
     #     plt.close()
 
     # create spike trains
-    # spike_trains = create_spike_trains(units, window_edges, window_size=window_size)
+    spike_trains = create_spike_trains(units, window_edges, window_size=window_size)
     spike_train_file_name = f'spike_trains_{window_size}'
-    # save_pickle(spike_trains, spike_train_file_name, spike_dir)
+    save_pickle(spike_trains, spike_train_file_name, spike_dir)
 
     spike_trains = load_pickle(spike_train_file_name, spike_dir)
 
@@ -301,10 +302,10 @@ if __name__ == "__main__":
         labels_file_name = f'labels_goal{g}_ws{window_size}'
         np.save(f'{dlc_dir}/{labels_file_name}.npy', labels)
 
-    # labels = cat_dlc(windowed_dlc)
-    # labels = labels.astype(np.float32)
-    # labels_file_name = f'labels_{window_size}'
-    # np.save(f'{dlc_dir}/{labels_file_name}.npy', labels)
+    labels = cat_dlc(windowed_dlc)
+    labels = labels.astype(np.float32)
+    labels_file_name = f'labels_{window_size}'
+    np.save(f'{dlc_dir}/{labels_file_name}.npy', labels)
 
     # concatenate spike trains into np.arrays for training
     
@@ -315,10 +316,10 @@ if __name__ == "__main__":
         inputs_file_name = f'inputs_goal{g}_ws{window_size}'
         np.save(f'{spike_dir}/{inputs_file_name}', model_inputs)
             
-    # model_inputs, unit_list = cat_spike_trains(spike_trains)
+    model_inputs, unit_list = cat_spike_trains(spike_trains)
     # convert model_inputs to float32
-    # model_inputs = model_inputs.astype(np.float32)
-    # inputs_file_name = f'inputs_{window_size}'
-    # np.save(f'{spike_dir}/{inputs_file_name}', model_inputs)
+    model_inputs = model_inputs.astype(np.float32)
+    inputs_file_name = f'inputs_{window_size}'
+    np.save(f'{spike_dir}/{inputs_file_name}', model_inputs)
     save_pickle(unit_list, 'unit_list', spike_dir)
     pass 
