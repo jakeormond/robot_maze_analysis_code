@@ -19,7 +19,14 @@ def smooth_positional_data(dlc_data, window_size=100):
     pass
 
 
-def create_positional_trains(dlc_data, window_size=100): # we'll default to 100 ms windows for now
+def create_positional_trains(dlc_data, window_size=100, overlap=None): # we'll default to 100 ms windows for now
+
+    # overlap
+    if overlap is None:
+       overlap_factor = 1.
+    
+    else:
+        overlap_factor = 1/overlap
 
     # first, get the start and end time of the video
     window_in_samples = window_size * sample_freq / 1000 # convert window size to samples
@@ -30,11 +37,13 @@ def create_positional_trains(dlc_data, window_size=100): # we'll default to 100 
         end_time = dlc_data[k].video_samples.iloc[-1]
         duration = end_time - start_time
 
+    
+
         # calculate the number of windows. Windows overlap by 50%.
-        num_windows = int(np.floor(duration/(window_in_samples/2))) - 1
+        num_windows = int(np.floor(duration/(window_in_samples * overlap_factor))) - 1
 
         # get the bin edges for the windows, these will be returned and used to bin the spikes
-        window_edges[k] = np.int64([start_time + i*window_in_samples/2 for i in range(num_windows+2)])
+        window_edges[k] = np.int64([start_time + i*window_in_samples*overlap_factor for i in range(num_windows+2)])
 
         # calculate the window centres. Because of the 50% overlap, they are simply the 
         # window edges with the first and last values excluded
@@ -71,7 +80,10 @@ def create_positional_trains(dlc_data, window_size=100): # we'll default to 100 
     return windowed_dlc, window_edges, window_size
 
 
-def create_spike_trains(units, window_edges, window_size): 
+def create_spike_trains(units, window_edges, window_size, overlap=None): 
+
+    
+
     # windows overlap by 50%
     # window_size in ms - just hard coded, not checked, so be careful!!!!!
        
@@ -255,71 +267,74 @@ if __name__ == "__main__":
     dlc_data  = load_pickle('dlc_final', dlc_dir)
     # dlc_data = dlc_data['hComb']
 
-    # create positional and spike trains with overlapping windows
-    # and save as a pickle file
-    window_size = 250
-    windowed_dlc, window_edges, window_size = \
-        create_positional_trains(dlc_data, window_size=window_size)    
-    windowed_data = {'windowed_dlc': windowed_dlc, 'window_edges': window_edges}
-    dlc_train_file_name = f'windowed_dlc_{window_size}'
-    save_pickle(windowed_data, dlc_train_file_name, dlc_dir)
 
-    windowed_data = load_pickle(dlc_train_file_name, dlc_dir)
-    windowed_dlc = windowed_data['windowed_dlc']
-    window_edges = windowed_data['window_edges']
+    window_sizes = [100, 250]
 
-    # plot the windowed data against the original data (plotted, looked fine so commented out)
-    # for k in windowed_dlc.keys():
-    #     # plot the x and y position
-    #     plt.figure()
-    #     # plot the original data in blue
-    #     # plt.plot(dlc_data[k].video_samples, dlc_data[k].x, 'b')
-    #     # plt.plot(dlc_data[k].video_samples, dlc_data[k].y, 'b')
-    #     plt.plot(dlc_data[k].video_samples, dlc_data[k].hd, 'b')
+    for window_size in window_sizes:
+        # create positional and spike trains 
+        # and save as a pickle file
+        windowed_dlc, window_edges, window_size = \
+            create_positional_trains(dlc_data, window_size=window_size)    
+        windowed_data = {'windowed_dlc': windowed_dlc, 'window_edges': window_edges}
+        dlc_train_file_name = f'windowed_dlc_{window_size}'
+        save_pickle(windowed_data, dlc_train_file_name, dlc_dir)
 
-    #     # plot the windowed data in red
-    #     # plt.plot(windowed_dlc[k].video_samples, windowed_dlc[k].x + 10, 'r')
-    #     # plt.plot(windowed_dlc[k].video_samples, windowed_dlc[k].y + 10, 'r')
-    #     plt.plot(windowed_dlc[k].video_samples, windowed_dlc[k].hd + 1, 'r')
-    #     plt.title(k)
-    #     plt.show()
-    #     plt.close()
+        windowed_data = load_pickle(dlc_train_file_name, dlc_dir)
+        windowed_dlc = windowed_data['windowed_dlc']
+        window_edges = windowed_data['window_edges']
 
-    # create spike trains
-    spike_trains = create_spike_trains(units, window_edges, window_size=window_size)
-    spike_train_file_name = f'spike_trains_{window_size}'
-    save_pickle(spike_trains, spike_train_file_name, spike_dir)
+        # plot the windowed data against the original data (plotted, looked fine so commented out)
+        # for k in windowed_dlc.keys():
+        #     # plot the x and y position
+        #     plt.figure()
+        #     # plot the original data in blue
+        #     # plt.plot(dlc_data[k].video_samples, dlc_data[k].x, 'b')
+        #     # plt.plot(dlc_data[k].video_samples, dlc_data[k].y, 'b')
+        #     plt.plot(dlc_data[k].video_samples, dlc_data[k].hd, 'b')
 
-    spike_trains = load_pickle(spike_train_file_name, spike_dir)
+        #     # plot the windowed data in red
+        #     # plt.plot(windowed_dlc[k].video_samples, windowed_dlc[k].x + 10, 'r')
+        #     # plt.plot(windowed_dlc[k].video_samples, windowed_dlc[k].y + 10, 'r')
+        #     plt.plot(windowed_dlc[k].video_samples, windowed_dlc[k].hd + 1, 'r')
+        #     plt.title(k)
+        #     plt.show()
+        #     plt.close()
 
-    # split the dlc data by goal
-    dlc_by_goal = split_dictionary_by_goal(windowed_dlc, data_dir)
-    # concatenate data from all trials into np.arrays for training
-    goals = list(dlc_by_goal.keys())
-    for g in goals:
-        labels = cat_dlc(dlc_by_goal[g])
+        # create spike trains
+        spike_trains = create_spike_trains(units, window_edges, window_size=window_size)
+        spike_train_file_name = f'spike_trains_{window_size}'
+        save_pickle(spike_trains, spike_train_file_name, spike_dir)
+
+        spike_trains = load_pickle(spike_train_file_name, spike_dir)
+
+        # split the dlc data by goal
+        dlc_by_goal = split_dictionary_by_goal(windowed_dlc, data_dir)
+        # concatenate data from all trials into np.arrays for training
+        goals = list(dlc_by_goal.keys())
+        for g in goals:
+            labels = cat_dlc(dlc_by_goal[g])
+            labels = labels.astype(np.float32)
+            labels_file_name = f'labels_goal{g}_ws{window_size}'
+            np.save(f'{dlc_dir}/{labels_file_name}.npy', labels)
+
+        labels = cat_dlc(windowed_dlc)
         labels = labels.astype(np.float32)
-        labels_file_name = f'labels_goal{g}_ws{window_size}'
+        labels_file_name = f'labels_{window_size}'
         np.save(f'{dlc_dir}/{labels_file_name}.npy', labels)
 
-    labels = cat_dlc(windowed_dlc)
-    labels = labels.astype(np.float32)
-    labels_file_name = f'labels_{window_size}'
-    np.save(f'{dlc_dir}/{labels_file_name}.npy', labels)
-
-    # concatenate spike trains into np.arrays for training
-    
-    model_inputs_by_goal, unit_list = cat_spike_trains_by_goal(spike_trains, data_dir)  
-    for g in goals:
+        # concatenate spike trains into np.arrays for training
+        
+        model_inputs_by_goal, unit_list = cat_spike_trains_by_goal(spike_trains, data_dir)  
+        for g in goals:
+            # convert model_inputs to float32
+            model_inputs = model_inputs_by_goal[g].astype(np.float32)
+            inputs_file_name = f'inputs_goal{g}_ws{window_size}'
+            np.save(f'{spike_dir}/{inputs_file_name}', model_inputs)
+                
+        model_inputs, unit_list = cat_spike_trains(spike_trains)
         # convert model_inputs to float32
-        model_inputs = model_inputs_by_goal[g].astype(np.float32)
-        inputs_file_name = f'inputs_goal{g}_ws{window_size}'
+        model_inputs = model_inputs.astype(np.float32)
+        inputs_file_name = f'inputs_{window_size}'
         np.save(f'{spike_dir}/{inputs_file_name}', model_inputs)
-            
-    model_inputs, unit_list = cat_spike_trains(spike_trains)
-    # convert model_inputs to float32
-    model_inputs = model_inputs.astype(np.float32)
-    inputs_file_name = f'inputs_{window_size}'
-    np.save(f'{spike_dir}/{inputs_file_name}', model_inputs)
-    save_pickle(unit_list, 'unit_list', spike_dir)
-    pass 
+        save_pickle(unit_list, 'unit_list', spike_dir)
+        pass 
