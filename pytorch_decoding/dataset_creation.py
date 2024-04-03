@@ -19,14 +19,7 @@ def smooth_positional_data(dlc_data, window_size=100):
     pass
 
 
-def create_positional_trains(dlc_data, window_size=100, overlap=None): # we'll default to 100 ms windows for now
-
-    # overlap
-    if overlap is None:
-       overlap_factor = 1.
-    
-    else:
-        overlap_factor = 1/overlap
+def create_positional_trains(dlc_data, window_size=100): # we'll default to 100 ms windows for now
 
     # first, get the start and end time of the video
     window_in_samples = window_size * sample_freq / 1000 # convert window size to samples
@@ -37,14 +30,11 @@ def create_positional_trains(dlc_data, window_size=100, overlap=None): # we'll d
         end_time = dlc_data[k].video_samples.iloc[-1]
         duration = end_time - start_time
 
-    
-
         # calculate the number of windows. Windows overlap by 50%.
-        num_windows = int(np.floor(duration/(window_in_samples * overlap_factor))) - 1
+        num_windows = int(np.floor(duration/(window_in_samples)))
 
         # get the bin edges for the windows, these will be returned and used to bin the spikes
-        window_edges[k] = np.int64([start_time + i*window_in_samples*overlap_factor for i in range(num_windows+2)])
-
+        window_edges[k] = np.arange(start_time, end_time, window_in_samples)
         # calculate the window centres. Because of the 50% overlap, they are simply the 
         # window edges with the first and last values excluded
         window_centres = window_edges[k][1:-1]
@@ -82,11 +72,7 @@ def create_positional_trains(dlc_data, window_size=100, overlap=None): # we'll d
 
 def create_spike_trains(units, window_edges, window_size, overlap=None): 
 
-    
-
-    # windows overlap by 50%
-    # window_size in ms - just hard coded, not checked, so be careful!!!!!
-       
+          
     # create a dictionary to hold the spike trains  
     spike_trains = {}
 
@@ -110,21 +96,7 @@ def create_spike_trains(units, window_edges, window_size, overlap=None):
 
             # bin spike times into the windows
             binned_spikes = np.histogram(spike_times, window_edges[k])[0]
-            # make a copy of binned spikes
-            binned_spikes_copy = binned_spikes.copy()
-
-            # the two copies are offset by half the window size
-            # and added together to produce the ovelapping windows 
-            # (i.e. the new first bin is bin1 + bin2, the new second
-            # bin is bin2 + bin3, etc.) without resorting to a slow
-            # for loop
-            # remove the last bin of binned spike
-            binned_spikes = binned_spikes[:-1]
-            # remove the first bin of the copy
-            binned_spikes_copy = binned_spikes_copy[1:]
-            # add the two together  
-            binned_spikes = binned_spikes + binned_spikes_copy
-
+           
             spike_rate = binned_spikes / (window_size / 1000)
             spike_trains[u][k] = spike_rate
             
