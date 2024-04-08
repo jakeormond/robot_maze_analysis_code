@@ -15,6 +15,7 @@ from utilities.get_directories import get_data_dir, get_robot_maze_directory
 from position.calculate_pos_and_dir import get_goal_coordinates, cm_per_pixel
 from utilities.load_and_save_data import load_pickle, save_pickle
 from behaviour.load_behaviour import get_behaviour_dir
+from position.calculate_pos_and_dir import get_directions_to_position, get_relative_directions_to_position
 
 
 def plot_occupancy_heatmap(positional_occupancy, goal_coordinates, figure_dir):
@@ -139,34 +140,21 @@ def plot_trial_path(dlc_data, limits, dlc_dir, d):
     # plt.close()
 
 
+
+
 def get_directional_occupancy_by_position(dlc_data, limits):
 
     # NOTE THAT IN THE OUTPUT, THE FIRST INDEX IS THE Y AXIS, 
     # AND THE SECOND INDEX IS THE X AXIS
 
-    # get the x and y limits of the maze
-    x_min = limits['x_min']
-    x_max = limits['x_max']
-    x_width = limits['x_width']
+    x_bins, y_bins = get_xy_bins(limits, n_bins=100)
 
-    y_min = limits['y_min']
-    y_max = limits['y_max']
-    y_height = limits['y_height']
+    x_bins_og = get_og_bins(x_bins)
+    y_bins_og = get_og_bins(y_bins)
 
-    # we want roughly 100 bins
-    n_bins = 100
-    pixels_per_bin = np.sqrt(x_width*y_height/n_bins)
-    n_x_bins = int(np.round(x_width/pixels_per_bin)) # note that n_bins is actually one more than the number of bins
-    n_y_bins = int(np.round(y_height/pixels_per_bin))
-
-    # create bins
-    x_bins_og = np.linspace(x_min, x_max, n_x_bins + 1)
-    x_bins = x_bins_og.copy()
-    x_bins[-1] = x_bins[-1] + 1e-6 # add a small number to the last bin so that the last value is included in the bin
-    
-    y_bins_og = np.linspace(y_min, y_max, n_y_bins + 1)
-    y_bins = y_bins_og.copy()
-    y_bins[-1] = y_bins[-1] + 1e-6 # add a small number to the last bin so that the last value is included in the bin
+    # create positional occupancy matrix
+    n_x_bins = len(x_bins) - 1
+    n_y_bins = len(y_bins) - 1
 
     # create directional occupancy by position array
     n_dir_bins=12 # 12 bins of 30 degrees each
@@ -209,10 +197,79 @@ def get_directional_occupancy_by_position(dlc_data, limits):
     return directional_occupancy_by_position
 
 
-def get_positional_occupancy(dlc_data, limits):    
 
-    # NOTE THAT IN THE OUTPUT, THE FIRST INDEX IS THE Y AXIS, 
-    # AND THE SECOND INDEX IS THE X AXIS
+def get_relative_direction_occupancy_by_position(dlc_data, limits):
+        
+    # get spatial bins
+    x_bins, y_bins = get_xy_bins(limits, n_bins=100)
+
+    # candidate consink positions will be at bin centres
+    x_bins_og = get_og_bins(x_bins)
+    y_bins_og = get_og_bins(y_bins)
+
+    bins = {'x': x_bins_og, 'y': y_bins_og}
+
+    x_sink_pos = x_bins_og[0:-1] + np.diff(x_bins_og)/2
+    y_sink_pos = y_bins_og[0:-1] + np.diff(y_bins_og)/2
+
+    candidate_sinks = {'x': x_sink_pos, 'y': y_sink_pos}
+
+    # create positional occupancy matrix
+    n_x_bins = len(x_bins) - 1
+    n_y_bins = len(y_bins) - 1
+
+    # create relative directional occupancy by position array
+    n_dir_bins=12 # 12 bins of 30 degrees each
+    
+    reldir_occ_by_pos = np.array([[np.zeros((n_y_bins, n_x_bins, n_dir_bins)) for _ in range(n_y_bins)] for _ in range(n_x_bins)])
+    
+    # get x and y data
+    x = dlc_data['x']
+    y = dlc_data['y']
+
+    x_bin = np.digitize(x, x_bins) - 1
+    y_bin = np.digitize(y, y_bins) - 1
+
+    # get the head direction data
+    hd = dlc_data['hd']
+
+    # get the durations
+    durations = dlc_data['durations']
+
+    for i in range(np.max(x_bin)+1):
+        for j in range(np.max(y_bin)+1):
+            # get the indices where x_bin == i and y_bin == j
+            indices = np.where((x_bin == i) & (y_bin == j))[0]
+
+            x_positions = x[indices]
+            y_positions = y[indices]
+            positions = {'x': x_positions, 'y': y_positions}
+
+            # get the head directions and durations for these indices
+            hd_temp = hd[indices]
+            durations_temp = durations[indices]
+
+            # loop through possible consink positions
+            for i2, x_sink in x_sink_pos:
+                for j2, y_sink in y_sink_pos:
+                
+                    # get directions to sink                    
+                    directions = get_directions_to_position([x_sink, y_sink], positions)
+                    
+                    # get the relative direction
+                    relative_direction = get_relative_directions_to_position(directions, hd_temp)
+                    
+                    # get the directional occupancy for these indices
+                    directional_occupancy, direction_bins = \
+                        get_directional_occupancy(relative_direction, durations_temp, n_bins=12)
+
+                    # add the directional occupancy to positional_occupancy_temp
+                    reldir_occ_by_pos[j, i, j2, i2, :] = directional_occupancy
+
+    return reldir_occ_by_pos, bins, candidate_sinks    
+
+
+def get_xy_bins(limits, n_bins=100):
 
     # get the x and y limits of the maze
     x_min = limits['x_min']
@@ -223,8 +280,8 @@ def get_positional_occupancy(dlc_data, limits):
     y_max = limits['y_max']
     y_height = limits['y_height']
 
-    # we want roughly 400 bins
-    pixels_per_bin = np.sqrt(x_width*y_height/400)
+    # we want roughly 100 bins
+    pixels_per_bin = np.sqrt(x_width*y_height/n_bins)
     n_x_bins = int(np.round(x_width/pixels_per_bin)) # note that n_bins is actually one more than the number of bins
     n_y_bins = int(np.round(y_height/pixels_per_bin))
 
@@ -237,14 +294,27 @@ def get_positional_occupancy(dlc_data, limits):
     y_bins = y_bins_og.copy()
     y_bins[-1] = y_bins[-1] + 1e-6 # add a small number to the last bin so that the last value is included in the bin
 
+    return x_bins, y_bins
+
+
+def get_positional_occupancy(dlc_data, limits):    
+
+    # NOTE THAT IN THE OUTPUT, THE FIRST INDEX IS THE Y AXIS, 
+    # AND THE SECOND INDEX IS THE X AXIS
+
+    x_bins, y_bins = get_xy_bins(limits, n_bins=400)
+
+    x_bins_og = get_og_bins(x_bins)
+    y_bins_og = get_og_bins(y_bins)
+
     # create positional occupancy matrix
+    n_x_bins = len(x_bins) - 1
+    n_y_bins = len(y_bins) - 1
     positional_occupancy_temp = np.zeros((n_y_bins, n_x_bins))
 
     # get x and y data 
     x = dlc_data['x']
     y = dlc_data['y']
-
-
 
     x_bin = np.digitize(x, x_bins) - 1
     y_bin = np.digitize(y, y_bins) - 1 
@@ -259,6 +329,20 @@ def get_positional_occupancy(dlc_data, limits):
                             'x_bins': x_bins_og, 'y_bins': y_bins_og}
 
     return positional_occupancy
+
+
+def get_og_bins(bins):
+   
+    # get differences between each bin
+    bin_diffs = np.diff(bins)
+
+    # the last difference should be greater than the others, determine by how much
+    diff = bin_diffs[-1] - np.mean(bin_diffs[:-1])
+
+    # substract this difference from the last bin
+    bins[-1] = bins[-1] - diff
+
+    return bins
 
 
 def calculate_frame_durations(dlc_data):
@@ -293,6 +377,26 @@ def get_axes_limits(dlc_data):
             'y_min': y_min, 'y_max': y_max, 'y_height': y_height}
 
     return limits
+
+
+def get_consink_candidate_positions(dlc_data, limits, n_xbins=None, n_ybins=None):
+    # get the x and y limits of the maze
+    x_min = limits['x_min']
+    x_max = limits['x_max']
+
+    y_min = limits['y_min']
+    y_max = limits['y_max']
+
+    if n_xbins is None:
+        n_xbins = 10
+    if n_ybins is None:
+        n_ybins = 10
+
+    # create bins
+    x_bins = np.linspace(x_min, x_max, n_xbins + 1)
+    y_bins = np.linspace(y_min, y_max, n_ybins + 1)
+
+    return x_bins, y_bins
 
 
 def concatenate_dlc_data(dlc_data):

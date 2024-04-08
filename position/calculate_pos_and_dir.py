@@ -196,6 +196,26 @@ def get_goal_coordinates(platform_coordinates=None, goals=None, data_dir=None):
         goal_coordinates[g] = platform_coordinates[g][0:2]
     return goal_coordinates
 
+
+def get_directions_to_position(point_in_space, positions):
+    
+    x_diff = point_in_space[0] - positions['x']
+    y_diff = positions['y'] - point_in_space[1]
+    directions = np.arctan2(y_diff, x_diff)
+    return directions
+
+
+def get_relative_directions_to_position(directions_to_position, head_directions):
+    
+    relative_direction = head_directions - directions_to_position
+    # any relative direction greater than pi is actually less than pi
+    relative_direction[relative_direction > np.pi] -= 2*np.pi
+    # any relative direction less than -pi is actually greater than -pi
+    relative_direction[relative_direction < -np.pi] += 2*np.pi
+    
+    return relative_direction
+
+
 def get_relative_head_direction(dlc_data, platform_coordinates, goals, screen_coordinates):
     
     # get the goal coordinates
