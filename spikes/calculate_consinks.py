@@ -16,6 +16,7 @@ from utilities.load_and_save_data import load_pickle, save_pickle
 from behaviour.load_behaviour import split_dictionary_by_goal
 from position.calculate_pos_and_dir import get_goal_coordinates, get_x_and_y_limits, cm_per_pixel
 from position.calculate_occupancy import get_relative_direction_occupancy_by_position, concatenate_dlc_data, get_axes_limits, calculate_frame_durations
+from spikes.restrict_spikes_to_trials import concatenate_unit_across_trials
 
 
 if __name__ == "__main__":
@@ -47,7 +48,22 @@ if __name__ == "__main__":
 
     # load spike data
     spike_dir = os.path.join(data_dir, 'spike_sorting')
-    units = load_pickle('units_w_behav_correlates', spike_dir)
+    units = load_pickle('units_by_goal', spike_dir)
+
+    goals = units.keys()
+    for goal in goals:
+        goal_units = units[goal]
+        
+        for unit in goal_units.keys():
+            unit = concatenate_unit_across_trials(unit)
+
+            # get head directions
+            head_directions = dlc_data_concat['hd']
+            # make head_directions a numpy array
+            head_directions = head_directions.to_numpy()
+            
+            
+
 
 
     pass
