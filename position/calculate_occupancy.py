@@ -228,7 +228,11 @@ def get_relative_direction_occupancy_by_position(dlc_data, limits):
     y = dlc_data['y']
 
     x_bin = np.digitize(x, x_bins) - 1
+    # find x_bin == n_x_bins, and set it to n_x_bins - 1
+    x_bin[x_bin == n_x_bins] = n_x_bins - 1 
+
     y_bin = np.digitize(y, y_bins) - 1
+    y_bin[y_bin == n_y_bins] = n_y_bins - 1
 
     # get the head direction data
     hd = dlc_data['hd']
@@ -250,8 +254,8 @@ def get_relative_direction_occupancy_by_position(dlc_data, limits):
             durations_temp = durations[indices]
 
             # loop through possible consink positions
-            for i2, x_sink in x_sink_pos:
-                for j2, y_sink in y_sink_pos:
+            for i2, x_sink in enumerate(x_sink_pos):
+                for j2, y_sink in enumerate(y_sink_pos):
                 
                     # get directions to sink                    
                     directions = get_directions_to_position([x_sink, y_sink], positions)
