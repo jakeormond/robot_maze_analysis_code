@@ -429,6 +429,29 @@ def concatenate_dlc_data_by_goal(dlc_data, behaviour_data):
     return dlc_data_concat_by_goal
 
 
+
+def get_direction_bins(n_bins=12):
+    direction_bins = np.linspace(-np.pi, np.pi, n_bins+1)
+    return direction_bins
+
+
+def bin_directions(directions, direction_bins):
+    # get the bin indices for each value in directions
+    bin_indices = np.digitize(directions, direction_bins, right=True) - 1
+    # any bin_indices that are -1 should be 0
+    bin_indices[bin_indices==-1] = 0
+    # any bin_indices that are n_bins should be n_bins-1
+    n_bins = len(direction_bins) - 1
+    bin_indices[bin_indices==n_bins] = n_bins-1
+
+    # get the counts for each bin
+    counts = np.zeros(n_bins)
+    for i in range(n_bins):
+        counts[i] = np.sum(bin_indices==i)
+
+    return counts, bin_indices
+
+
 def get_directional_occupancy(directions, durations, n_bins=24):
 
     # create 24 bins, each 15 degrees
