@@ -1,6 +1,8 @@
 import sys
 import os
+from multiprocessing import Pool
 import numpy as np
+import pandas as pd
 
 import platform
 
@@ -21,7 +23,49 @@ from spikes.restrict_spikes_to_trials import concatenate_unit_across_trials
 import pycircstat as pycs
 
 
-def rel_dir_ctrl_distribution(unit, reldir_occ_by_pos, sink_bins, candidate_sinks):
+def rel_dir_ctrl_distribution(unit, reldir_occ_by_pos, sink_bins):
+    """
+    For a given unit, produces relative direction occupancy distributions 
+    for each candidate consink position based on the number of spikes fired 
+    at each positional bin. 
+    """
+
+    # get head directions as np array
+    hd = unit['hd'].to_numpy()
+
+    x = unit['x'].to_numpy()
+    y = unit['y'].to_numpy()
+
+    x_bin = np.digitize(x, sink_bins['x']) - 1
+    # find x_bin == n_x_bins, and set it to n_x_bins - 1
+    x_bin[x_bin == (len(sink_bins['x'])-1)] = len(sink_bins['x'])-2
+
+    y_bin = np.digitize(y, sink_bins['y']) - 1
+    # find y_bin == n_y_bins, and set it to n_y_bins - 1
+    y_bin[y_bin == (len(sink_bins['y'])-1)] = len(sink_bins['y'])-2
+
+    direction_bins = get_direction_bins(n_bins=12)
+    rel_dir_ctrl_dist = np.zeros(len(direction_bins) -1)
+
+    # loop through the x and y bins
+    n_spikes_total = 0
+    for i in range(np.max(x_bin)+1):
+        for j in range(np.max(y_bin)+1):
+            # get the indices where x_bin == i and y_bin == j
+            indices = np.where((x_bin == i) & (y_bin == j))[0]
+
+            n_spikes = len(indices)
+            if n_spikes == 0:
+                continue
+            n_spikes_total = n_spikes_total + n_spikes
+
+            rel_dir_ctrl_dist = rel_dir_ctrl_dist + reldir_occ_by_pos[j,i,:] * n_spikes
+
+    return rel_dir_ctrl_dist, n_spikes_total
+
+
+
+def rel_dir_ctrl_distribution_all_sinks(unit, reldir_occ_by_pos, sink_bins, candidate_sinks):
     """
     For a given unit, produces relative direction occupancy distributions 
     for each candidate consink position based on the number of spikes fired 
@@ -63,12 +107,24 @@ def rel_dir_ctrl_distribution(unit, reldir_occ_by_pos, sink_bins, candidate_sink
     return rel_dir_ctrl_dist, n_spikes_total
 
 
-def rel_dir_distribution(unit, sink_bins, candidate_sinks, direction_bins):
+def rel_dir_distribution(hd, positions, candidate_sink, direction_bins):
+    
+    directions = get_directions_to_position([candidate_sink[0], candidate_sink[1]], positions)
+    relative_direction = get_relative_directions_to_position(directions, hd)
+    rel_dir_binned_counts, _ = bin_directions(relative_direction, direction_bins)
+
+    return rel_dir_binned_counts
+
+
+def rel_dir_distribution_all_sinks(unit, sink_bins, candidate_sinks, direction_bins):
    
     """ 
     Create array to store the relative direcion histograms. There will be one histogram
     for each candidate consink position. The histograms will be stored in a 3D array, with
     dimensions (n_y_bins, n_x_bins, n_direction_bins). 
+
+    PRETTY SURE THIS DOESN'T NEED THE FIRST SET OF X AND Y LOOPS!!!!!!!!!!!!!!! FIX IT!!!!!!!!!!
+
     """
 
     # create array to store relative direction histograms
@@ -127,8 +183,13 @@ def normalize_rel_dir_dist(rel_dir_dist, rel_dir_ctrl_dist, n_spikes_total):
     rel_dir_dist_div_ctrl = rel_dir_dist/rel_dir_ctrl_dist 
 
     # now we want the counts in each histogram to sum to the total number of spikes
-    sum_rel_dir_dist_div_ctrl = rel_dir_dist_div_ctrl.sum(axis=2)
-    sum_rel_dir_dist_div_ctrl_ex = sum_rel_dir_dist_div_ctrl[:,:,np.newaxis]
+    if len(rel_dir_dist_div_ctrl.shape) > 1:
+        sum_rel_dir_dist_div_ctrl = rel_dir_dist_div_ctrl.sum(axis=2)
+        sum_rel_dir_dist_div_ctrl_ex = sum_rel_dir_dist_div_ctrl[:,:,np.newaxis]
+
+    else:
+        sum_rel_dir_dist_div_ctrl_ex = rel_dir_dist_div_ctrl.sum()
+        
     normalised_rel_dir_dist = (rel_dir_dist_div_ctrl/sum_rel_dir_dist_div_ctrl_ex) * n_spikes_total
 
     return normalised_rel_dir_dist
@@ -140,19 +201,127 @@ def mean_resultant_length(normalised_rel_dir_dist, direction_bins):
     """
 
     dir_bin_centres = (direction_bins[1:] + direction_bins[:-1])/2
+    mrl = pycs.resultant_vector_length(dir_bin_centres, w=normalised_rel_dir_dist)
+    mean_angle = pycs.mean(dir_bin_centres, w=normalised_rel_dir_dist)
+
+    return mrl, mean_angle
+
+
+
+def mean_resultant_length_nrdd(normalised_rel_dir_dist, direction_bins):
+    """
+    Calculate the mean resultant length of the normalised relative direction distribution. 
+    """
+
+    dir_bin_centres = (direction_bins[1:] + direction_bins[:-1])/2
 
     n_y_bins = normalised_rel_dir_dist.shape[0]
     n_x_bins = normalised_rel_dir_dist.shape[1]
 
     mrl = np.zeros((n_y_bins, n_x_bins))
+    mean_angle = np.zeros((n_y_bins, n_x_bins))
 
     for i in range(n_y_bins):
         for j in range(n_x_bins):
 
             mrl[i,j] = pycs.resultant_vector_length(dir_bin_centres, w=normalised_rel_dir_dist[i,j,:])
+            mean_angle[i,j] = pycs.mean(dir_bin_centres, w=normalised_rel_dir_dist[i,j,:])
+
+    return mrl, mean_angle
+
+
+def find_consink(unit, reldir_occ_by_pos, sink_bins, candidate_sinks):
+    """
+    Find the consink position that maximises the mean resultant length of the normalised relative direction distribution. 
+    """
+    #  get control occupancy distribution
+    rel_dir_ctrl_dist, n_spikes_total = rel_dir_ctrl_distribution_all_sinks(unit, reldir_occ_by_pos, sink_bins, candidate_sinks)
+
+    # rel dir distribution for each possible consink position
+    rel_dir_dist = rel_dir_distribution_all_sinks(unit, sink_bins, candidate_sinks, direction_bins)
+
+    # normalise rel_dir_dist by rel_dir_ctrl_dist
+    normalised_rel_dir_dist = normalize_rel_dir_dist(rel_dir_dist, rel_dir_ctrl_dist, n_spikes_total)
+
+    # calculate the mean resultant length of the normalised relative direction distribution
+    mrl, mean_angle = mean_resultant_length_nrdd(normalised_rel_dir_dist, direction_bins)
+
+    # find the maximum mrl, and its indices
+    max_mrl = np.max(mrl)
+    max_mrl_indices = np.where(mrl == max_mrl)
+    mean_angle = np.round(mean_angle[max_mrl_indices[0][0], max_mrl_indices[1][0]], 3)
+
+    return np.round(max_mrl, 3), max_mrl_indices, mean_angle
+
+
+def recalculate_consink_from_shuffle(unit, reldir_occ_by_pos_4sink, candidate_sink, direction_bins):
+
+    rel_dir_ctrl_dist, n_spikes_total = rel_dir_ctrl_distribution(unit, reldir_occ_by_pos_4sink, sink_bins)
+
+    # get head directions as np array
+    hd = unit['hd'].to_numpy()
+
+    x = unit['x'].to_numpy()
+    y = unit['y'].to_numpy()
+    positions = {'x': x, 'y': y}  
+
+    # calculate min and max numbers of shifts
+    min_shift = len(hd)//15
+    max_shift = len(hd) - min_shift
+
+
+    n_shuffles = 10
+    shifts = np.random.randint(min_shift, max_shift, size=n_shuffles)
+    mrl = np.zeros(n_shuffles)
+    
+    args_list = [(shift, hd, positions, candidate_sink, direction_bins, rel_dir_ctrl_dist, n_spikes_total) for shift in shifts]
+
+    with Pool() as p:
+        mrl = p.map(shuffle_and_calculate, args_list)
+    
+    # for s in range(n_shuffles):
+
+    #     # shift the hds by by a random numnber of indices between min_shift and max_shift
+    #     shift = np.random.randint(min_shift, max_shift)
+    #     hd_shift = np.roll(hd, shift)
+
+    #     rel_dir_binned_counts = rel_dir_distribution(hd_shift, positions, candidate_sink, direction_bins)
+        
+    #     # normalise rel_dir_dist by rel_dir_ctrl_dist
+    #     normalised_rel_dir_dist = normalize_rel_dir_dist(rel_dir_binned_counts, rel_dir_ctrl_dist, n_spikes_total)
+
+    #     # calculate the mean resultant length of the normalised relative direction distribution
+    #     mrl[s], _ = mean_resultant_length(normalised_rel_dir_dist, direction_bins)
+
+    # calculate 95% and 99.9% confidence intervals
+    mrl = np.round(mrl, 3)
+    mrl_95 = np.percentile(mrl, 95)
+    mrl_999 = np.percentile(mrl, 99.9)
+
+    ci = (mrl_95, mrl_999)
+    
+    return ci
+
+
+def shuffle_and_calculate(args):
+    """
+    Shuffle the head directions, calculate the relative direction distribution, and calculate the mean resultant length. 
+    """
+    shift, hd, positions, candidate_sink, direction_bins, rel_dir_ctrl_dist, n_spikes_total = args
+
+    hd_shift = np.roll(hd, shift)
+
+    rel_dir_binned_counts = rel_dir_distribution(hd_shift, positions, candidate_sink, direction_bins)
+        
+    # normalise rel_dir_dist by rel_dir_ctrl_dist
+    normalised_rel_dir_dist = normalize_rel_dir_dist(rel_dir_binned_counts, rel_dir_ctrl_dist, n_spikes_total)
+
+    # calculate the mean resultant length of the normalised relative direction distribution
+    mrl, _ = mean_resultant_length(normalised_rel_dir_dist, direction_bins)
 
     return mrl
-
+    
+    
 
 if __name__ == "__main__":
     animal = 'Rat46'
@@ -189,28 +358,66 @@ if __name__ == "__main__":
     units = load_pickle('units_by_goal', spike_dir)
 
     goals = units.keys()
+    # consinks = {}
+    # consinks_df = {}
+    # for goal in goals:
+    #     goal_units = units[goal]
+    #     consinks[goal] = {}
+        
+    #     for cluster in goal_units.keys():
+    #         unit = concatenate_unit_across_trials(goal_units[cluster])
+            
+    #         # get consink  
+    #         max_mrl, max_mrl_indices, mean_angle = find_consink(unit, reldir_occ_by_pos, sink_bins, candidate_sinks)
+    #         consink_position = np.round([candidate_sinks['x'][max_mrl_indices[1][0]], candidate_sinks['y'][max_mrl_indices[0][0]]], 3)
+    #         consinks[goal][cluster] = {'mrl': max_mrl, 'position': consink_position, 'mean_angle': mean_angle}
+
+    #     # create a data frame with the consink positions
+    #     consinks_df[goal] = pd.DataFrame(consinks[goal]).T
+
+    # # save consinks_df 
+    # save_pickle(consinks_df, 'consinks_df', spike_dir)
+
+
+    ######################### TEST STATISTICAL SIGNIFICANCE OF CONSINKS #########################
+    # shift the head directions relative to their positions, and recalculate the tuning to the 
+    # previously identified consink position. 
+    
+    # load the consinks_df
+    consinks_df = load_pickle('consinks_df', spike_dir)
+    # add two columns to hold the confidence intervals
+    consinks_df['ci_95'] = np.nan
+    consinks_df['ci_999'] = np.nan 
+
     for goal in goals:
         goal_units = units[goal]
+        # consinks[goal] = {}
         
         for cluster in goal_units.keys():
             unit = concatenate_unit_across_trials(goal_units[cluster])
 
-            #  get control occupancy distribution
-            rel_dir_ctrl_dist, n_spikes_total = rel_dir_ctrl_distribution(unit, reldir_occ_by_pos, sink_bins, candidate_sinks)
+            candidate_sink = consinks_df[goal].loc[cluster, 'position']
+            # find the indices of the candidate sink in the candidate_sinks dictionaries
+            sink_x_index = np.where(np.round(candidate_sinks['x'], 3) == candidate_sink[0])[0][0]
+            sink_y_index = np.where(np.round(candidate_sinks['y'], 3) == candidate_sink[1])[0][0]
 
-            # rel dir distribution for each possible consink position
-            rel_dir_dist = rel_dir_distribution(unit, sink_bins, candidate_sinks, direction_bins)
+            reldir_occ_by_pos_4sink = reldir_occ_by_pos[:, :, sink_y_index, sink_x_index, :]
+            ci = recalculate_consink_from_shuffle(unit, reldir_occ_by_pos_4sink, candidate_sink, direction_bins)
+            consinks_df.loc[(goal, cluster), 'ci_95'] = ci[0]
+            consinks_df.loc[(goal, cluster), 'ci_999'] = ci[1]
 
-            # normalise rel_dir_dist by rel_dir_ctrl_dist
-            normalised_rel_dir_dist = normalize_rel_dir_dist(rel_dir_dist, rel_dir_ctrl_dist, n_spikes_total)
+    save_pickle(consinks_df, 'consinks_df', spike_dir)
 
-            # calculate the mean resultant length of the normalised relative direction distribution
-            mrl = mean_resultant_length(normalised_rel_dir_dist, direction_bins)
 
-            mean(alpha, w=None, ci=None, d=None, axis=None, axial_correction=1)
+
+
+
+
+
 
 
 
 
 
     pass
+

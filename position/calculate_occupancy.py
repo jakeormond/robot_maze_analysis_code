@@ -199,6 +199,10 @@ def get_directional_occupancy_by_position(dlc_data, limits):
 
 
 def get_relative_direction_occupancy_by_position(dlc_data, limits):
+    '''
+    output is a y, x, y, x, n_bins array.
+    The first y and x are the position bins, and the second y and x are the consink positions.     
+    '''
         
     # get spatial bins
     x_bins, y_bins = get_xy_bins(limits, n_bins=100)
@@ -475,7 +479,7 @@ def get_directional_occupancy(directions, durations, n_bins=24):
     return occupancy, direction_bins_og
 
 
-def get_directional_occupancy_from_dlc(dlc_data):
+def get_directional_occupancy_from_dlc(dlc_data, n_bins=24):
 
     # create list of dlc_data with directional data
     direction_data = {}
@@ -502,7 +506,7 @@ def get_directional_occupancy_from_dlc(dlc_data):
     for direction_type in direction_data.keys():
         for d in direction_data[direction_type]:
 
-            occupancy, direction_bins = get_directional_occupancy(dlc_data[d], dlc_data['durations'], n_bins=24)
+            occupancy, direction_bins = get_directional_occupancy(dlc_data[d], dlc_data['durations'], n_bins=n_bins)
             directional_occupancy[direction_type][d] = occupancy
 
     directional_occupancy = {'occupancy': directional_occupancy, 'bins': direction_bins} 
