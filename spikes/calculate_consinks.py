@@ -11,7 +11,7 @@ if platform.system() == 'Windows':
     sys.path.append('C:/Users/Jake/Documents/python_code/robot_maze_analysis_code')
 # if on Linux
 elif platform.system() == 'Linux':
-    sys.path.append('/home/Jake/Documents/python_code/robot_maze_analysis_code')
+    sys.path.append('/home/jake/Documents/python_code/robot_maze_analysis_code')
 
 from utilities.get_directories import get_data_dir, get_robot_maze_directory
 from utilities.load_and_save_data import load_pickle, save_pickle
@@ -270,28 +270,32 @@ def recalculate_consink_from_shuffle(unit, reldir_occ_by_pos_4sink, candidate_si
     max_shift = len(hd) - min_shift
 
 
-    n_shuffles = 10
-    shifts = np.random.randint(min_shift, max_shift, size=n_shuffles)
+    n_shuffles = 1000
+    # shifts = np.random.randint(min_shift, max_shift, size=n_shuffles)
     mrl = np.zeros(n_shuffles)
     
-    args_list = [(shift, hd, positions, candidate_sink, direction_bins, rel_dir_ctrl_dist, n_spikes_total) for shift in shifts]
+    # args_list = [(shift, hd, positions, candidate_sink, direction_bins, rel_dir_ctrl_dist, n_spikes_total) for shift in shifts]
 
-    with Pool() as p:
-        mrl = p.map(shuffle_and_calculate, args_list)
+    # with Pool() as p:
+    #     mrl = p.map(shuffle_and_calculate, args_list)
     
-    # for s in range(n_shuffles):
+    for s in range(n_shuffles):
 
-    #     # shift the hds by by a random numnber of indices between min_shift and max_shift
-    #     shift = np.random.randint(min_shift, max_shift)
-    #     hd_shift = np.roll(hd, shift)
+        # print every 50th shuffle
+        if s % 50 == 0:
+            print(f'shuffle {s}')
 
-    #     rel_dir_binned_counts = rel_dir_distribution(hd_shift, positions, candidate_sink, direction_bins)
+        # shift the hds by by a random numnber of indices between min_shift and max_shift
+        shift = np.random.randint(min_shift, max_shift)
+        hd_shift = np.roll(hd, shift)
+
+        rel_dir_binned_counts = rel_dir_distribution(hd_shift, positions, candidate_sink, direction_bins)
         
-    #     # normalise rel_dir_dist by rel_dir_ctrl_dist
-    #     normalised_rel_dir_dist = normalize_rel_dir_dist(rel_dir_binned_counts, rel_dir_ctrl_dist, n_spikes_total)
+        # normalise rel_dir_dist by rel_dir_ctrl_dist
+        normalised_rel_dir_dist = normalize_rel_dir_dist(rel_dir_binned_counts, rel_dir_ctrl_dist, n_spikes_total)
 
-    #     # calculate the mean resultant length of the normalised relative direction distribution
-    #     mrl[s], _ = mean_resultant_length(normalised_rel_dir_dist, direction_bins)
+        # calculate the mean resultant length of the normalised relative direction distribution
+        mrl[s], _ = mean_resultant_length(normalised_rel_dir_dist, direction_bins)
 
     # calculate 95% and 99.9% confidence intervals
     mrl = np.round(mrl, 3)
@@ -378,6 +382,8 @@ if __name__ == "__main__":
     # # save consinks_df 
     # save_pickle(consinks_df, 'consinks_df', spike_dir)
 
+    load_pickle('consinks_df', spike_dir)
+
 
     ######################### TEST STATISTICAL SIGNIFICANCE OF CONSINKS #########################
     # shift the head directions relative to their positions, and recalculate the tuning to the 
@@ -386,13 +392,15 @@ if __name__ == "__main__":
     # load the consinks_df
     consinks_df = load_pickle('consinks_df', spike_dir)
     # add two columns to hold the confidence intervals
-    consinks_df['ci_95'] = np.nan
-    consinks_df['ci_999'] = np.nan 
+
 
     for goal in goals:
         goal_units = units[goal]
         # consinks[goal] = {}
         
+        consinks_df[goal]['ci_95'] = np.nan
+        consinks_df[goal]['ci_999'] = np.nan 
+
         for cluster in goal_units.keys():
             unit = concatenate_unit_across_trials(goal_units[cluster])
 
@@ -402,9 +410,11 @@ if __name__ == "__main__":
             sink_y_index = np.where(np.round(candidate_sinks['y'], 3) == candidate_sink[1])[0][0]
 
             reldir_occ_by_pos_4sink = reldir_occ_by_pos[:, :, sink_y_index, sink_x_index, :]
+
+            print(f'calcualting confidence intervals for {goal} cluster {cluster}')
             ci = recalculate_consink_from_shuffle(unit, reldir_occ_by_pos_4sink, candidate_sink, direction_bins)
-            consinks_df.loc[(goal, cluster), 'ci_95'] = ci[0]
-            consinks_df.loc[(goal, cluster), 'ci_999'] = ci[1]
+            consinks_df[goal].loc[cluster, 'ci_95'] = ci[0]
+            consinks_df[goal].loc[cluster, 'ci_999'] = ci[1]
 
     save_pickle(consinks_df, 'consinks_df', spike_dir)
 
