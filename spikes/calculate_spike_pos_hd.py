@@ -516,7 +516,7 @@ if __name__ == "__main__":
     data_dir = get_data_dir(animal, session)
 
     # code_to_run = range(8)
-    code_to_run = [7]
+    code_to_run = [4]
 
 
     ################## LOAD DATA ##################

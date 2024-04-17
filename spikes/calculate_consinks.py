@@ -328,8 +328,10 @@ def shuffle_and_calculate(args):
     
 
 if __name__ == "__main__":
-    animal = 'Rat46'
-    session = '19-02-2024'
+    # animal = 'Rat46'
+    animal = 'Rat47'
+    # session = '19-02-2024'
+    session = '08-02-2024'
     data_dir = get_data_dir(animal, session)
 
     # get direction bins
@@ -362,25 +364,25 @@ if __name__ == "__main__":
     units = load_pickle('units_by_goal', spike_dir)
 
     goals = units.keys()
-    # consinks = {}
-    # consinks_df = {}
-    # for goal in goals:
-    #     goal_units = units[goal]
-    #     consinks[goal] = {}
+    consinks = {}
+    consinks_df = {}
+    for goal in goals:
+        goal_units = units[goal]
+        consinks[goal] = {}
         
-    #     for cluster in goal_units.keys():
-    #         unit = concatenate_unit_across_trials(goal_units[cluster])
+        for cluster in goal_units.keys():
+            unit = concatenate_unit_across_trials(goal_units[cluster])
             
-    #         # get consink  
-    #         max_mrl, max_mrl_indices, mean_angle = find_consink(unit, reldir_occ_by_pos, sink_bins, candidate_sinks)
-    #         consink_position = np.round([candidate_sinks['x'][max_mrl_indices[1][0]], candidate_sinks['y'][max_mrl_indices[0][0]]], 3)
-    #         consinks[goal][cluster] = {'mrl': max_mrl, 'position': consink_position, 'mean_angle': mean_angle}
+            # get consink  
+            max_mrl, max_mrl_indices, mean_angle = find_consink(unit, reldir_occ_by_pos, sink_bins, candidate_sinks)
+            consink_position = np.round([candidate_sinks['x'][max_mrl_indices[1][0]], candidate_sinks['y'][max_mrl_indices[0][0]]], 3)
+            consinks[goal][cluster] = {'mrl': max_mrl, 'position': consink_position, 'mean_angle': mean_angle}
 
-    #     # create a data frame with the consink positions
-    #     consinks_df[goal] = pd.DataFrame(consinks[goal]).T
+        # create a data frame with the consink positions
+        consinks_df[goal] = pd.DataFrame(consinks[goal]).T
 
-    # # save consinks_df 
-    # save_pickle(consinks_df, 'consinks_df', spike_dir)
+    # save consinks_df 
+    save_pickle(consinks_df, 'consinks_df', spike_dir)
 
     load_pickle('consinks_df', spike_dir)
 
@@ -398,8 +400,11 @@ if __name__ == "__main__":
         goal_units = units[goal]
         # consinks[goal] = {}
         
-        consinks_df[goal]['ci_95'] = np.nan
-        consinks_df[goal]['ci_999'] = np.nan 
+        # make columns for the confidence intervals; place them directly beside the mrl column
+        idx = consinks_df[goal].columns.get_loc('mrl')
+
+        consinks_df[goal].insert(idx + 1, 'ci_95', np.nan)
+        consinks_df[goal].insert(idx + 2, 'ci_999', np.nan)
 
         for cluster in goal_units.keys():
             unit = concatenate_unit_across_trials(goal_units[cluster])
@@ -417,6 +422,10 @@ if __name__ == "__main__":
             consinks_df[goal].loc[cluster, 'ci_999'] = ci[1]
 
     save_pickle(consinks_df, 'consinks_df', spike_dir)
+
+
+
+
 
 
 
