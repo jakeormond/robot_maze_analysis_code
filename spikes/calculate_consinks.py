@@ -3,6 +3,9 @@ import os
 from multiprocessing import Pool
 import numpy as np
 import pandas as pd
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
 
 import platform
 
@@ -307,6 +310,70 @@ def recalculate_consink_from_shuffle(unit, reldir_occ_by_pos_4sink, candidate_si
     return ci
 
 
+def plot_all_consinks(consinks_df, goal_coordinates, limits, jitter, plot_dir, plot_name='ConSinks'):
+    fig, ax = plt.subplots(1, 2, figsize=(20, 10))
+    fig.suptitle(plot_name)
+
+    goals = [g for g in consinks_df.keys() if isinstance(g, int)]
+
+    for i, g in enumerate(goals):
+        ax[i].set_title(f'goal {g}')
+        ax[i].set_xlabel('x position (cm)')
+        ax[i].set_ylabel('y position (cm)')
+
+        # plot the goal positions
+        colours = ['b', 'g']
+        for i2, g2 in enumerate(goal_coordinates.keys()):
+            # draw a circle with radius 80 around the goal on ax
+            circle = plt.Circle((goal_coordinates[g2][0], 
+                goal_coordinates[g2][1]), 80, color=colours[i2], 
+                fill=False, linewidth=5)
+            ax[i].add_artist(circle)    
+
+    # loop through the rows of the consinks_df, plot a filled red circle at the consink 
+    # position if the mrl is greater than ci_999
+    for cluster in consinks_df[g].index:
+
+        x_jitter = np.random.uniform(-jitter[0], jitter[0])
+        y_jitter = np.random.uniform(-jitter[1], jitter[1])
+
+        consink_position1 = consinks_df[goals[0]].loc[cluster, 'position']
+        mrl1 = consinks_df[goals[0]].loc[cluster, 'mrl']
+        ci_95_1 = consinks_df[goals[0]].loc[cluster, 'ci_95']
+        ci_999_1 = consinks_df[goals[0]].loc[cluster, 'ci_999']
+
+        consink_position2 = consinks_df[goals[1]].loc[cluster, 'position']
+        mrl2 = consinks_df[goals[1]].loc[cluster, 'mrl']
+        ci_95_2 = consinks_df[goals[1]].loc[cluster, 'ci_95']
+        ci_999_2 = consinks_df[goals[1]].loc[cluster, 'ci_999']
+
+        if mrl1 > ci_95_1 and mrl2 > ci_95_2:           
+            ax[0].plot(consink_position1[0] + x_jitter, consink_position1[1] + y_jitter, 'ro')
+            ax[1].plot(consink_position2[0] + x_jitter, consink_position2[1] + y_jitter, 'ro')
+            # ax[i].text(consink_position[0], consink_position[1], f'{cluster}', fontsize=12)
+
+        elif mrl1 > ci_95_1:
+             ax[0].plot(consink_position1[0] + x_jitter, consink_position1[1] + y_jitter, 'bo')
+
+        elif mrl2 > ci_95_2:
+            ax[1].plot(consink_position2[0] + x_jitter, consink_position2[1] + y_jitter, 'bo')
+
+        for i in range(2):
+            # set the x and y limits
+            ax[i].set_xlim((limits['x_min']-200, limits['x_max']+200))
+            ax[i].set_ylim(limits['y_min']-200, limits['y_max']+200)
+
+            # reverse the y axis
+            ax[i].invert_yaxis()
+
+            # make the axes equal
+            ax[i].set_aspect('equal')
+
+    plt.savefig(os.path.join(plot_dir, plot_name + '.png'))
+    plt.show()
+    pass
+
+
 def shuffle_and_calculate(args):
     """
     Shuffle the head directions, calculate the relative direction distribution, and calculate the mean resultant length. 
@@ -328,11 +395,13 @@ def shuffle_and_calculate(args):
     
 
 if __name__ == "__main__":
-    # animal = 'Rat46'
-    animal = 'Rat47'
-    # session = '19-02-2024'
-    session = '08-02-2024'
+    code_to_run = [2]
+    animal = 'Rat46'
+    # animal = 'Rat47'
+    session = '19-02-2024'
+    # session = '08-02-2024'
     data_dir = get_data_dir(animal, session)
+    spike_dir = os.path.join(data_dir, 'spike_sorting')
 
     # get direction bins
     direction_bins = get_direction_bins(n_bins=12)
@@ -359,69 +428,88 @@ if __name__ == "__main__":
         sink_bins = load_pickle('sink_bins', dlc_dir)
         candidate_sinks = load_pickle('candidate_sinks', dlc_dir)
 
-    # load spike data
-    spike_dir = os.path.join(data_dir, 'spike_sorting')
-    units = load_pickle('units_by_goal', spike_dir)
+    ################# CALCULATE CONSINKS ###########################################
+    if 0 in code_to_run:
+        # load spike data
+        units = load_pickle('units_by_goal', spike_dir)
 
-    goals = units.keys()
-    consinks = {}
-    consinks_df = {}
-    for goal in goals:
-        goal_units = units[goal]
-        consinks[goal] = {}
-        
-        for cluster in goal_units.keys():
-            unit = concatenate_unit_across_trials(goal_units[cluster])
+        goals = units.keys()
+        consinks = {}
+        consinks_df = {}
+        for goal in goals:
+            goal_units = units[goal]
+            consinks[goal] = {}
             
-            # get consink  
-            max_mrl, max_mrl_indices, mean_angle = find_consink(unit, reldir_occ_by_pos, sink_bins, candidate_sinks)
-            consink_position = np.round([candidate_sinks['x'][max_mrl_indices[1][0]], candidate_sinks['y'][max_mrl_indices[0][0]]], 3)
-            consinks[goal][cluster] = {'mrl': max_mrl, 'position': consink_position, 'mean_angle': mean_angle}
+            for cluster in goal_units.keys():
+                unit = concatenate_unit_across_trials(goal_units[cluster])
+                
+                # get consink  
+                max_mrl, max_mrl_indices, mean_angle = find_consink(unit, reldir_occ_by_pos, sink_bins, candidate_sinks)
+                consink_position = np.round([candidate_sinks['x'][max_mrl_indices[1][0]], candidate_sinks['y'][max_mrl_indices[0][0]]], 3)
+                consinks[goal][cluster] = {'mrl': max_mrl, 'position': consink_position, 'mean_angle': mean_angle}
 
-        # create a data frame with the consink positions
-        consinks_df[goal] = pd.DataFrame(consinks[goal]).T
+            # create a data frame with the consink positions
+            consinks_df[goal] = pd.DataFrame(consinks[goal]).T
 
-    # save consinks_df 
-    save_pickle(consinks_df, 'consinks_df', spike_dir)
+        # save consinks_df 
+        save_pickle(consinks_df, 'consinks_df', spike_dir)
 
-    load_pickle('consinks_df', spike_dir)
-
-
+    
     ######################### TEST STATISTICAL SIGNIFICANCE OF CONSINKS #########################
     # shift the head directions relative to their positions, and recalculate the tuning to the 
     # previously identified consink position. 
-    
-    # load the consinks_df
-    consinks_df = load_pickle('consinks_df', spike_dir)
-    # add two columns to hold the confidence intervals
+    if 1 in code_to_run:
+        # load the consinks_df
+        consinks_df = load_pickle('consinks_df', spike_dir)
+        # add two columns to hold the confidence intervals
 
+        for goal in goals:
+            goal_units = units[goal]
+            # consinks[goal] = {}
+            
+            # make columns for the confidence intervals; place them directly beside the mrl column
+            idx = consinks_df[goal].columns.get_loc('mrl')
 
-    for goal in goals:
-        goal_units = units[goal]
-        # consinks[goal] = {}
+            consinks_df[goal].insert(idx + 1, 'ci_95', np.nan)
+            consinks_df[goal].insert(idx + 2, 'ci_999', np.nan)
+
+            for cluster in goal_units.keys():
+                unit = concatenate_unit_across_trials(goal_units[cluster])
+
+                candidate_sink = consinks_df[goal].loc[cluster, 'position']
+                # find the indices of the candidate sink in the candidate_sinks dictionaries
+                sink_x_index = np.where(np.round(candidate_sinks['x'], 3) == candidate_sink[0])[0][0]
+                sink_y_index = np.where(np.round(candidate_sinks['y'], 3) == candidate_sink[1])[0][0]
+
+                reldir_occ_by_pos_4sink = reldir_occ_by_pos[:, :, sink_y_index, sink_x_index, :]
+
+                print(f'calcualting confidence intervals for {goal} cluster {cluster}')
+                ci = recalculate_consink_from_shuffle(unit, reldir_occ_by_pos_4sink, candidate_sink, direction_bins)
+                consinks_df[goal].loc[cluster, 'ci_95'] = ci[0]
+                consinks_df[goal].loc[cluster, 'ci_999'] = ci[1]
+
+        save_pickle(consinks_df, 'consinks_df', spike_dir)
+
+    ########## PLOT ALL SIGNIFICANT CONSINKS ####################################
+    if 2 in code_to_run:
+
+        # get goal coordinates
+        goal_coordinates = get_goal_coordinates(data_dir=data_dir)
+
+        # make folder consinks in spike_dir if it doesn't already exist
+        plot_dir = os.path.join(spike_dir, 'consinks')
+        if not os.path.exists(plot_dir):
+            os.mkdir(plot_dir)
         
-        # make columns for the confidence intervals; place them directly beside the mrl column
-        idx = consinks_df[goal].columns.get_loc('mrl')
+        # load the consinks_df
+        consinks_df = load_pickle('consinks_df', spike_dir)
 
-        consinks_df[goal].insert(idx + 1, 'ci_95', np.nan)
-        consinks_df[goal].insert(idx + 2, 'ci_999', np.nan)
-
-        for cluster in goal_units.keys():
-            unit = concatenate_unit_across_trials(goal_units[cluster])
-
-            candidate_sink = consinks_df[goal].loc[cluster, 'position']
-            # find the indices of the candidate sink in the candidate_sinks dictionaries
-            sink_x_index = np.where(np.round(candidate_sinks['x'], 3) == candidate_sink[0])[0][0]
-            sink_y_index = np.where(np.round(candidate_sinks['y'], 3) == candidate_sink[1])[0][0]
-
-            reldir_occ_by_pos_4sink = reldir_occ_by_pos[:, :, sink_y_index, sink_x_index, :]
-
-            print(f'calcualting confidence intervals for {goal} cluster {cluster}')
-            ci = recalculate_consink_from_shuffle(unit, reldir_occ_by_pos_4sink, candidate_sink, direction_bins)
-            consinks_df[goal].loc[cluster, 'ci_95'] = ci[0]
-            consinks_df[goal].loc[cluster, 'ci_999'] = ci[1]
-
-    save_pickle(consinks_df, 'consinks_df', spike_dir)
+        # calculate a jitter amount to jitter the positions by so they are visible
+        x_diff = np.mean(np.diff(candidate_sinks['x']))
+        y_diff = np.mean(np.diff(candidate_sinks['y']))
+        jitter = (x_diff/3, y_diff/3)
+        plot_all_consinks(consinks_df, goal_coordinates, limits, jitter, plot_dir)
+        
 
 
 
