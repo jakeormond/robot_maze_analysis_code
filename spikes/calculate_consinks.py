@@ -25,6 +25,8 @@ from spikes.restrict_spikes_to_trials import concatenate_unit_across_trials
 
 import pycircstat as pycs
 
+cm_per_pixel = 0.2
+
 
 def rel_dir_ctrl_distribution(unit, reldir_occ_by_pos, sink_bins):
     """
@@ -312,23 +314,29 @@ def recalculate_consink_from_shuffle(unit, reldir_occ_by_pos_4sink, candidate_si
 
 def plot_all_consinks(consinks_df, goal_coordinates, limits, jitter, plot_dir, plot_name='ConSinks'):
     fig, ax = plt.subplots(1, 2, figsize=(20, 10))
-    fig.suptitle(plot_name)
+    fig.suptitle(plot_name, fontsize=24)
 
     goals = [g for g in consinks_df.keys() if isinstance(g, int)]
+    colours = ['g', 'g']
+
 
     for i, g in enumerate(goals):
-        ax[i].set_title(f'goal {g}')
-        ax[i].set_xlabel('x position (cm)')
-        ax[i].set_ylabel('y position (cm)')
+        ax[i].set_title(f'goal {g}', fontsize=20)
+        ax[i].set_xlabel('x position (cm)', fontsize=16)
+        ax[i].set_ylabel('y position (cm)', fontsize=16)
 
         # plot the goal positions
-        colours = ['b', 'g']
-        for i2, g2 in enumerate(goal_coordinates.keys()):
-            # draw a circle with radius 80 around the goal on ax
-            circle = plt.Circle((goal_coordinates[g2][0], 
-                goal_coordinates[g2][1]), 80, color=colours[i2], 
+        circle = plt.Circle((goal_coordinates[g][0], 
+                goal_coordinates[g][1]), 80, color=colours[i], 
                 fill=False, linewidth=5)
-            ax[i].add_artist(circle)    
+        ax[i].add_artist(circle)   
+        
+        # for i2, g2 in enumerate(goal_coordinates.keys()):
+        #     # draw a circle with radius 80 around the goal on ax
+        #     circle = plt.Circle((goal_coordinates[g2][0], 
+        #         goal_coordinates[g2][1]), 80, color=colours[i2], 
+        #         fill=False, linewidth=5)
+        #     ax[i].add_artist(circle)    
 
     # loop through the rows of the consinks_df, plot a filled red circle at the consink 
     # position if the mrl is greater than ci_999
@@ -361,19 +369,19 @@ def plot_all_consinks(consinks_df, goal_coordinates, limits, jitter, plot_dir, p
                 fill=True)
             ax[1].add_artist(circle)   
 
-        elif mrl1 > ci_95_1:
-            # ax[0].plot(consink_position1[0] + x_jitter, consink_position1[1] + y_jitter, 'bo')
-            circle = plt.Circle((consink_position1[0] + x_jitter, 
-                consink_position1[1] + y_jitter), 60, color='b', 
-                fill=True)
-            ax[0].add_artist(circle)  
+        # elif mrl1 > ci_95_1:
+        #     # ax[0].plot(consink_position1[0] + x_jitter, consink_position1[1] + y_jitter, 'bo')
+        #     circle = plt.Circle((consink_position1[0] + x_jitter, 
+        #         consink_position1[1] + y_jitter), 60, color='b', 
+        #         fill=True)
+        #     ax[0].add_artist(circle)  
 
-        elif mrl2 > ci_95_2:
-            # ax[1].plot(consink_position2[0] + x_jitter, consink_position2[1] + y_jitter, 'bo')
-            circle = plt.Circle((consink_position2[0] + x_jitter, 
-                consink_position2[1] + y_jitter), 60, color='b', 
-                fill=True)
-            ax[1].add_artist(circle)
+        # elif mrl2 > ci_95_2:
+        #     # ax[1].plot(consink_position2[0] + x_jitter, consink_position2[1] + y_jitter, 'bo')
+        #     circle = plt.Circle((consink_position2[0] + x_jitter, 
+        #         consink_position2[1] + y_jitter), 60, color='b', 
+        #         fill=True)
+        #     ax[1].add_artist(circle)
 
         for i in range(2):
             # set the x and y limits
@@ -385,6 +393,22 @@ def plot_all_consinks(consinks_df, goal_coordinates, limits, jitter, plot_dir, p
 
             # make the axes equal
             ax[i].set_aspect('equal')
+
+            # set font size of axes
+            ax[i].tick_params(axis='both', which='major', labelsize=14)
+
+            # get the axes values
+            x_ticks = ax[i].get_xticks()
+            y_ticks = ax[i].get_yticks()
+
+            # convert the axes values to cm
+            x_ticks_cm = x_ticks * cm_per_pixel
+            y_ticks_cm = y_ticks * cm_per_pixel
+
+            # set the axes values to cm
+            ax[i].set_xticklabels(x_ticks_cm)
+            ax[i].set_yticklabels(y_ticks_cm)
+
 
     plt.savefig(os.path.join(plot_dir, plot_name + '.png'))
     plt.show()
@@ -413,10 +437,10 @@ def shuffle_and_calculate(args):
 
 if __name__ == "__main__":
     code_to_run = [2]
-    # animal = 'Rat46'
-    animal = 'Rat47'
+    animal = 'Rat46'
+    # animal = 'Rat47'
     # session = '19-02-2024'
-    session = '08-02-2024'
+    session = '20-02-2024'
     data_dir = get_data_dir(animal, session)
     spike_dir = os.path.join(data_dir, 'spike_sorting')
 
@@ -431,6 +455,10 @@ if __name__ == "__main__":
 
     # get x and y limits
     limits = get_axes_limits(dlc_data_concat)
+
+    units = load_pickle('units_by_goal', spike_dir)
+
+    goals = units.keys()
 
     # get relative direction occupancy by position if np array not already saved
     if os.path.exists(os.path.join(dlc_dir, 'reldir_occ_by_pos.npy')) == False:
@@ -448,9 +476,7 @@ if __name__ == "__main__":
     ################# CALCULATE CONSINKS ###########################################
     if 0 in code_to_run:
         # load spike data
-        units = load_pickle('units_by_goal', spike_dir)
-
-        goals = units.keys()
+        
         consinks = {}
         consinks_df = {}
         for goal in goals:
