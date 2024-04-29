@@ -369,19 +369,19 @@ def plot_all_consinks(consinks_df, goal_coordinates, limits, jitter, plot_dir, p
                 fill=True)
             ax[1].add_artist(circle)   
 
-        # elif mrl1 > ci_95_1:
-        #     # ax[0].plot(consink_position1[0] + x_jitter, consink_position1[1] + y_jitter, 'bo')
-        #     circle = plt.Circle((consink_position1[0] + x_jitter, 
-        #         consink_position1[1] + y_jitter), 60, color='b', 
-        #         fill=True)
-        #     ax[0].add_artist(circle)  
+        elif mrl1 > ci_95_1:
+            # ax[0].plot(consink_position1[0] + x_jitter, consink_position1[1] + y_jitter, 'bo')
+            circle = plt.Circle((consink_position1[0] + x_jitter, 
+                consink_position1[1] + y_jitter), 60, color='b', 
+                fill=True)
+            ax[0].add_artist(circle)  
 
-        # elif mrl2 > ci_95_2:
-        #     # ax[1].plot(consink_position2[0] + x_jitter, consink_position2[1] + y_jitter, 'bo')
-        #     circle = plt.Circle((consink_position2[0] + x_jitter, 
-        #         consink_position2[1] + y_jitter), 60, color='b', 
-        #         fill=True)
-        #     ax[1].add_artist(circle)
+        elif mrl2 > ci_95_2:
+            # ax[1].plot(consink_position2[0] + x_jitter, consink_position2[1] + y_jitter, 'bo')
+            circle = plt.Circle((consink_position2[0] + x_jitter, 
+                consink_position2[1] + y_jitter), 60, color='b', 
+                fill=True)
+            ax[1].add_artist(circle)
 
         for i in range(2):
             # set the x and y limits
@@ -437,10 +437,10 @@ def shuffle_and_calculate(args):
 
 if __name__ == "__main__":
     code_to_run = [2]
-    animal = 'Rat46'
-    # animal = 'Rat47'
+    # animal = 'Rat46'
+    animal = 'Rat47'
     # session = '19-02-2024'
-    session = '20-02-2024'
+    session = '16-02-2024'
     data_dir = get_data_dir(animal, session)
     spike_dir = os.path.join(data_dir, 'spike_sorting')
 
