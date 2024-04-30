@@ -6,6 +6,7 @@ import pandas as pd
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 import platform
 
@@ -415,6 +416,27 @@ def plot_all_consinks(consinks_df, goal_coordinates, limits, jitter, plot_dir, p
     pass
 
 
+def restrict_to_significant_consinks(consinks_df):
+    for g in consinks_df.keys():
+        consinks_df[g] = consinks_df[g][(consinks_df[g]['mrl'] > consinks_df[g]['ci_95'])]  
+
+    return consinks_df
+
+
+
+def calculate_consink_distance_to_goal(consinks_df, goal_coordinates):
+    for g in consinks_df.keys():
+        for cluster in consinks_df[g].index:
+            consink_position = consinks_df[g].loc[cluster, 'position']
+
+            for g2 in goal_coordinates.keys():
+                distance_to_goal = np.sqrt((consink_position[0] - goal_coordinates[g2][0])**2 + (consink_position[1] - goal_coordinates[g2][1])**2)
+                consinks_df[g].loc[cluster, f'distance_to_goal{g2}'] = distance_to_goal  
+    
+    return consinks_df
+
+
+
 def shuffle_and_calculate(args):
     """
     Shuffle the head directions, calculate the relative direction distribution, and calculate the mean resultant length. 
@@ -432,15 +454,62 @@ def shuffle_and_calculate(args):
     mrl, _ = mean_resultant_length(normalised_rel_dir_dist, direction_bins)
 
     return mrl
+
+
+def plot_consink_distances_to_goal(consinks_df, path=None):
+
+    if path is None:
+        # throw an error
+        raise ValueError('path must be provided')
+
+    # create a new dataframe for seaborn plotting
+    data = []
+
+    goals = list(consinks_df.keys())
+
+    for g in goals:
+        for cluster in consinks_df[g].index:
+            for g2 in goals:
+                distance_to_goal = consinks_df[g].loc[cluster, f'distance_to_goal{g2}'] * cm_per_pixel
+                data.append({'unit': cluster, 'category': f'g{g}_d2g{g2}', 'distance': distance_to_goal})
+
+    # convert to dataframe
+    df = pd.DataFrame(data)
+
+    # create hues for units
+    # unique_values = df['unit'].unique()
+    # palette = sns.color_palette("husl", len(unique_values))
+    # color_map = dict(zip(unique_values, palette))
+
+    # create a figure without subplots
+    fig, ax = plt.subplots(1, 1, figsize=(5, 5))
+
+    # plot the swarmplot
+    # ax = sns.swarmplot(data=df, x='category', y='distance', hue="unit", palette=color_map)
+    ax = sns.swarmplot(data=df, x='category', y='distance')
+    # ax.legend_.remove()
+    # make y label "distance (cm)"
+    ax.set_ylabel('distance (cm)')
+
+    plt.tight_layout()
+    plt.show()
+
+    # save the figure
+    fig.savefig(path)
+
+    return fig
+
+
+    
     
     
 
 if __name__ == "__main__":
-    code_to_run = [2]
-    # animal = 'Rat46'
-    animal = 'Rat47'
-    # session = '19-02-2024'
-    session = '16-02-2024'
+    code_to_run = [3]
+    animal = 'Rat46'
+    # animal = 'Rat47'
+    session = '19-02-2024'
+    # session = '16-02-2024'
     data_dir = get_data_dir(animal, session)
     spike_dir = os.path.join(data_dir, 'spike_sorting')
 
@@ -554,7 +623,20 @@ if __name__ == "__main__":
         plot_all_consinks(consinks_df, goal_coordinates, limits, jitter, plot_dir)
         
 
+    ################ CALCULATE CONSINK DISTANCE TO GOAL ##############################
+    if 3 in code_to_run:
+        goal_coordinates = get_goal_coordinates(data_dir=data_dir)
 
+        # get the distance to goal for each consink
+        consinks_df = load_pickle('consinks_df', spike_dir)
+        consinks_df = restrict_to_significant_consinks(consinks_df)
+        consinks_df = calculate_consink_distance_to_goal(consinks_df, goal_coordinates)
+
+        ############ plot consink distances to goal ############################
+        fig_path = os.path.join(spike_dir, 'consinks', 'consink_distances_to_goal_swarmplot.png')
+        plot_consink_distances_to_goal(consinks_df, path=fig_path)
+
+        pass
 
 
 

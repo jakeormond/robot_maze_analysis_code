@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import pandas as pd
 
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -43,9 +44,9 @@ def place_field_centre_of_mass(rate_map, x_bins, y_bins):
     total_rate = 0
     for i in range(len(x_bins) - 1):
         for j in range(len(y_bins) - 1):
-            com_x += rate_map[i, j] * (x_bins[i] + x_bins[i + 1]) / 2
-            com_y += rate_map[i, j] * (y_bins[j] + y_bins[j + 1]) / 2
-            total_rate += rate_map[i, j]
+            com_x += rate_map[j, i] * (x_bins[i] + x_bins[i + 1]) / 2
+            com_y += rate_map[j, i] * (y_bins[j] + y_bins[j + 1]) / 2
+            total_rate += rate_map[j, i]
     com_x /= total_rate
     com_y /= total_rate
 
@@ -106,17 +107,7 @@ def calculate_rate_map_property_across_goals(func, rate_maps, **kwargs):
     return properties
 
 
-def plot_place_field_positions():
-
-    pass
-
-def place_field_distances_to_goal_swarmplot(distances_to_goal):
-    """
-        For each of the two goal epochs, plot the place field distance to each goal,
-        producing four swarmplots in total.
-    """
-    import seaborn as sns
-    import matplotlib.pyplot as plt
+def distances_dict_to_dataframe(distances_to_goal):
 
     # get the goal names
     goals = list(distances_to_goal.keys())
@@ -124,28 +115,64 @@ def place_field_distances_to_goal_swarmplot(distances_to_goal):
     # get the unit names
     units = list(distances_to_goal[goals[0]].keys())
 
-    # create a figure
-    fig, axs = plt.subplots(2, 2, figsize=(10, 10))
+    # create a list of dictionaries
+    data = []
+    
+    for goal in goals:
+        for u in distances_to_goal[goal].keys():
+            for goal_ in goals:
+                data.append({'unit': u, 'category': f'g{goal}_d2g{goal_}', \
+                    'distance': distances_to_goal[goal][u][goal_] * cm_per_pixel})
+    
+    # convert to dataframe
+    df = pd.DataFrame(data)
 
-    for i, goal in enumerate(goals):
-        for j, unit in enumerate(units):
-            distances = [distances_to_goal[goal][unit][g] for g in goals]
-            sns.swarmplot(data=distances, ax=axs[i, j])
-            axs[i, j].set_title(f'Goal: {goal}, Unit: {unit}')
-            axs[i, j].set_ylabel('Distance to goal (cm)')
+    return df
+
+
+def plot_place_field_positions():
+
+    pass
+
+def place_field_distances_to_goal_swarmplot(distances_to_goal, path=None):
+    """
+        For each of the two goal epochs, plot the place field distance to each goal,
+        producing four swarmplots in total.
+    """  
+
+    if path is None:
+        # throw an error
+        raise ValueError('path must be provided')
+
+    # create hues for units
+    unique_values = distances_to_goal['unit'].unique()
+    palette = sns.color_palette("husl", len(unique_values))
+
+    color_map = dict(zip(unique_values, palette))
+
+    # create a figure without subplots
+    fig, ax = plt.subplots(1, 1, figsize=(5, 5))
+
+    # plot the swarmplot
+    ax = sns.swarmplot(data=distances_to_goal, x='category', y='distance', hue="unit", palette=color_map)
+    ax.legend_.remove()
+    # make y label "distance (cm)"
+    ax.set_ylabel('distance (cm)')
 
     plt.tight_layout()
     plt.show()
 
+    # save the figure
+    fig.savefig(path)
+
     return fig
-
-
 
 
 def main():
     animal = 'Rat47'
     session = '08-02-2024'
     data_dir = get_data_dir(animal, session)
+    spike_dir = os.path.join(data_dir, 'spike_sorting')
 
     # load rate maps
     rate_maps = load_pickle('smoothed_rate_maps_by_goal', os.path.join(data_dir, 'spike_sorting'))
@@ -168,8 +195,11 @@ def main():
     # restrict distances_to_goal to pyramidal cells
     distances_to_goal = {g: {u: distances_to_goal[g][u] for u in distances_to_goal[g] if u in neuron_types and neuron_types[u] == 'pyramidal'} for g in distances_to_goal}
 
+    # convert distances_to_goal dict to dataframe 
+    df = distances_dict_to_dataframe(distances_to_goal)
+    
     # plot the place field distances to goal
-    place_field_distances_to_goal_swarmplot(distances_to_goal)
+    place_field_distances_to_goal_swarmplot(df, path=os.path.join(spike_dir, 'distances_to_goal_swarmplot.png'))
 
     pass
 
