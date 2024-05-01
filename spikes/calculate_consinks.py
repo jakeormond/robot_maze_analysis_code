@@ -25,6 +25,7 @@ from position.calculate_occupancy import get_relative_direction_occupancy_by_pos
 from spikes.restrict_spikes_to_trials import concatenate_unit_across_trials
 
 import pycircstat as pycs
+from scipy.stats import wilcoxon
 
 cm_per_pixel = 0.2
 
@@ -211,7 +212,6 @@ def mean_resultant_length(normalised_rel_dir_dist, direction_bins):
     mean_angle = pycs.mean(dir_bin_centres, w=normalised_rel_dir_dist)
 
     return mrl, mean_angle
-
 
 
 def mean_resultant_length_nrdd(normalised_rel_dir_dist, direction_bins):
@@ -436,6 +436,30 @@ def calculate_consink_distance_to_goal(consinks_df, goal_coordinates):
     return consinks_df
 
 
+def consink_distance_stats(consinks_df):
+    statistics = {}
+    goals = list(consinks_df.keys())
+    for g in goals:
+        # data1 is the f'distance_to_goal{goals[0]}' column
+        data1 = consinks_df[g][f'distance_to_goal{goals[0]}'].to_numpy()
+        data2 = consinks_df[g][f'distance_to_goal{goals[1]}'].to_numpy()
+
+        # calculate the wilcoxon rank sum test
+        statistic, p = wilcoxon(data1, data2)
+        statistics[g] = {'n': data1.shape[0], 'statistic': statistic, 'p': p}
+
+    # make a dataframe from statistics with one row for each g in goals
+    statistics = pd.DataFrame(statistics).T
+
+    # add a column 'significant' to statistics, containing True if the p value is less than 0.05
+    statistics['significant'] = statistics['p'] < 0.05
+
+    # add the name "goal" for the first column
+    statistics.index.name = 'goal'
+
+    return statistics
+
+
 
 def shuffle_and_calculate(args):
     """
@@ -631,6 +655,11 @@ if __name__ == "__main__":
         consinks_df = load_pickle('consinks_df', spike_dir)
         consinks_df = restrict_to_significant_consinks(consinks_df)
         consinks_df = calculate_consink_distance_to_goal(consinks_df, goal_coordinates)
+
+        # calculate the statistics for the differences in distance to goal for each consink
+        statistics = consink_distance_stats(consinks_df)
+        # save statistics as csv file
+        statistics.to_csv(os.path.join(spike_dir, 'consinks', 'consink_distance_statistics.csv'))
 
         ############ plot consink distances to goal ############################
         fig_path = os.path.join(spike_dir, 'consinks', 'consink_distances_to_goal_swarmplot.png')

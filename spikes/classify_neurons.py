@@ -270,8 +270,8 @@ def classify_neurons(halfwidths, mean_rates):
 
 
 if __name__ == "__main__":
-    animal = 'Rat47'
-    session = '08-02-2024'
+    animal = 'Rat46'
+    session = '19-02-2024'
     data_dir = get_data_dir(animal, session)
 
     # load dlc_data which has the trial times

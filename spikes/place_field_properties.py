@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import pandas as pd
+from scipy.stats import wilcoxon
 
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -107,6 +108,38 @@ def calculate_rate_map_property_across_goals(func, rate_maps, **kwargs):
     return properties
 
 
+def placefield_distance_stats(distances_to_goal):
+    statistics = {}
+    goals = list(distances_to_goal.keys())
+    for g in goals:
+
+        # create a dataframe from distances_to_goal[g], with columns 'unit', contain the keys of distances_to_goal[g],
+        # goal1_distance containing the values of distances_to_goal[g][unit][goal1],
+        # and goal2_distance containing the values of distances_to_goal[g][unit][goal2]
+        data = [{'unit': unit, 'goal1_distance': distances_to_goal[g][unit][goals[0]], \
+                 'goal2_distance': distances_to_goal[g][unit][goals[1]]} for unit in distances_to_goal[g]]
+        df = pd.DataFrame(data)
+
+            # data1 is the f'distance_to_goal{goals[0]}' column
+        data1 = df['goal1_distance'].to_numpy()
+        data2 = df['goal2_distance'].to_numpy()
+
+        # calculate the wilcoxon rank sum test
+        statistic, p = wilcoxon(data1, data2)
+        statistics[g] = {'n': data1.shape[0], 'statistic': statistic, 'p': p}
+
+    # make a dataframe from statistics with one row for each g in goals
+    statistics = pd.DataFrame(statistics).T
+
+    # add a column 'significant' to statistics, containing True if the p value is less than 0.05
+    statistics['significant'] = statistics['p'] < 0.05
+
+    # add the name "goal" for the first column
+    statistics.index.name = 'goal'
+
+    return statistics
+
+
 def distances_dict_to_dataframe(distances_to_goal):
 
     # get the goal names
@@ -195,8 +228,15 @@ def main():
     # restrict distances_to_goal to pyramidal cells
     distances_to_goal = {g: {u: distances_to_goal[g][u] for u in distances_to_goal[g] if u in neuron_types and neuron_types[u] == 'pyramidal'} for g in distances_to_goal}
 
+    # calculate the statisitics for the differences in distance to goal for each place field
+    statistics = placefield_distance_stats(distances_to_goal)
+    # save statistics as csv file
+    statistics.to_csv(os.path.join(spike_dir, 'place_field_distance_statistics.csv'))
+
     # convert distances_to_goal dict to dataframe 
     df = distances_dict_to_dataframe(distances_to_goal)
+
+    
     
     # plot the place field distances to goal
     place_field_distances_to_goal_swarmplot(df, path=os.path.join(spike_dir, 'distances_to_goal_swarmplot.png'))
