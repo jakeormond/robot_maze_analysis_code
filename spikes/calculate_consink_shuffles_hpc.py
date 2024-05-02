@@ -48,9 +48,9 @@ def main():
     animal = 'Rat47'
     session = '08-02-2024'
 
-    data_dir = get_data_dir(animal, session)
+    data_dir = os.path.join('/ceph/scratch/jakeo/robot_maze/', animal, session)
     spike_dir = os.path.join(data_dir, 'spike_sorting')
-    # load neuron_types.pkl
+
     neuron_types = load_pickle('neuron_types', spike_dir)
 
     # get direction bins

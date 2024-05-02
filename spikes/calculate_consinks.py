@@ -4,7 +4,8 @@ from multiprocessing import Pool
 import numpy as np
 import pandas as pd
 import matplotlib
-matplotlib.use('TkAgg')
+# matplotlib.use('TkAgg')
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import seaborn as sns
 from joblib import Parallel, delayed
@@ -21,7 +22,7 @@ elif platform.system() == 'Linux':
 from utilities.get_directories import get_data_dir, get_robot_maze_directory
 from utilities.load_and_save_data import load_pickle, save_pickle
 from behaviour.load_behaviour import split_dictionary_by_goal
-from position.calculate_pos_and_dir import get_goal_coordinates, get_x_and_y_limits, cm_per_pixel, get_directions_to_position, get_relative_directions_to_position
+from position.calculate_pos_and_dir import get_goal_coordinates, get_x_and_y_limits, get_directions_to_position, get_relative_directions_to_position
 from position.calculate_occupancy import get_relative_direction_occupancy_by_position, concatenate_dlc_data, get_axes_limits, calculate_frame_durations, get_direction_bins, bin_directions
 from spikes.restrict_spikes_to_trials import concatenate_unit_across_trials
 
