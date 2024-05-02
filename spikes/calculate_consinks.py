@@ -7,6 +7,7 @@ import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import seaborn as sns
+from joblib import Parallel, delayed
 
 import platform
 
@@ -78,7 +79,6 @@ def rel_dir_ctrl_distribution_all_sinks(unit, reldir_occ_by_pos, sink_bins, cand
     for each candidate consink position based on the number of spikes fired 
     at each positional bin. 
     """
-
 
     # get head directions as np array
     hd = unit['hd'].to_numpy()
@@ -236,7 +236,7 @@ def mean_resultant_length_nrdd(normalised_rel_dir_dist, direction_bins):
     return mrl, mean_angle
 
 
-def find_consink(unit, reldir_occ_by_pos, sink_bins, candidate_sinks):
+def find_consink(unit, reldir_occ_by_pos, sink_bins, direction_bins, candidate_sinks):
     """
     Find the consink position that maximises the mean resultant length of the normalised relative direction distribution. 
     """
@@ -260,7 +260,39 @@ def find_consink(unit, reldir_occ_by_pos, sink_bins, candidate_sinks):
     return np.round(max_mrl, 3), max_mrl_indices, mean_angle
 
 
-def recalculate_consink_from_shuffle(unit, reldir_occ_by_pos_4sink, candidate_sink, direction_bins):
+def calculate_shift_mrl(hd, min_shift, max_shift, unit, reldir_occ_by_pos, sink_bins, candidate_sinks):
+    shift = np.random.randint(min_shift, max_shift)
+    hd_shift = np.roll(hd, shift)
+    shifted_unit = unit.copy()
+    shifted_unit['hd'] = hd_shift
+
+    mrl, _, _ = find_consink(shifted_unit, reldir_occ_by_pos, sink_bins, candidate_sinks)
+    return mrl
+
+
+def recalculate_consink_to_all_candidates_from_shuffle(unit, reldir_occ_by_pos, sink_bins, candidate_sinks):
+
+    hd = unit['hd'].to_numpy()
+
+    # calculate min and max numbers of shifts
+    min_shift = len(hd)//15
+    max_shift = len(hd) - min_shift
+
+    n_shuffles = 1000
+    mrl = np.zeros(n_shuffles)
+
+    mrl = Parallel(n_jobs=-1, verbose=50)(delayed(calculate_shift_mrl)(hd, min_shift, max_shift, unit, reldir_occ_by_pos, sink_bins, candidate_sinks) for s in range(n_shuffles))
+
+    mrl = np.round(mrl, 3)
+    mrl_95 = np.percentile(mrl, 95)
+    mrl_999 = np.percentile(mrl, 99.9)
+
+    ci = (mrl_95, mrl_999)
+    
+    return ci
+
+
+def recalculate_consink_to_single_candidate_from_shuffle(unit, reldir_occ_by_pos_4sink, candidate_sink, direction_bins):
 
     rel_dir_ctrl_dist, n_spikes_total = rel_dir_ctrl_distribution(unit, reldir_occ_by_pos_4sink, sink_bins)
 
@@ -480,9 +512,9 @@ def shuffle_and_calculate(args):
     return mrl
 
 
-def plot_consink_distances_to_goal(consinks_df, path=None):
+def plot_consink_distances_to_goal(consinks_df, fig_path=None):
 
-    if path is None:
+    if fig_path is None:
         # throw an error
         raise ValueError('path must be provided')
 
@@ -519,7 +551,8 @@ def plot_consink_distances_to_goal(consinks_df, path=None):
     plt.show()
 
     # save the figure
-    fig.savefig(path)
+    fig.savefig(f'{fig_path}.png')
+    fig.savefig(f'{fig_path}.svg')
 
     return fig
 
@@ -529,10 +562,11 @@ def plot_consink_distances_to_goal(consinks_df, path=None):
     
 
 if __name__ == "__main__":
-    code_to_run = [3]
-    animal = 'Rat46'
-    # animal = 'Rat47'
-    session = '19-02-2024'
+    code_to_run = [1]
+    
+    # animal = 'Rat46'
+    animal = 'Rat47'
+    session = '08-02-2024'
     # session = '16-02-2024'
     data_dir = get_data_dir(animal, session)
     spike_dir = os.path.join(data_dir, 'spike_sorting')
@@ -580,7 +614,7 @@ if __name__ == "__main__":
                 unit = concatenate_unit_across_trials(goal_units[cluster])
                 
                 # get consink  
-                max_mrl, max_mrl_indices, mean_angle = find_consink(unit, reldir_occ_by_pos, sink_bins, candidate_sinks)
+                max_mrl, max_mrl_indices, mean_angle = find_consink(unit, reldir_occ_by_pos, sink_bins, direction_bins, candidate_sinks)
                 consink_position = np.round([candidate_sinks['x'][max_mrl_indices[1][0]], candidate_sinks['y'][max_mrl_indices[0][0]]], 3)
                 consinks[goal][cluster] = {'mrl': max_mrl, 'position': consink_position, 'mean_angle': mean_angle}
 
@@ -606,8 +640,10 @@ if __name__ == "__main__":
             # make columns for the confidence intervals; place them directly beside the mrl column
             idx = consinks_df[goal].columns.get_loc('mrl')
 
-            consinks_df[goal].insert(idx + 1, 'ci_95', np.nan)
-            consinks_df[goal].insert(idx + 2, 'ci_999', np.nan)
+            # if the columns don't exist, insert them            
+            if 'ci_95' not in consinks_df[goal].columns:
+                consinks_df[goal].insert(idx + 1, 'ci_95', np.nan)
+                consinks_df[goal].insert(idx + 2, 'ci_999', np.nan)
 
             for cluster in goal_units.keys():
                 unit = concatenate_unit_across_trials(goal_units[cluster])
@@ -617,10 +653,12 @@ if __name__ == "__main__":
                 sink_x_index = np.where(np.round(candidate_sinks['x'], 3) == candidate_sink[0])[0][0]
                 sink_y_index = np.where(np.round(candidate_sinks['y'], 3) == candidate_sink[1])[0][0]
 
-                reldir_occ_by_pos_4sink = reldir_occ_by_pos[:, :, sink_y_index, sink_x_index, :]
+                # reldir_occ_by_pos_4sink = reldir_occ_by_pos[:, :, sink_y_index, sink_x_index, :]
 
-                print(f'calcualting confidence intervals for {goal} cluster {cluster}')
-                ci = recalculate_consink_from_shuffle(unit, reldir_occ_by_pos_4sink, candidate_sink, direction_bins)
+                print(f'calcualting confidence intervals for goal {goal} {cluster}')
+                # ci = recalculate_consink_to_single_candidate_from_shuffle(unit, reldir_occ_by_pos_4sink, candidate_sink, direction_bins)
+                ci = recalculate_consink_to_all_candidates_from_shuffle(unit, reldir_occ_by_pos, sink_bins, candidate_sinks)
+                
                 consinks_df[goal].loc[cluster, 'ci_95'] = ci[0]
                 consinks_df[goal].loc[cluster, 'ci_999'] = ci[1]
 
@@ -662,8 +700,8 @@ if __name__ == "__main__":
         statistics.to_csv(os.path.join(spike_dir, 'consinks', 'consink_distance_statistics.csv'))
 
         ############ plot consink distances to goal ############################
-        fig_path = os.path.join(spike_dir, 'consinks', 'consink_distances_to_goal_swarmplot.png')
-        plot_consink_distances_to_goal(consinks_df, path=fig_path)
+        fig_path = os.path.join(spike_dir, 'consinks', 'consink_distances_to_goal_swarmplot')
+        plot_consink_distances_to_goal(consinks_df, fig_path=fig_path)
 
         pass
 

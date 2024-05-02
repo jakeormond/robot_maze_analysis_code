@@ -167,13 +167,13 @@ def plot_place_field_positions():
 
     pass
 
-def place_field_distances_to_goal_swarmplot(distances_to_goal, path=None):
+def place_field_distances_to_goal_swarmplot(distances_to_goal, fig_path=None):
     """
         For each of the two goal epochs, plot the place field distance to each goal,
         producing four swarmplots in total.
     """  
 
-    if path is None:
+    if fig_path is None:
         # throw an error
         raise ValueError('path must be provided')
 
@@ -187,16 +187,18 @@ def place_field_distances_to_goal_swarmplot(distances_to_goal, path=None):
     fig, ax = plt.subplots(1, 1, figsize=(5, 5))
 
     # plot the swarmplot
-    ax = sns.swarmplot(data=distances_to_goal, x='category', y='distance', hue="unit", palette=color_map)
-    ax.legend_.remove()
+    # ax = sns.swarmplot(data=distances_to_goal, x='category', y='distance', hue="unit", palette=color_map)
+    ax = sns.swarmplot(data=distances_to_goal, x='category', y='distance')
+    # ax.legend_.remove()
     # make y label "distance (cm)"
     ax.set_ylabel('distance (cm)')
 
     plt.tight_layout()
-    plt.show()
+    # plt.show()
 
     # save the figure
-    fig.savefig(path)
+    fig.savefig(f'{fig_path}.png')
+    fig.savefig(f'{fig_path}.svg')
 
     return fig
 
@@ -239,7 +241,7 @@ def main():
     
     
     # plot the place field distances to goal
-    place_field_distances_to_goal_swarmplot(df, path=os.path.join(spike_dir, 'distances_to_goal_swarmplot.png'))
+    place_field_distances_to_goal_swarmplot(df, fig_path=os.path.join(spike_dir, 'distances_to_goal_swarmplot'))
 
     pass
 
