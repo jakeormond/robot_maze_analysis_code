@@ -12,11 +12,12 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 import sys
 sys.path.append('C:/Users/Jake/Documents/python_code/robot_maze_analysis_code')
 from utilities.get_directories import get_data_dir, get_robot_maze_directory
-from position.calculate_pos_and_dir import get_goal_coordinates, cm_per_pixel
+from position.calculate_pos_and_dir import get_goal_coordinates
 from utilities.load_and_save_data import load_pickle, save_pickle
 from behaviour.load_behaviour import get_behaviour_dir
 from position.calculate_pos_and_dir import get_directions_to_position, get_relative_directions_to_position
 
+cm_per_pixel = 0.2
 
 def plot_occupancy_heatmap(positional_occupancy, goal_coordinates, figure_dir):
 

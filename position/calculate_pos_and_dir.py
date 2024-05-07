@@ -13,22 +13,6 @@ sys.path.append('C:/Users/Jake/Documents/python_code/robot_maze_analysis_code')
 from utilities.get_directories import get_data_dir, get_robot_maze_directory
 from utilities.load_and_save_data import save_pickle, load_pickle
 
-
-# screen platforms is a dictionary where each key is the screen number and each
-# value is the number of the platfom that is directly adjacent to the screen
-screen_platforms = {1: 12, 2: 18, 3: 246, 4: 240}
-
-# load the platform map
-robot_maze_dir = get_robot_maze_directory()
-map_path = os.path.join(robot_maze_dir, 'workstation',
-            'map_files', 'platform_map.csv')
-platform_map = np.genfromtxt(map_path, delimiter=',')
-col_dist = np.round(np.cos(np.radians(30)), 3)  # distances between columns
-row_dist = 0.5                                  # and rows in platform map
-
-cm_per_pixel = 370/2048 # 370 cm is the y dimension of the arena, 2048 is the y dimension of the video
-
-
 def get_uncropped_platform_coordinates(platform_coordinates, crop_coordinates):
 
     # check if you need to run this function
@@ -357,6 +341,22 @@ def get_x_and_y_limits(dlc_data):
     return x_and_y_limits
 
 if __name__ == "__main__":
+
+
+    # screen platforms is a dictionary where each key is the screen number and each
+    # value is the number of the platfom that is directly adjacent to the screen
+    screen_platforms = {1: 12, 2: 18, 3: 246, 4: 240}
+
+    # load the platform map
+    robot_maze_dir = get_robot_maze_directory()
+    map_path = os.path.join(robot_maze_dir, 'workstation',
+                'map_files', 'platform_map.csv')
+    platform_map = np.genfromtxt(map_path, delimiter=',')
+    col_dist = np.round(np.cos(np.radians(30)), 3)  # distances between columns
+    row_dist = 0.5                                  # and rows in platform map
+
+    cm_per_pixel = 370/2048 # 370 cm is the y dimension of the arena, 2048 is the y dimension of the video
+
     animal = 'Rat46'
     session = '20-02-2024'
     data_dir = get_data_dir(animal, session)
