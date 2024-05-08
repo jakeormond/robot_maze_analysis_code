@@ -340,8 +340,8 @@ def get_x_and_y_limits(dlc_data):
 
     return x_and_y_limits
 
-if __name__ == "__main__":
 
+def main():
 
     # screen platforms is a dictionary where each key is the screen number and each
     # value is the number of the platfom that is directly adjacent to the screen
@@ -410,4 +410,8 @@ if __name__ == "__main__":
     save_pickle(dlc_data, 'dlc_final', dlc_dir)
 
     pass
+
+
+if __name__ == "__main__":
+    main()
     
