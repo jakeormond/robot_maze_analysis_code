@@ -1,12 +1,9 @@
 import os
-import glob
 import numpy as np
 import pandas as pd
-import pickle
 import matplotlib.pyplot as plt
 from scipy import stats
 from random import sample
-import itertools
 
 import sys
 sys.path.append('C:/Users/Jake/Documents/python_code/robot_maze_analysis_code')
@@ -270,8 +267,8 @@ def classify_neurons(halfwidths, mean_rates):
 
 
 if __name__ == "__main__":
-    animal = 'Rat46'
-    session = '19-02-2024'
+    animal = 'Rat47'
+    session = '16-02-2024'
     data_dir = get_data_dir(animal, session)
 
     # load dlc_data which has the trial times
@@ -287,12 +284,12 @@ if __name__ == "__main__":
     # bin_dir = '/media/jake/LaCie/' + animal + '/' + session
     # bin_path = glob.glob(bin_dir + '/*.ap.bin')[0]
 
-    # allow user to select bin_path interactively
+    # allow user to select bin_path interactively, starting from the spike_dir
     import tkinter as tk
     from tkinter import filedialog
     root = tk.Tk()
     root.withdraw()
-    bin_path = filedialog.askopenfilename(title='Select the .ap.bin file')
+    bin_path = filedialog.askopenfilename(title='Select the .ap.bin file', initialdir=spike_dir)
 
     # calculate mean firing rates
     mean_rates = calculate_mean_rates(units, dlc_data)
