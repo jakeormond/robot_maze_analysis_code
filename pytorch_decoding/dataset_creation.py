@@ -153,7 +153,8 @@ def cat_dlc(windowed_dlc):
             dlc_array = np.concatenate((dlc_array, temp_array), axis=0)
         
     # all columns need to be scaled to the range 0-1
-    for i in range(dlc_array.shape[1]) :
+    # for i in range(dlc_array.shape[1]) :
+    for i in range(5) :
         # dlc_array[:, i] = (dlc_array[:, i] - np.min(dlc_array[:, i])) / \
         #                     (np.max(dlc_array[:, i]) - np.min(dlc_array[:, i]))
 
@@ -192,9 +193,14 @@ def cat_spike_trains(spike_trains):
     spike_array = np.transpose(spike_array)
 
     # zscore the columns of spike_array
-    spike_array = (spike_array - np.mean(spike_array, axis=0)) / np.std(spike_array, axis=0)
+    # spike_array = (spike_array - np.mean(spike_array, axis=0)) / np.std(spike_array, axis=0)
     
     return spike_array, unit_list
+
+
+def zscore_spike_array(spike_array):
+    spike_array = (spike_array - np.mean(spike_array, axis=0)) / np.std(spike_array, axis=0)
+    return spike_array
 
 def cat_spike_trains_by_goal(spike_trains, data_dir):
     # get list of units
@@ -416,13 +422,16 @@ def main():
             spike_trains = load_pickle(spike_train_file_name, spike_dir)
 
             model_inputs, unit_list = cat_spike_trains(spike_trains)
+            
             # convert model_inputs to float32
             model_inputs = model_inputs.astype(np.float32)
             inputs_file_name = f'inputs_{window_size}'
             np.save(f'{spike_dir}/{inputs_file_name}', model_inputs)
             save_pickle(unit_list, 'unit_list', spike_dir)
 
-        
+            model_inputs_z = zscore_spike_array(model_inputs)
+            z_inputs_file_name = f'inputs_zcored_{window_size}'
+            np.save(f'{spike_dir}/{z_inputs_file_name}', model_inputs_z)
 
 if __name__ == "__main__":
     main()
