@@ -46,7 +46,7 @@ def recalculate_consink_to_all_candidates_from_shuffle(unit, reldir_occ_by_pos, 
 
 def main():
     animal = 'Rat47'
-    session = '08-02-2024'
+    session = '16-02-2024'
 
     data_dir = os.path.join('/ceph/scratch/jakeo/robot_maze/', animal, session)
     spike_dir = os.path.join(data_dir, 'spike_sorting')
@@ -94,7 +94,9 @@ def main():
             consinks_df[goal].loc[cluster, 'ci_999'] = ci[1]
 
     save_pickle(consinks_df, 'consinks_df', spike_dir)
-    
+    # save as csv
+    consinks_df.to_csv(os.path.join(spike_dir, 'consinks_df.csv'))
+    print('saved consinks_df to {spike_dir}')    
 
 if __name__ == "__main__":
 
