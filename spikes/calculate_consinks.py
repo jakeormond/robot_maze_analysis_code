@@ -558,11 +558,18 @@ def plot_consink_distances_to_goal(consinks_df, fig_path=None):
     return fig
 
 
-    
-    
-    
+def load_consink_df(directory):
+    consinks_df = load_pickle('consinks_df_OLD', directory)
 
-if __name__ == "__main__":
+    # save the consinks_df as a csv file
+    for g in consinks_df.keys():
+        consinks_df[g].to_csv(os.path.join(directory, f'consinks_goal_OLD{g}.csv'))
+
+    return consinks_df
+
+
+def main():
+
     code_to_run = [1]
     
     # animal = 'Rat46'
@@ -704,20 +711,18 @@ if __name__ == "__main__":
         fig_path = os.path.join(spike_dir, 'consinks', 'consink_distances_to_goal_swarmplot')
         plot_consink_distances_to_goal(consinks_df, fig_path=fig_path)
 
-        pass
+        
+if __name__ == "__main__":
+    
+    # main()
 
+    animal = 'Rat47'
+    session = '16-02-2024'
+    # session = '16-02-2024'
+    data_dir = get_data_dir(animal, session)
+    spike_dir = os.path.join(data_dir, 'spike_sorting')
 
-
-
-
-
-
-
-
-
-
-
-
-
+    consink_df = load_consink_df(spike_dir)
     pass
+
 
