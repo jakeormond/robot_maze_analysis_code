@@ -132,7 +132,7 @@ def main():
             unit = unit[['samples', 'x', 'y', 'hd']]
 
             ######### PERFORM CICULAR TRANSLATION CONTROL
-            
+
             print(f'calcualting confidence intervals for goal {goal} {cluster}')
 
             ci = recalculate_consink_to_all_candidates_from_translation(unit, dlc_data, reldir_occ_by_pos, sink_bins, direction_bins, candidate_sinks)
@@ -141,10 +141,10 @@ def main():
             consinks_df[goal].loc[cluster, 'ci_95'] = ci[0]
             consinks_df[goal].loc[cluster, 'ci_999'] = ci[1]
 
-    save_pickle(consinks_df, 'consinks_df', spike_dir)
+    save_pickle(consinks_df, 'consinks_df_translated_ctrl', spike_dir)
     # save as csv
-    consinks_df.to_csv(os.path.join(spike_dir, 'consinks_df.csv'))
-    print('saved consinks_df to {spike_dir}')    
+    consinks_df.to_csv(os.path.join(spike_dir, 'consinks_df_translated_ctrl.csv'))
+    print('saved consinks_df_translated_ctrl to {spike_dir}')    
 
 if __name__ == "__main__":
 
