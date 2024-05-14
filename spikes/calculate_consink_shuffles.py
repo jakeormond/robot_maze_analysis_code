@@ -146,8 +146,8 @@ def main():
 
     save_pickle(consinks_df, 'consinks_df_translated_ctrl', spike_dir)
     # save as csv
-    consinks_df.to_csv(os.path.join(spike_dir, 'consinks_df_translated_ctrl.csv'))
-    print('saved consinks_df_translated_ctrl to {spike_dir}')    
+    # consinks_df.to_csv(os.path.join(spike_dir, 'consinks_df_translated_ctrl.csv'))
+    # print('saved consinks_df_translated_ctrl to {spike_dir}')    
 
 if __name__ == "__main__":
 
