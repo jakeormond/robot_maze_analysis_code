@@ -82,7 +82,7 @@ def circularly_translate_units_by_goal(unit, dlc_data):
     unit_f = np.round(f_i(unit['samples']), 3)
     shifted_unit_f = unit_f + shift
     # any value in shifted_unit_f greater than n_frames should be rolled 
-    shifted_unit_f = np.where(shifted_unit_f >= n_frames, shifted_unit_f - n_frames, shifted_unit_f)
+    shifted_unit_f = np.where(shifted_unit_f >= n_frames-1, shifted_unit_f - (n_frames-1), shifted_unit_f)
     shifted_unit_f = np.sort(shifted_unit_f)  
 
     # interpolate the new samples 

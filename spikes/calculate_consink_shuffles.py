@@ -42,7 +42,10 @@ def recalculate_consink_to_all_candidates_from_translation(unit, dlc_data, reldi
     n_shuffles = 1000
     mrl = np.zeros(n_shuffles)
 
-    mrl = Parallel(n_jobs=-1, verbose=50)(delayed(calculate_translated_mrl)(unit, dlc_data, reldir_occ_by_pos, sink_bins, direction_bins, candidate_sinks) for s in range(n_shuffles))
+    # mrl = Parallel(n_jobs=-1, verbose=50)(delayed(calculate_translated_mrl)(unit, dlc_data, reldir_occ_by_pos, sink_bins, direction_bins, candidate_sinks) for s in range(n_shuffles))
+
+    for s in range(n_shuffles):
+        mrl[s] = calculate_translated_mrl(unit, dlc_data, reldir_occ_by_pos, sink_bins, direction_bins, candidate_sinks)
  
     mrl = np.round(mrl, 3)
     mrl_95 = np.percentile(mrl, 95)
