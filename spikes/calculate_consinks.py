@@ -559,11 +559,11 @@ def plot_consink_distances_to_goal(consinks_df, fig_path=None):
 
 
 def load_consink_df(directory):
-    consinks_df = load_pickle('consinks_df_OLD', directory)
+    consinks_df = load_pickle('consinks_df_translated_ctrl', directory)
 
     # save the consinks_df as a csv file
     for g in consinks_df.keys():
-        consinks_df[g].to_csv(os.path.join(directory, f'consinks_goal_OLD{g}.csv'))
+        consinks_df[g].to_csv(os.path.join(directory, f'consinks_goal_translated{g}.csv'))
 
     return consinks_df
 
