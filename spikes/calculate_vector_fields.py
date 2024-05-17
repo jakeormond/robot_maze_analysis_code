@@ -10,7 +10,7 @@ sys.path.append('C:/Users/Jake/Documents/python_code/robot_maze_analysis_code')
 from utilities.get_directories import get_data_dir
 from utilities.load_and_save_data import load_pickle, save_pickle
 from behaviour.load_behaviour import get_behaviour_dir
-from position.calculate_pos_and_dir import get_goal_coordinates, get_x_and_y_limits, cm_per_pixel
+from position.calculate_pos_and_dir import get_goal_coordinates, get_x_and_y_limits
 
 
 cm_per_pixel = 0.2
@@ -298,8 +298,8 @@ def plot_vector_fields_2goals_all_units(vector_fields, goal_coordinates, plot_di
 
 
 if __name__ == "__main__":
-    animal = 'Rat46'
-    session = '20-02-2024'
+    animal = 'Rat47'
+    session = '16-02-2024'
     data_dir = get_data_dir(animal, session)
 
     # get goal coordinates

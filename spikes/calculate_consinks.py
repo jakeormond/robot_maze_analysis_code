@@ -570,11 +570,11 @@ def load_consink_df(directory):
 
 def main():
 
-    code_to_run = [1]
+    code_to_run = [3]
     
     # animal = 'Rat46'
-    animal = 'Rat47'
-    session = '08-02-2024'
+    animal = 'Rat46'
+    session = '20-02-2024'
     # session = '16-02-2024'
     data_dir = get_data_dir(animal, session)
     spike_dir = os.path.join(data_dir, 'spike_sorting')
@@ -714,10 +714,10 @@ def main():
         
 if __name__ == "__main__":
     
-    # main()
+    main()
 
-    animal = 'Rat47'
-    session = '16-02-2024'
+    animal = 'Rat46'
+    session = '20-02-2024'
     # session = '16-02-2024'
     data_dir = get_data_dir(animal, session)
     spike_dir = os.path.join(data_dir, 'spike_sorting')

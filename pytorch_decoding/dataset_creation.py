@@ -430,7 +430,7 @@ def main():
             save_pickle(unit_list, 'unit_list', spike_dir)
 
             model_inputs_z = zscore_spike_array(model_inputs)
-            z_inputs_file_name = f'inputs_zcored_{window_size}'
+            z_inputs_file_name = f'inputs_zscored_{window_size}'
             np.save(f'{spike_dir}/{z_inputs_file_name}', model_inputs_z)
 
 if __name__ == "__main__":

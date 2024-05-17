@@ -204,8 +204,8 @@ def place_field_distances_to_goal_swarmplot(distances_to_goal, fig_path=None):
 
 
 def main():
-    animal = 'Rat47'
-    session = '08-02-2024'
+    animal = 'Rat46'
+    session = '20-02-2024'
     data_dir = get_data_dir(animal, session)
     spike_dir = os.path.join(data_dir, 'spike_sorting')
 
