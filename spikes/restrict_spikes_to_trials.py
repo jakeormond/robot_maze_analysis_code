@@ -44,6 +44,19 @@ def restrict_spikes_to_trials(units, dlc_data):
     return restricted_units
 
 
+def concatenate_unit_across_trials(unit):
+    # unit is a dictionary with keys as trial numbers and values as dataframes
+    
+    for i, t in enumerate(unit.keys()):
+        if i == 0:
+            concatenated_unit = unit[t]
+        else:
+            # combine dataframes
+            concatenated_unit = pd.concat([concatenated_unit, unit[t]], axis=0)
+
+    return concatenated_unit
+
+
 if __name__ == "__main__":
     
     animal = 'Rat46'

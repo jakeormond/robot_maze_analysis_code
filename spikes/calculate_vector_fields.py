@@ -10,7 +10,10 @@ sys.path.append('C:/Users/Jake/Documents/python_code/robot_maze_analysis_code')
 from utilities.get_directories import get_data_dir
 from utilities.load_and_save_data import load_pickle, save_pickle
 from behaviour.load_behaviour import get_behaviour_dir
-from position.calculate_pos_and_dir import get_goal_coordinates, get_x_and_y_limits, cm_per_pixel
+from position.calculate_pos_and_dir import get_goal_coordinates, get_x_and_y_limits
+
+
+cm_per_pixel = 0.2
 
 
 def calculate_vector_fields(spike_rates_by_position_and_direction, x_bins, y_bins, direction_bins):
@@ -169,33 +172,37 @@ def plot_vector_fields(vector_fields, plot_dir):
         plt.close(fig)
 
 
-def plot_vector_fields_2goals(vector_fields, goal_coordinates, x_centres, y_centres, plot_name, plot_dir):
+def plot_vector_fields_2goals(vector_fields, goal_coordinates, x_centres, y_centres, plot_name, plot_dir, consink=None):
 
     fig, ax = plt.subplots(1, 2, figsize=(20, 10))
-    fig.suptitle(plot_name)
+    fig.suptitle(plot_name, fontsize=24)
 
     goals = [g for g in vector_fields.keys() if isinstance(g, int)]
-
+    colours = ['g', 'g']
     for i, g in enumerate(goals):
-        ax[i].set_title(f'goal {g}')
-        ax[i].set_xlabel('x position (cm)')
-        ax[i].set_ylabel('y position (cm)')
+        ax[i].set_title(f'goal {g}', fontsize=20)
+        ax[i].set_xlabel('x position (cm)', fontsize=16)
+        ax[i].set_ylabel('y position (cm)', fontsize=16)
 
         # plot the goal positions
-        colours = ['b', 'g']
-        for i2, g2 in enumerate(goal_coordinates.keys()):
-            # draw a circle with radius 80 around the goal on ax
-            circle = plt.Circle((goal_coordinates[g2][0], 
-                goal_coordinates[g2][1]), 80, color=colours[i2], 
+        circle = plt.Circle((goal_coordinates[g][0], 
+                goal_coordinates[g][1]), 80, color=colours[i], 
                 fill=False, linewidth=5)
-            ax[i].add_artist(circle)       
+        ax[i].add_artist(circle)    
+        
+        # for i2, g2 in enumerate(goal_coordinates.keys()):
+        #     # draw a circle with radius 80 around the goal on ax
+        #     circle = plt.Circle((goal_coordinates[g2][0], 
+        #         goal_coordinates[g2][1]), 80, color=colours[i2], 
+        #         fill=False, linewidth=5)
+        #     ax[i].add_artist(circle)       
         
         
         vector_field = vector_fields[g][plot_name]
 
         # plot vector field
         ax[i].quiver(x_centres, y_centres, np.cos(vector_field), np.sin(vector_field), color='k', scale=10)
-        
+       
         # flip y axis
         ax[i].invert_yaxis()
 
@@ -207,15 +214,57 @@ def plot_vector_fields_2goals(vector_fields, goal_coordinates, x_centres, y_cent
         ax[i].set_xlim(x_lim[0] - 0.1*x_range, x_lim[1] + 0.1*x_range)
         ax[i].set_ylim(y_lim[0] - 0.1*y_range, y_lim[1] + 0.1*y_range)
 
-        # set the axes to have identical scales
-        ax[i].set_aspect('equal')
+        #
+
         
+        if consink is not None:
+            mrl = consink[g]['mrl']
+            ci_95 = consink[g]['ci_95']
+            ci_999  = consink[g]['ci_999']
+            consink_pos = consink[g]['position']
+            consink_angle = consink[g]['mean_angle']
+            if consink_angle > np.pi:
+                consink_angle = consink_angle - 2*np.pi
+            
+            # plot a filled circle at the consink position
+            if mrl > ci_95:
+                consink_color = 'r'
+            else: # color is gray
+                consink_color = 'gray'
+
+            circle = plt.Circle((consink_pos[0], 
+                consink_pos[1]), 50, color=consink_color, 
+                fill=True)
+            ax[i].add_artist(circle)      
+        
+            # add text with mrl, ci_95, ci_999
+            # ax[i].text(0, 2100, f'mrl: {mrl:.2f}\nci_95: {ci_95:.2f}\nci_999: {ci_999:.2f}\nangle: {consink_angle:.2f}', fontsize=16)
+            ax[i].text(0, 2100, f'mrl: {mrl:.2f}\nci_999: {ci_999:.2f}\nangle: {consink_angle:.2f}', fontsize=16)
+            
+        # set font size of axes
+        ax[i].tick_params(axis='both', which='major', labelsize=14)
+
+        # get the axes values
+        x_ticks = ax[i].get_xticks()
+        y_ticks = ax[i].get_yticks()
+
+        # convert the axes values to cm
+        x_ticks_cm = x_ticks * cm_per_pixel
+        y_ticks_cm = y_ticks * cm_per_pixel
+
+        # set the axes values to cm
+        ax[i].set_xticklabels(x_ticks_cm)
+        ax[i].set_yticklabels(y_ticks_cm)
+
+
+
+        # set the axes to have identical scales
+        ax[i].set_aspect('equal')        
 
     fig.savefig(os.path.join(plot_dir, f'{plot_name}.png'))
 
 
-
-def plot_vector_fields_2goals_all_units(vector_fields, goal_coordinates, plot_dir):
+def plot_vector_fields_2goals_all_units(vector_fields, goal_coordinates, plot_dir, consinks=None):
     if not os.path.exists(plot_dir):
         os.mkdir(plot_dir)
 
@@ -229,14 +278,28 @@ def plot_vector_fields_2goals_all_units(vector_fields, goal_coordinates, plot_di
 
     units = list(vector_fields[goals[0]].keys())
     for u in units:
+        if consinks is not None:
+            consink = {goals[0]: None, goals[1]: None}
+            # find row with unit index
+            for g in goals:
+                consink[g] = consinks[g].loc[u]
+            for g in goals:
+                mrl = consink[g]['mrl']
+                ci_95 = consink[g]['ci_95']
 
-        plot_vector_fields_2goals(vector_fields, goal_coordinates, x_centres, y_centres, u, plot_dir)
+                if mrl > ci_95 :
+                    plot_vector_fields_2goals(vector_fields, goal_coordinates, x_centres, y_centres, u, plot_dir, consink=consink)
+                    break
+            
+        else:
+            # plot_vector_fields_2goals(vector_fields, goal_coordinates, x_centres, y_centres, u, plot_dir, consink=None)
+            pass
 
 
 
 if __name__ == "__main__":
-    animal = 'Rat46'
-    session = '17-02-2024'
+    animal = 'Rat47'
+    session = '16-02-2024'
     data_dir = get_data_dir(animal, session)
 
     # get goal coordinates
@@ -274,6 +337,8 @@ if __name__ == "__main__":
 
     if 2 in code_to_run:
 
+        consinks = load_pickle('consinks_df', spike_dir)
+
         spike_rates_by_position_and_direction_by_goal = load_pickle('spike_rates_by_position_and_direction_by_goal', spike_dir)
 
         vector_fields_by_goal, mean_resultant_lengths_by_goal = calculate_vector_fields_2goals(spike_rates_by_position_and_direction_by_goal, behaviour_data)
@@ -282,8 +347,10 @@ if __name__ == "__main__":
         save_pickle(mean_resultant_lengths_by_goal, 'mean_resultant_lengths_by_goal', spike_dir)
 
         # plot vector fields by goal
-        plot_dir = os.path.join(spike_dir, 'vector_fields_by_goal')
-        plot_vector_fields_2goals_all_units(vector_fields_by_goal, goal_coordinates, plot_dir)
+        # plot_dir = os.path.join(spike_dir, 'vector_fields_by_goal')
+        plot_dir = os.path.join(spike_dir, 'vector_fields_by_goal', 'consinks')
+
+        plot_vector_fields_2goals_all_units(vector_fields_by_goal, goal_coordinates, plot_dir, consinks=consinks)
 
 
     ############################# BOTH GOALS - COMBINED PRINCIPAL CELLS ############################
