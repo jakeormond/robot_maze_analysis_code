@@ -12,7 +12,11 @@ sys.path.append('C:/Users/Jake/Documents/python_code/robot_maze_analysis_code')
 from utilities.get_directories import get_data_dir 
 
 
-def match_behaviour_and_bonsai_datestamps(behaviour_dir, video_dir):  
+def match_behaviour_and_bonsai_datestamps_V1(behaviour_dir, video_dir): 
+
+    # this version uses date created information to match the files, but this info now seems to be lost with Windows 11 upgrade, 
+    # so deprecating it as version 1
+
     # find csv files in behaviour directory
     csv_files = glob.glob(os.path.join(behaviour_dir, '*.csv'))
     # get the time that each csv file was created
@@ -61,8 +65,86 @@ def match_behaviour_and_bonsai_datestamps(behaviour_dir, video_dir):
 
     return behaviour_and_matching_bonsai_datestamps
 
+def match_behaviour_and_video_files(behaviour_dir, video_dir): 
 
-def match_behaviour_and_bonsai_files(behaviour_dir, video_dir):  
+    # this version doesn't use date created information to match the files, but instead uses the file names to match the files so critical that
+    # only the correct files are here. This is version 2
+
+    # find csv files in behaviour directory
+    csv_files = glob.glob(os.path.join(behaviour_dir, '*.csv'))
+    n_csv_files = len(csv_files)
+
+
+     # find the video files in the video_files directory
+    video_files = glob.glob(os.path.join(video_dir, '*.avi'))
+    n_video_files = len(video_files)
+
+    # assert that n_csv_files == n_video_files
+    assert n_csv_files == n_video_files, "Number of csv files and video files do not match"
+
+    # sort the list of csv_files 
+    csv_files.sort()
+    video_files.sort()
+
+    # match the names of the csv files and video files
+    behaviour_and_matching_video_files = [None] * len(csv_files)
+    for c in range(len(csv_files)):
+        csv_file = csv_files[c]
+        video_file = video_files[c]
+        
+        behaviour_and_matching_video_files[c] = \
+                                (csv_file, video_file)
+                
+        print(behaviour_and_matching_video_files[c])                
+
+    return behaviour_and_matching_video_files
+
+
+def re_date_files(behaviour_and_matching_files, video_dir, video_csv_dir):
+
+    # reverse the list of behaviour_and_matching_files
+    behaviour_and_matching_files = behaviour_and_matching_files[::-1]
+
+    bonsai_files = ["cropTS", "cropValues", "dlcOut", "pulseTS", "videoTS"]
+
+    for b in behaviour_and_matching_files:
+        
+        # get the correct date and time
+        behaviour_file = b[0]
+        behaviour_name = os.path.basename(behaviour_file)
+        behaviour_date_time = behaviour_name[:-4]
+        
+        # get the wrong date and time
+        video_file = b[1]
+        video_name = os.path.basename(video_file)
+        video_date_time_wrong = video_name[6:-4]
+
+        # rename the video file with the correct date and time
+        video_file_corrected = os.path.join(video_dir, "video_" + behaviour_date_time + ".avi")
+
+        print('video file renamed from ' + video_file + ' to ' + video_file_corrected)  
+
+        os.rename(video_file, video_file_corrected)
+
+        # rename the bonsai files
+        for bf in bonsai_files:
+            bonsai_file = glob.glob(os.path.join(video_csv_dir, bf + "_" + video_date_time_wrong + ".csv"))
+            if len(bonsai_file) > 0:
+                # rename the file
+                bonsai_file = bonsai_file[0]
+                bonsai_file_new = os.path.join(video_csv_dir, bf + "_" + behaviour_date_time + ".csv")
+
+                print('bonsai file renamed from ' + bonsai_file + ' to ' + bonsai_file_new)
+                os.rename(bonsai_file, bonsai_file_new)
+
+    return
+
+    
+
+
+
+
+def match_behaviour_and_bonsai_files_V1(behaviour_dir, video_dir):  
     # find csv files in behaviour directory
     csv_files = glob.glob(os.path.join(behaviour_dir, '*.csv'))
     # get the time that each csv file was created
@@ -103,7 +185,7 @@ def match_behaviour_and_bonsai_files(behaviour_dir, video_dir):
     return behaviour_and_matching_bonsai_files
 
 
-def re_date_files(behaviour_and_matching_files, file_paths):
+def re_date_files_V1(behaviour_and_matching_files, file_paths):
     # loop backwards through behaviour_and_matching_bonsai_files
     for i, b in reversed(list(enumerate(behaviour_and_matching_files))):
         wrong_date = b[1]
@@ -211,27 +293,34 @@ def re_date_dlc_files(behaviour_and_matching_video_datestamps, dlc_dir):
     
 
 if __name__ == "__main__":
-    animal = 'Rat47'
-    session = '08-02-2024'
-    data_dir = get_data_dir(animal, session)
+
+    expt = 'robot_single_goal'
+    animal = 'Rat_HC1'
+    session = '31-07-2024'
+    data_dir = get_data_dir(expt, animal, session)
     behaviour_dir = os.path.join(data_dir, 'behaviour')
     video_dir = os.path.join(data_dir, 'video_files')
     video_csv_dir = os.path.join(data_dir, 'video_csv_files')
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
-    behaviour_and_matching_bonsai_datestamps = \
-        match_behaviour_and_bonsai_datestamps(behaviour_dir, video_dir)
+    
+    # behaviour_and_matching_bonsai_datestamps = \
+    #    match_behaviour_and_bonsai_datestamps(behaviour_dir, video_dir)
+
+    behaviour_and_matching_video_files = match_behaviour_and_video_files(behaviour_dir, video_dir)
     
     # redate bonsai files
-    # re_date_bonsai_files(behaviour_and_matching_bonsai_datestamps, \
-    #                     video_csv_dir)
+    re_date_files(behaviour_and_matching_video_files, video_dir, \
+                        video_csv_dir)
         
     
     # revert_dlc_file_names(dlc_dir)
 
     # redate dlc files
-    re_date_dlc_files(behaviour_and_matching_bonsai_datestamps, \
-                        dlc_dir)    
+    # re_date_dlc_files(behaviour_and_matching_bonsai_datestamps, \
+    #                    dlc_dir)    
     
    # redate video files
-    re_date_video_files(behaviour_and_matching_bonsai_datestamps, \
-                        video_dir) 
+    # re_date_video_files(behaviour_and_matching_bonsai_datestamps, \
+    #                     video_dir) 
+    
+    pass

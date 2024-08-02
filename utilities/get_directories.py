@@ -8,9 +8,9 @@ def get_home_dir():
         home_dir = "/media/jake/LaCie" # Linux/Ubuntu
     return home_dir
 
-def get_data_dir(animal, session):
+def get_data_dir(experiment, animal, session):
     home_dir = get_home_dir()
-    data_dir = os.path.join(home_dir, animal, session)
+    data_dir = os.path.join(home_dir, experiment, animal, session)
     return data_dir
 
 def get_robot_maze_directory():
