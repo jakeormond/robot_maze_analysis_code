@@ -8,7 +8,14 @@ import glob
 import time
 
 import sys
-sys.path.append('C:/Users/Jake/Documents/python_code/robot_maze_analysis_code')
+
+# if on windows
+if sys.platform == 'win32':
+    sys.path.append('C:/Users/Jake/Documents/python_code/robot_maze_analysis_code')
+
+else:
+    sys.path.append('/home/jake/Documents/python_code/robot_maze_analysis_code')
+
 from utilities.get_directories import get_data_dir 
 
 
@@ -65,7 +72,7 @@ def match_behaviour_and_bonsai_datestamps_V1(behaviour_dir, video_dir):
 
     return behaviour_and_matching_bonsai_datestamps
 
-def match_behaviour_and_video_files(behaviour_dir, video_dir): 
+def match_behaviour_and_video_files(behaviour_dir, video_dir, video_csv_dir): 
 
     # this version doesn't use date created information to match the files, but instead uses the file names to match the files so critical that
     # only the correct files are here. This is version 2
@@ -79,8 +86,15 @@ def match_behaviour_and_video_files(behaviour_dir, video_dir):
     video_files = glob.glob(os.path.join(video_dir, '*.avi'))
     n_video_files = len(video_files)
 
+    # find csv_files in video_csv_dir
+    video_csv_files = glob.glob(os.path.join(video_csv_dir, '*.csv'))
+    n_video_csv_files = len(video_csv_files)
+    n_video_csv_files = n_video_csv_files/5
+
     # assert that n_csv_files == n_video_files
     assert n_csv_files == n_video_files, "Number of csv files and video files do not match"
+    assert n_csv_files == n_video_csv_files, "Number of csv files and video_csv files do not match"
+    
 
     # sort the list of csv_files 
     csv_files.sort()
@@ -154,7 +168,7 @@ def match_behaviour_and_bonsai_files_V1(behaviour_dir, video_dir):
     csv_times = [(t.tm_hour, t.tm_min) for t in csv_times]
 
     # find the video files in the video_files directory
-    video_dir = os.path.join(data_dir, 'video_files')
+    video_dir = os.path.join(data_dir, 'videos')
     video_files = glob.glob(os.path.join(video_dir, '*.avi'))
     # get the time that each video file was created
     video_times = [os.path.getmtime(f) for f in video_files]
@@ -295,18 +309,24 @@ def re_date_dlc_files(behaviour_and_matching_video_datestamps, dlc_dir):
 if __name__ == "__main__":
 
     expt = 'robot_single_goal'
-    animal = 'Rat_HC1'
-    session = '31-07-2024'
+    animal = 'Rat_HC4'
+    session = '01-08-2024'
     data_dir = get_data_dir(expt, animal, session)
     behaviour_dir = os.path.join(data_dir, 'behaviour')
-    video_dir = os.path.join(data_dir, 'video_files')
+    video_dir = os.path.join(data_dir, 'videos')
     video_csv_dir = os.path.join(data_dir, 'video_csv_files')
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
     
     # behaviour_and_matching_bonsai_datestamps = \
     #    match_behaviour_and_bonsai_datestamps(behaviour_dir, video_dir)
 
-    behaviour_and_matching_video_files = match_behaviour_and_video_files(behaviour_dir, video_dir)
+    # 
+    behaviour_and_matching_video_files = match_behaviour_and_video_files(behaviour_dir, video_dir, video_csv_dir)
+
+    n_files = len(behaviour_and_matching_video_files)
+
+    # for i in range(n_files):
+    #     print(behaviour_and_matching_video_files[i])
     
     # redate bonsai files
     re_date_files(behaviour_and_matching_video_files, video_dir, \
