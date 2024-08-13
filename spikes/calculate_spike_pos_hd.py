@@ -65,6 +65,61 @@ def get_unit_position_and_directions(dlc_data, unit):
     return unit
 
 
+def circularly_translate_units_by_goal(unit, dlc_data):
+
+    # determine shift
+    n_frames = len(dlc_data)
+
+    # frames are acquired at roughly 30 fps. I want shift to be minimum 5 seconds
+    min_shift = 5 * 30
+    max_shift = n_frames - min_shift + 1
+
+    # pick a shift randomly between those two numbers 
+    shift = np.random.randint(min_shift, max_shift)
+
+    # interpolate the frame number of the unit spikes
+    f_i = interpolate.interp1d(dlc_data['video_samples'], list(range(0,n_frames)))
+    unit_f = np.round(f_i(unit['samples']), 3)
+    shifted_unit_f = unit_f + shift
+    # any value in shifted_unit_f greater than n_frames should be rolled 
+    shifted_unit_f = np.where(shifted_unit_f >= n_frames-1, shifted_unit_f - (n_frames-1), shifted_unit_f)
+    shifted_unit_f = np.sort(shifted_unit_f)  
+
+    # interpolate the new samples 
+    f_s = interpolate.interp1d(list(range(0,n_frames)), dlc_data['video_samples'])
+    shifted_unit_s = np.round(f_s(shifted_unit_f))
+
+    # interpolate the x and y positions of the unit spikes
+    f_x = interpolate.interp1d(list(range(0,n_frames)), dlc_data['x'])
+    f_y = interpolate.interp1d(list(range(0,n_frames)), dlc_data['y'])
+    shifted_unit_x = np.round(f_x(shifted_unit_f), 2)
+    shifted_unit_y = np.round(f_y(shifted_unit_f), 2)
+
+    # interpolate the hd of the unit spikes
+    shifted_unit_hd = np.round(interpolate_rads(list(range(0,n_frames)), dlc_data['hd'], shifted_unit_f), 3)
+
+    # create the shifted unit
+    shifted_unit = {'samples': shifted_unit_s, 'x': shifted_unit_x, 'y': shifted_unit_y, 'hd': shifted_unit_hd}
+    # make it a dataframe
+    shifted_unit = pd.DataFrame(shifted_unit)
+
+    return shifted_unit
+    
+    
+
+
+
+        
+        
+
+
+
+
+
+
+    pass
+
+
 def bin_spikes_by_position(units, positional_occupancy):
 
     
@@ -512,11 +567,11 @@ def create_artificial_unit(units, directional_occupancy_by_position):
 
 if __name__ == "__main__":
     animal = 'Rat47'
-    session = '08-02-2024'
+    session = '16-02-2024'
     data_dir = get_data_dir(animal, session)
 
     # code_to_run = range(8)
-    code_to_run = [7]
+    code_to_run = [4]
 
 
     ################## LOAD DATA ##################

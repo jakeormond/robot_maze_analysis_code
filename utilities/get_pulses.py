@@ -420,10 +420,14 @@ def plot_pulse_alignment(pulses, data_dir):
 
 
 if __name__ == "__main__":
-    animal = 'Rat46'
-    session = '19-02-2024'
+    # animal = 'Rat46'
+    # session = '19-02-2024'
+    
+    experiment = 'robot_single_goal'
+    animal = 'RatHC2'
+    session = '12-07-2024'
 
-    data_dir = get_data_dir(animal, session)
+    data_dir = get_data_dir(experiment, animal, session)
 
     # not currently using get_spikeglx_pulses, use extract_pulses_from_raw.py instead
     # spikeglx_pulses = get_spikeglx_pulses(animal, session)

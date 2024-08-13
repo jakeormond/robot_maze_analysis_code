@@ -1,12 +1,9 @@
 import os
-import glob
 import numpy as np
 import pandas as pd
-import pickle
 import matplotlib.pyplot as plt
 from scipy import stats
 from random import sample
-import itertools
 
 import sys
 sys.path.append('C:/Users/Jake/Documents/python_code/robot_maze_analysis_code')
@@ -199,7 +196,11 @@ def calculate_spike_halfwidth(average_waveform):
         middle_ind = rising_edge + 3*upsample_factor
 
     if half_peak < 0:
-        falling_edge = np.where(waveform_upsampled[middle_ind:] > half_peak)[0][0] + middle_ind
+        # if np.where(waveform_upsampled[middle_ind:] > half_peak)[0] is empty
+        if np.where(waveform_upsampled[middle_ind:] > half_peak)[0].size == 0:
+            falling_edge = upsampled_len-1
+        else:
+            falling_edge = np.where(waveform_upsampled[middle_ind:] > half_peak)[0][0] + middle_ind
 
     else:
         falling_edge = np.where(waveform_upsampled[middle_ind:] > half_peak)[0][0] + middle_ind
@@ -266,8 +267,8 @@ def classify_neurons(halfwidths, mean_rates):
 
 
 if __name__ == "__main__":
-    animal = 'Rat46'
-    session = '20-02-2024'
+    animal = 'Rat47'
+    session = '16-02-2024'
     data_dir = get_data_dir(animal, session)
 
     # load dlc_data which has the trial times
@@ -283,32 +284,32 @@ if __name__ == "__main__":
     # bin_dir = '/media/jake/LaCie/' + animal + '/' + session
     # bin_path = glob.glob(bin_dir + '/*.ap.bin')[0]
 
-    # allow user to select bin_path interactively
-    # import tkinter as tk
-    # from tkinter import filedialog
-    # root = tk.Tk()
-    # root.withdraw()
-    # bin_path = filedialog.askopenfilename(title='Select the .ap.bin file')
+    # allow user to select bin_path interactively, starting from the spike_dir
+    import tkinter as tk
+    from tkinter import filedialog
+    root = tk.Tk()
+    root.withdraw()
+    bin_path = filedialog.askopenfilename(title='Select the .ap.bin file', initialdir=spike_dir)
 
     # calculate mean firing rates
     mean_rates = calculate_mean_rates(units, dlc_data)
 
     # get average waveforms
-    # average_waveforms = get_average_waveforms(units, spike_dir, bin_path)
-    # save_pickle(average_waveforms, 'average_waveforms', spike_dir)
+    average_waveforms = get_average_waveforms(units, spike_dir, bin_path)
+    save_pickle(average_waveforms, 'average_waveforms', spike_dir)
 
     # plot average waveforms
     average_waveforms = load_pickle('average_waveforms', spike_dir)
-    # plot_average_waveforms(average_waveforms, mean_rates, spike_dir)
+    plot_average_waveforms(average_waveforms, mean_rates, spike_dir)
 
     # manually remove any clusters that don't look like neurons
-    # units, average_waveforms, mean_rates, save_flag = \
-    #     remove_bad_clusters(units, average_waveforms, mean_rates)
+    units, average_waveforms, mean_rates, save_flag = \
+        remove_bad_clusters(units, average_waveforms, mean_rates)
 
-    # if save_flag is True:
-    #     # resave units and average_waveforms
-    #     save_pickle(units, 'restricted_units', spike_dir)
-    #     save_pickle(average_waveforms, 'average_waveforms', spike_dir)
+    if save_flag is True:
+        # resave units and average_waveforms
+        save_pickle(units, 'restricted_units', spike_dir)
+        save_pickle(average_waveforms, 'average_waveforms', spike_dir)
 
     # get halfwidths    
     halfwidths = calculate_spike_halfwidths(average_waveforms)

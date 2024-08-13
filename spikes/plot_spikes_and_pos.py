@@ -13,7 +13,9 @@ sys.path.append('C:/Users/Jake/Documents/python_code/robot_maze_analysis_code')
 from utilities.get_directories import get_data_dir, get_robot_maze_directory
 from utilities.load_and_save_data import load_pickle, save_pickle
 from behaviour.load_behaviour import split_dictionary_by_goal
-from position.calculate_pos_and_dir import get_goal_coordinates, get_x_and_y_limits, cm_per_pixel
+from position.calculate_pos_and_dir import get_goal_coordinates, get_x_and_y_limits
+
+cm_per_pixel = 0.2
 
 
 def basic_spike_pos_plot(ax, unit, dlc_data, goal_coordinates, x_and_y_limits):
@@ -407,7 +409,7 @@ if __name__ == "__main__":
 
     # plot spikes and position
     plot_dir = os.path.join(spike_dir, 'spikes_and_pos')
-    plot_spikes_and_pos(units, dlc_data, goal_coordinates, x_and_y_limits, plot_dir)
+    # plot_spikes_and_pos(units, dlc_data, goal_coordinates, x_and_y_limits, plot_dir)
 
     # plot spike and position by goal
     units_by_goal = {}
