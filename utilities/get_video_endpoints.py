@@ -96,9 +96,12 @@ def get_video_startpoints(dlc_data):
 
 
 if __name__ == "__main__":
-    animal = 'Rat46'
-    session = '19-02-2024'
-    data_dir = get_data_dir(animal, session)
+    
+    experiment = 'robot_single_goal'
+    animal = 'Rat_HC1'
+    session = '31-07-2024'
+
+    data_dir = get_data_dir(experiment, animal, session)
     video_dir = os.path.join(data_dir, 'video_files')
 
     endpoints = get_video_endpoints(video_dir, user_input=False)

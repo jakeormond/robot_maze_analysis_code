@@ -341,7 +341,7 @@ def get_x_and_y_limits(dlc_data):
     return x_and_y_limits
 
 
-def main():
+def main_2goal():
 
     # screen platforms is a dictionary where each key is the screen number and each
     # value is the number of the platfom that is directly adjacent to the screen
@@ -410,6 +410,76 @@ def main():
     save_pickle(dlc_data, 'dlc_final', dlc_dir)
 
     pass
+
+
+def main():
+
+    # screen platforms is a dictionary where each key is the screen number and each
+    # value is the number of the platfom that is directly adjacent to the screen
+    screen_platforms = {1: 12, 2: 18, 3: 246, 4: 240}
+
+    # load the platform map
+    robot_maze_dir = get_robot_maze_directory()
+    map_path = os.path.join(robot_maze_dir, 'workstation',
+                'map_files', 'platform_map.csv')
+    platform_map = np.genfromtxt(map_path, delimiter=',')
+    col_dist = np.round(np.cos(np.radians(30)), 3)  # distances between columns
+    row_dist = 0.5                                  # and rows in platform map
+
+    cm_per_pixel = 370/2048 # 370 cm is the y dimension of the arena, 2048 is the y dimension of the video
+
+    animal = 'Rat46'
+    session = '20-02-2024'
+    data_dir = get_data_dir(animal, session)
+    dlc_dir = os.path.join(data_dir, 'deeplabcut')
+
+    # get the goal coordinates
+    screen_coordinates, save_flag = get_screen_coordinates(data_dir)
+    # save the screen coordinates
+    if save_flag:
+        save_pickle(screen_coordinates, 'screen_coordinates', dlc_dir)    
+  
+    # load dlc_data which has the trial times    
+    dlc_data = load_pickle('dlc_final', dlc_dir)
+    
+    # load the platform coordinates, from which we can get the goal coordinates
+    robot_maze_dir = get_robot_maze_directory()
+    platform_path = os.path.join(robot_maze_dir, 'workstation', 'map_files')
+    platform_coordinates = load_pickle('platform_coordinates', platform_path)
+    crop_coordinates = load_pickle('crop_coordinates', platform_path)
+
+    platform_coordinates, save_flag = get_uncropped_platform_coordinates(platform_coordinates, crop_coordinates)
+    if save_flag:
+        # first, copy the original platform_coordinates file
+        src_file = os.path.join(robot_maze_dir, 'workstation',
+                'map_files', 'platform_coordinates.pickle')
+        dst_file = os.path.join(robot_maze_dir, 'workstation',
+                'map_files', 'platform_coordinates_cropped.pickle')
+        shutil.copyfile(src_file, dst_file)     
+
+        # save the new platform_coordinates file
+        save_pickle(platform_coordinates, 'platform_coordinates', platform_path)
+
+    # load the behaviour data, from which we can get the goal ids
+    behaviour_dir = os.path.join(data_dir, 'behaviour')
+    behaviour_data = load_pickle('behaviour_data_by_goal', behaviour_dir)
+
+    goals = []
+    for k in behaviour_data.keys():
+        goals.append(k)
+
+    # calculate the animal's current platform for each frame
+    dlc_data = get_current_platform(dlc_data, platform_coordinates)  
+
+    # calculate head direction relative to the goals
+    dlc_data, goal_coordinates = get_relative_head_direction(dlc_data, platform_coordinates, goals, screen_coordinates)
+
+    # calculate the distance to each goal and screen
+    dlc_data = get_distances(dlc_data, platform_coordinates, goal_coordinates, screen_coordinates)
+
+    # save the dlc_data
+    save_pickle(dlc_data, 'dlc_final', dlc_dir)
+
 
 
 if __name__ == "__main__":

@@ -343,9 +343,11 @@ def interpolate_out_nans(dlc_data):
 
 
 if __name__ == "__main__":
-    animal = 'Rat46'
-    session = '19-02-2024'
-    data_dir = get_data_dir(animal, session)
+    
+    experiment = 'robot_single_goal'
+    animal = 'Rat_HC1'
+    session = '31-07-2024'
+    data_dir = get_data_dir(experiment, animal, session)
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
 
     # process the dlc data
