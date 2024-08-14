@@ -320,8 +320,8 @@ if __name__ == "__main__":
     spikeglx_data_dirs = sorted(spikeglx_data_dirs, key=sort_key)
 
     # save the order of the folders as a csv file
-    spikeglx_data_dirs = pd.DataFrame(spikeglx_data_dirs)
-    spikeglx_data_dirs.to_csv(os.path.join(spikeglx_dir, 'spikeglx_data_dirs.csv'), header=False, index=False)
+    spikeglx_data_dirs_df = pd.DataFrame(spikeglx_data_dirs)
+    spikeglx_data_dirs_df.to_csv(os.path.join(spikeglx_dir, 'spikeglx_data_dirs.csv'), header=False, index=False)
     
     # create lists to store the names of the pulses, and the number of samples
     pulses = []
@@ -354,27 +354,16 @@ if __name__ == "__main__":
             hf.create_dataset(spikeglx_data_dirs[i], data=arr)
             print(f'saving {arr.shape[0]} pulses to key {spikeglx_data_dirs[i]}')
 
-    # save n_pulses and n_samples as a pickle file
-    data_dict = {}
+    # create a dataframe to store the number of samples and pulses
+    data = {
+        'dir_name': spikeglx_data_dirs,
+        'n_samples': n_samples,
+        'n_pulses': n_pulses
+    }
+    df = pd.DataFrame(data)
+    df.to_csv(os.path.join(spikeglx_dir, 'spikeglx_n_samples_and_pulses.csv'), index=False)
 
-    # Iterate over the directories
-    print('creating dictionary for pickle file with n_samples and n_pulses')
-    for i, dir_name in enumerate(spikeglx_data_dirs):
-        # Populate the dictionary with n_samples and n_pulses
-        data_dict[dir_name] = {
-            'n_samples': n_samples[i],
-            'n_pulses': n_pulses[i]
-        }
-        print(f'key {dir_name}: {n_samples[i]} samples, {n_pulses[i]} pulses')
-
-    # Define the file path for the pickle file
-    pickle_file = os.path.join(spikeglx_dir, 'spikeglx_n_samples_and_pulses.pkl')
-    # Save the dictionary as a pickle file
-    with open(pickle_file, 'wb') as f:
-        pickle.dump(data_dict, f)
-
-
-    # load the pulses from the h5 file
+        # load the pulses from the h5 file
     print('loading pulses from h5 file')
     with h5py.File(pulse_file, 'r') as hf:
         # get keys
@@ -385,8 +374,10 @@ if __name__ == "__main__":
         for key in keys:
             print(f'{key}: {hf[key].shape[0]} pulses from h5 file')
 
-            print(f'{key}: {data_dict[key]["n_pulses"]} pulses from pickle file')
-            print(f'{key}: {data_dict[key]["n_samples"]} samples from pickle file')
-    
+            # get the n_samples and n_pulses from df and print them
+            data_dict = df.set_index('dir_name').T.to_dict()
+            print(f'{key}: {data_dict[key]["n_pulses"]} pulses from dataframe')
+            print(f'{key}: {data_dict[key]["n_samples"]} samples from dataframe')
+
     pass
 
