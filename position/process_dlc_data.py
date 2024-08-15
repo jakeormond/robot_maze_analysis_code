@@ -342,6 +342,61 @@ def interpolate_out_nans(dlc_data):
     return dlc_data, save_flag
 
 
+def recalculate_start_and_endpoints(original_dlc_data, nan_removed_dlc_data, startpoints, endpoints):
+    """
+    Recalculate the start and endpoints of the video data after removing NaNs.
+    This is necessary because the start and endpoints are based on the original
+    data, which may have NaNs that were interpolated out. 
+    
+    Parameters
+    ----------
+    original_dlc_data : dict
+        The original dlc data. Each key is a trial time and the value is a 
+        pandas dataframe with the dlc data. 
+    nan_removed_dlc_data : dict
+        The dlc data with the NaNs removed. Each key is a trial time and the 
+        value is a pandas dataframe with the dlc data. 
+    startpoints : dict
+        The startpoints of the video data. Each key is a trial time and the 
+        value is the startpoint. 
+    endpoints : dict
+        The endpoints of the video data. Each key is a trial time and the 
+        value is the endpoint. 
+        
+    Returns
+    -------
+    new_startpoints : dict
+        The new startpoints of the video data. Each key is a trial time and the 
+        value is the new startpoint. 
+    new_endpoints : dict
+        The new endpoints of the video data. Each key is a trial time and the 
+        value is the new endpoint. 
+    """
+    new_startpoints = startpoints
+    new_endpoints = endpoints
+    
+    for t in original_dlc_data.keys():
+        original_data = original_dlc_data[t]
+        nan_removed_data = nan_removed_dlc_data[t]
+        
+        # get the startpoint and endpoint
+        startpoint = startpoints[t]
+        endpoint = endpoints[t]['end_frame']
+        
+        # get the original and nan_removed indices
+        original_indices = original_data.index
+        nan_removed_indices = nan_removed_data.index
+        
+        # get the new startpoint and endpoint
+        new_startpoint = nan_removed_indices.get_loc(startpoint)
+        new_endpoint = nan_removed_indices.get_loc(endpoint)
+        
+        new_startpoints[t] = new_startpoint
+        new_endpoints[t] = new_endpoint
+        
+    return new_startpoints, new_endpoints
+
+
 if __name__ == "__main__":
     
     experiment = 'robot_single_goal'
@@ -383,6 +438,19 @@ if __name__ == "__main__":
     dlc_final, save_flag = interpolate_out_nans(dlc_final)
 
     save_pickle(dlc_final, 'dlc_final', dlc_dir)
+
+    # recalculate the start and endpoints of the video data after removing NaNs
+    # this is necessary because the start and endpoints are based on the original
+    # data, which may have NaNs that were interpolated out
+    new_startpoints, new_endpoints = \
+        recalculate_start_and_endpoints(dlc_processed_data, dlc_final, \
+                                        video_startpoints, video_endpoints)
+    
+    save_pickle(video_startpoints, 'new_startpoints', video_dir)
+    save_pickle(video_endpoints, 'new_endpoints', video_dir)
+
+
+
 
     pass
 

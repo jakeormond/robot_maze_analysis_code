@@ -307,8 +307,8 @@ def sort_key(x):
 if __name__ == "__main__":
 
     experiment = 'robot_single_goal'
-    animal = 'Rat_HC1'
-    session = '31-07-2024'
+    animal = 'Rat_HC2'
+    session = '12-07-2024'
     data_dir = get_data_dir(experiment, animal, session)
 
     spikeglx_dir = os.path.join(data_dir, 'spikeglx_data')    

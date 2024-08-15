@@ -13,6 +13,7 @@ sys.path.append('C:/Users/Jake/Documents/python_code/robot_maze_analysis_code')
 from utilities.get_directories import get_data_dir, get_robot_maze_directory
 from utilities.load_and_save_data import save_pickle, load_pickle
 
+
 def get_uncropped_platform_coordinates(platform_coordinates, crop_coordinates):
 
     # check if you need to run this function
@@ -171,13 +172,24 @@ def get_goal_coordinates(platform_coordinates=None, goals=None, data_dir=None):
     if goals is None:
         goals = []
         behaviour_dir = os.path.join(data_dir, 'behaviour')
-        behaviour_data = load_pickle('behaviour_data_by_goal', behaviour_dir)
-        for k in behaviour_data.keys():
-            goals.append(k)
 
-    goal_coordinates = {}
-    for g in goals:
-        goal_coordinates[g] = platform_coordinates[g][0:2]
+        behaviour_data = load_pickle('behaviour_data', behaviour_dir)
+        goal = get_goals(behaviour_data)
+
+        # if goal is a list, then there is more than one goal
+        if isinstance(goal, list):
+            goals = goal
+            behaviour_data = load_pickle('behaviour_data_by_goal', behaviour_dir)
+            for k in behaviour_data.keys():
+                goals.append(k)
+
+            goal_coordinates = {}
+            for g in goals:
+                goal_coordinates[g] = platform_coordinates[g][0:2]
+        
+        else:
+            goal_coordinates = platform_coordinates[goal][0:2]
+        
     return goal_coordinates
 
 
@@ -200,7 +212,33 @@ def get_relative_directions_to_position(directions_to_position, head_directions)
     return relative_direction
 
 
-def get_relative_head_direction(dlc_data, platform_coordinates, goals, screen_coordinates):
+def get_relative_head_direction(dlc_data, platform_coordinates, goal):
+    
+    # get the goal coordinates
+    goal_coordinates = platform_coordinates[goal][0:2]
+    
+    for d in dlc_data.keys():
+        # get the x and y coordinates of the animal's head
+        x = dlc_data[d]['x'].values
+        y = dlc_data[d]['y'].values
+              
+        # calculate the direction to the goal
+        x_diff = goal_coordinates[0] - x
+        y_diff = y - goal_coordinates[1]
+        dlc_data[d][f'goal_direction'] = np.arctan2(y_diff, x_diff)
+
+        # calculate the hd relative to each goal
+        relative_direction_temp = dlc_data[d]['hd'] - dlc_data[d][f'goal_direction']
+        # any relative direction greater than pi is actually less than pi
+        relative_direction_temp[relative_direction_temp > np.pi] -= 2*np.pi
+        # any relative direction less than -pi is actually greater than -pi
+        relative_direction_temp[relative_direction_temp < -np.pi] += 2*np.pi
+        dlc_data[d][f'relative_direction_to_goal'] = relative_direction_temp
+       
+    return dlc_data, goal_coordinates
+
+
+def get_relative_head_direction_multigoal(dlc_data, platform_coordinates, goals, screen_coordinates):
     
     # get the goal coordinates
     goal_coordinates = {}
@@ -245,7 +283,7 @@ def get_relative_head_direction(dlc_data, platform_coordinates, goals, screen_co
     return dlc_data, goal_coordinates
 
 
-def get_distances(dlc_data, platform_coordinates, goal_coordinates, screen_coordinates): # get distance to each goal and screen. Distances will be calculated
+def get_distances_2goals(dlc_data, platform_coordinates, goal_coordinates, screen_coordinates): # get distance to each goal and screen. Distances will be calculated
     
     # get the goal indices
     goal_indices = {}
@@ -315,6 +353,53 @@ def get_distances(dlc_data, platform_coordinates, goal_coordinates, screen_coord
     return dlc_data
 
 
+def get_distances(dlc_data, platform_map, platform_coordinates, goal): # get distance to the goal    
+    # get the goal indices
+    row, col = np.where(platform_map == goal)
+    goal_indices = [row[0], col[0]]    
+
+    col_dist = np.round(np.cos(np.radians(30)), 3)  # distances between columns
+    row_dist = 0.5      
+
+    goal_coordinates = platform_coordinates[goal][0:2]
+   
+    # in both pixels and in platform distances (to account for the effect of the camera lens)
+    for d in dlc_data.keys():
+        # get the x and y coordinates of the animal's head
+        x = dlc_data[d]['x'].values
+        y = dlc_data[d]['y'].values
+
+        # get the platform positions for each frame
+        occupied_platforms = dlc_data[d]['occupied_platforms'].values
+        # platform_indices is a 2d array where each row is the row and col. 
+        # Its shape is (len(occupied_platforms), 2)
+        platform_indices = np.zeros((len(occupied_platforms), 2))
+
+        # find the row and col coordinates of the occupied platforms in the platform map array
+        for i, p in enumerate(occupied_platforms):
+            # find the row and col coordinates of the occupied platform in the platform map array
+            row, col = np.where(platform_map == p)
+            platform_indices[i, 0] = row[0]
+            platform_indices[i, 1] = col[0]
+
+        # goal distances    
+        x_diff = goal_coordinates[0] - x
+        y_diff = goal_coordinates[1] - y
+        dlc_data[d][f'distance_to_goal'] = np.sqrt(x_diff**2 + y_diff**2)
+
+        # calculate the distance to each goal in platform distances
+        row_diff = goal_indices[0] - platform_indices[:,0]
+        col_diff = goal_indices[1] - platform_indices[:,1]
+
+        row_diff = row_diff * row_dist
+        col_diff = col_diff * col_dist
+
+        dlc_data[d][f'distance_to_goal_platform'] = np.sqrt(row_diff**2 + col_diff**2)       
+
+    return dlc_data
+
+
+
 def get_x_and_y_limits(dlc_data):
 
     x_and_y_limits = {}
@@ -339,6 +424,23 @@ def get_x_and_y_limits(dlc_data):
     x_and_y_limits['y'] = [min_y, max_y]
 
     return x_and_y_limits
+
+
+def get_goals(behaviour_data):
+        goal = []
+        for t in behaviour_data.keys():
+            # the goal is the final entry in the chosen_pos column of the df
+            goal.append(behaviour_data[t].chosen_pos.iloc[-1])
+
+        # the goal is the unique value in the goals list
+        goal = list(set(goal))
+        # thrown an error if more than one goal
+        if len(goal) == 1:
+            # raise ValueError('More than one goal in the goals list')
+            goal = goal[0]
+
+        return goal
+
 
 
 def main_2goal():
@@ -414,9 +516,11 @@ def main_2goal():
 
 def main():
 
-    # screen platforms is a dictionary where each key is the screen number and each
-    # value is the number of the platfom that is directly adjacent to the screen
-    screen_platforms = {1: 12, 2: 18, 3: 246, 4: 240}
+    experiment = 'robot_single_goal'
+    animal = 'Rat_HC1'
+    session = '31-07-2024'
+
+    data_dir = get_data_dir(experiment, animal, session)
 
     # load the platform map
     robot_maze_dir = get_robot_maze_directory()
@@ -428,17 +532,9 @@ def main():
 
     cm_per_pixel = 370/2048 # 370 cm is the y dimension of the arena, 2048 is the y dimension of the video
 
-    animal = 'Rat46'
-    session = '20-02-2024'
-    data_dir = get_data_dir(animal, session)
+    
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
 
-    # get the goal coordinates
-    screen_coordinates, save_flag = get_screen_coordinates(data_dir)
-    # save the screen coordinates
-    if save_flag:
-        save_pickle(screen_coordinates, 'screen_coordinates', dlc_dir)    
-  
     # load dlc_data which has the trial times    
     dlc_data = load_pickle('dlc_final', dlc_dir)
     
@@ -462,24 +558,31 @@ def main():
 
     # load the behaviour data, from which we can get the goal ids
     behaviour_dir = os.path.join(data_dir, 'behaviour')
-    behaviour_data = load_pickle('behaviour_data_by_goal', behaviour_dir)
+    behaviour_data = load_pickle('behaviour_data', behaviour_dir)
 
-    goals = []
-    for k in behaviour_data.keys():
-        goals.append(k)
+    goal = []
+    for t in behaviour_data.keys():
+        # the goal is the final entry in the chosen_pos column of the df
+        goal.append(behaviour_data[t].chosen_pos.iloc[-1])
+
+    # the goal is the unique value in the goals list
+    goal = list(set(goal))
+    # thrown an error if more than one goal
+    if len(goal) > 1:
+        raise ValueError('More than one goal in the goals list')
+    goal = goal[0]
 
     # calculate the animal's current platform for each frame
     dlc_data = get_current_platform(dlc_data, platform_coordinates)  
 
     # calculate head direction relative to the goals
-    dlc_data, goal_coordinates = get_relative_head_direction(dlc_data, platform_coordinates, goals, screen_coordinates)
+    dlc_data, goal_coordinates = get_relative_head_direction(dlc_data, platform_coordinates, goal)
 
     # calculate the distance to each goal and screen
-    dlc_data = get_distances(dlc_data, platform_coordinates, goal_coordinates, screen_coordinates)
+    dlc_data = get_distances(dlc_data, platform_map, platform_coordinates, goal)
 
     # save the dlc_data
     save_pickle(dlc_data, 'dlc_final', dlc_dir)
-
 
 
 if __name__ == "__main__":

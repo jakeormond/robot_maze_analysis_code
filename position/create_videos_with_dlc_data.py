@@ -200,14 +200,103 @@ def create_full_video_with_dlc_data(video_time, dlc_data, data_dir, start_and_en
         # draw goals
         radius = 80
         colours = [(255, 0, 0), (0, 255, 0)]
-        for i, g in enumerate(goal_coordinates.keys()):
-            x_goal = goal_coordinates[g][0]
-            y_goal = goal_coordinates[g][1]
+
+
+        # if goal_coordinates is a dictionary
+        if type(goal_coordinates) == dict:
+
+            for i, g in enumerate(goal_coordinates.keys()):
+                x_goal = goal_coordinates[g][0]
+                y_goal = goal_coordinates[g][1]
+                cv2.circle(fs_frame, (int(x_goal), int(y_goal)), 
+                        int(radius), colours[i], 8)
+            
+                # draw goal direction arrow
+                goal_dir = dlc_for_frame[f'goal_direction_{g}']
+                x1 = np.cos(goal_dir) * 4*arrow_len
+                y1 = -np.sin(goal_dir) * 4*arrow_len
+
+                # x2 = np.cos(goal_dir + np.pi) * arrow_len
+                # y2 = -np.sin(goal_dir + np.pi) * arrow_len
+
+                x2 = np.cos(goal_dir) * arrow_len
+                y2 = -np.sin(goal_dir) * arrow_len
+
+                arrow_start = (int(x + x1), 
+                        int(y + y1))
+                arrow_end = (int(x + x2), 
+                            int(y + y2))
+                
+                cv2.arrowedLine(fs_frame, arrow_end, arrow_start, 
+                                colours[i], 8, tipLength = 0.5)
+        
+                # get the relative direction to the goal
+                relative_dir = dlc_for_frame[f'relative_direction_{g}']
+                
+                # plot the relative direction as the animal's head direction
+                # relative to the goal, which is plotted above the arrow
+                circle_radius = 80
+
+                # if i is 0, plot in the upper left corner, otherwise plot in the
+                # upper right corner
+                if i == 0:
+                    x_offset = 4*circle_radius
+                else:
+                    x_offset = 2448 - 4*circle_radius
+                
+                y_offset = 2*circle_radius
+
+                # draw the circle
+                circle_centre = (int(circle_radius/2) + x_offset, 
+                                int(circle_radius/2) + y_offset)
+                cv2.circle(fs_frame, circle_centre, circle_radius, colours[i], 8)
+
+                # overlay the text "goal" along the top of the circle
+                cv2.putText(fs_frame, 'GOAL', (int(x_offset - 0.5*circle_radius), 
+                                            int(y_offset - 0.75*circle_radius)), 
+                            cv2.FONT_HERSHEY_SIMPLEX, 2, colours[i], 2, cv2.LINE_AA)
+
+                # draw the arrow
+                arrow_len2 = 0.5*circle_radius
+                x1 = np.cos(relative_dir + np.pi/2) * arrow_len2
+                y1 = -np.sin(relative_dir + np.pi/2) * arrow_len2
+
+                x2 = np.cos(relative_dir + (3/2)*np.pi) * arrow_len2
+                y2 = -np.sin(relative_dir + (3/2)*np.pi) * arrow_len2
+
+                arrow_start = (int((circle_radius/2) + x_offset + x1), 
+                            int((circle_radius/2) + 2*y_offset + y1))
+                arrow_end = (int((circle_radius/2) + x_offset + x2),  
+                            int((circle_radius/2) + 2*y_offset + y2))
+
+                cv2.arrowedLine(fs_frame, arrow_end, arrow_start, 
+                                [0, 0, 255], 8, tipLength = 0.5)
+
+            # add x and y coordinates and hd_for_frame as text along the bottom of the frame
+            cv2.putText(fs_frame, f'x: {x:.2f}, y: {y:.2f}, hd: {hd_for_frame:.2f}', 
+                        (100, fs_frame.shape[0] - 100), cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 0, 255), 8, cv2.LINE_AA)
+
+            # shrink the frame to keep file size under control
+            fs_frame_re = cv2.resize(fs_frame, (1224, 1024))
+
+            cv2.startWindowThread()
+
+            cv2.imshow('Video Player', fs_frame_re)
+
+            video_writer.write(fs_frame_re)
+
+            if cv2.waitKey(2) & 0xFF == ord('q'):
+                break 
+
+        else:
+            i = 0 # only one goal, so select the first colour for the arrow
+            x_goal = goal_coordinates[0]
+            y_goal = goal_coordinates[1]
             cv2.circle(fs_frame, (int(x_goal), int(y_goal)), 
-                       int(radius), colours[i], 8)
+                    int(radius), colours[i], 8)
         
             # draw goal direction arrow
-            goal_dir = dlc_for_frame[f'goal_direction_{g}']
+            goal_dir = dlc_for_frame[f'goal_direction']
             x1 = np.cos(goal_dir) * 4*arrow_len
             y1 = -np.sin(goal_dir) * 4*arrow_len
 
@@ -218,15 +307,15 @@ def create_full_video_with_dlc_data(video_time, dlc_data, data_dir, start_and_en
             y2 = -np.sin(goal_dir) * arrow_len
 
             arrow_start = (int(x + x1), 
-                       int(y + y1))
+                    int(y + y1))
             arrow_end = (int(x + x2), 
                         int(y + y2))
             
             cv2.arrowedLine(fs_frame, arrow_end, arrow_start, 
                             colours[i], 8, tipLength = 0.5)
-     
+    
             # get the relative direction to the goal
-            relative_dir = dlc_for_frame[f'relative_direction_{g}']
+            relative_dir = dlc_for_frame[f'relative_direction_to_goal']
             
             # plot the relative direction as the animal's head direction
             # relative to the goal, which is plotted above the arrow
@@ -243,12 +332,12 @@ def create_full_video_with_dlc_data(video_time, dlc_data, data_dir, start_and_en
 
             # draw the circle
             circle_centre = (int(circle_radius/2) + x_offset, 
-                             int(circle_radius/2) + y_offset)
+                            int(circle_radius/2) + y_offset)
             cv2.circle(fs_frame, circle_centre, circle_radius, colours[i], 8)
 
             # overlay the text "goal" along the top of the circle
             cv2.putText(fs_frame, 'GOAL', (int(x_offset - 0.5*circle_radius), 
-                                           int(y_offset - 0.75*circle_radius)), 
+                                        int(y_offset - 0.75*circle_radius)), 
                         cv2.FONT_HERSHEY_SIMPLEX, 2, colours[i], 2, cv2.LINE_AA)
 
             # draw the arrow
@@ -265,24 +354,28 @@ def create_full_video_with_dlc_data(video_time, dlc_data, data_dir, start_and_en
                         int((circle_radius/2) + 2*y_offset + y2))
 
             cv2.arrowedLine(fs_frame, arrow_end, arrow_start, 
-                            [0, 0, 255], 8, tipLength = 0.5)
+                            colours[i], 8, tipLength = 0.5)
+            
 
-        # add x and y coordinates and hd_for_frame as text along the bottom of the frame
-        cv2.putText(fs_frame, f'x: {x:.2f}, y: {y:.2f}, hd: {hd_for_frame:.2f}', 
-                    (100, fs_frame.shape[0] - 100), cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 0, 255), 8, cv2.LINE_AA)
+            # cv2.arrowedLine(fs_frame, arrow_end, arrow_start, 
+            #                 [0, 0, 255], 8, tipLength = 0.5)
 
-        # shrink the frame to keep file size under control
-        fs_frame_re = cv2.resize(fs_frame, (1224, 1024))
+            # add x and y coordinates and hd_for_frame as text along the bottom of the frame
+            cv2.putText(fs_frame, f'x: {x:.2f}, y: {y:.2f}, hd: {hd_for_frame:.2f}', 
+                        (100, fs_frame.shape[0] - 100), cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 0, 255), 8, cv2.LINE_AA)
 
-        cv2.startWindowThread()
+            # shrink the frame to keep file size under control
+            fs_frame_re = cv2.resize(fs_frame, (1224, 1024))
 
-        cv2.imshow('Video Player', fs_frame_re)
+            cv2.startWindowThread()
 
-        video_writer.write(fs_frame_re)
+            cv2.imshow('Video Player', fs_frame_re)
 
-        if cv2.waitKey(2) & 0xFF == ord('q'):
-            break 
-        
+            video_writer.write(fs_frame_re)
+
+            if cv2.waitKey(2) & 0xFF == ord('q'):
+                break 
+       
     cap.release()
     cv2.destroyAllWindows()
     video_writer.release()
@@ -326,9 +419,13 @@ def get_video_paths_from_dlc(dlc_processed_data, data_dir):
 
 
 if __name__ == "__main__":
-    animal = 'Rat46'
-    session = '20-02-2024'
-    data_dir = get_data_dir(animal, session)
+    
+    experiment = 'robot_single_goal'
+    animal = 'Rat_HC1'
+    session = '31-07-2024'
+
+    data_dir = get_data_dir(experiment, animal, session)
+
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
     
     dlc_processed_data = load_pickle('dlc_processed_data', dlc_dir)
