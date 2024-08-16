@@ -354,11 +354,7 @@ def create_full_video_with_dlc_data(video_time, dlc_data, data_dir, start_and_en
                         int((circle_radius/2) + 2*y_offset + y2))
 
             cv2.arrowedLine(fs_frame, arrow_end, arrow_start, 
-                            colours[i], 8, tipLength = 0.5)
-            
-
-            # cv2.arrowedLine(fs_frame, arrow_end, arrow_start, 
-            #                 [0, 0, 255], 8, tipLength = 0.5)
+                            [0, 0, 255], 8, tipLength = 0.5)
 
             # add x and y coordinates and hd_for_frame as text along the bottom of the frame
             cv2.putText(fs_frame, f'x: {x:.2f}, y: {y:.2f}, hd: {hd_for_frame:.2f}', 
@@ -444,6 +440,9 @@ if __name__ == "__main__":
 
     for i, d in enumerate(dlc_processed_data.keys()):
 
+        if i < 8:
+            continue
+
         video_time = d
         print(video_time)
 
@@ -456,8 +455,8 @@ if __name__ == "__main__":
         start_and_end = (video_startpoint, video_endpoint)
 
         # create the video with the dlc data
-        create_cropped_video_with_dlc_data(dlc_processed_data[d], 
-                                       video_path, start_and_end)
+        # create_cropped_video_with_dlc_data(dlc_processed_data[d], 
+        #                                video_path, start_and_end)
             
         create_full_video_with_dlc_data(video_time, dlc_final_data[d], 
                                                data_dir, start_and_end)

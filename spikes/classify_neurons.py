@@ -4,6 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from scipy import stats
 from random import sample
+import json
 
 import sys
 sys.path.append('C:/Users/Jake/Documents/python_code/robot_maze_analysis_code')
@@ -32,7 +33,7 @@ def calculate_mean_rates(units, dlc_data):
     return mean_rates
 
 
-def get_average_waveforms(units, spike_dir, bin_path):
+def get_average_waveforms_old(units, spike_dir, bin_path):
     n_spikes = 100
     n_samples = 60
     n_channels = 385 # 384 channels + 1 digital channel
@@ -114,6 +115,110 @@ def get_average_waveforms(units, spike_dir, bin_path):
 
     return avg_waveforms
 
+
+def get_average_waveforms(units, spike_dir, bin_dir):
+
+    # load spikeglx_n_samples_and_pulses.csv into a data frame
+    n_samples_pulses = pd.read_csv(os.path.join(bin_dir, 'spikeglx_n_samples_and_pulses.csv'))
+    n_samples = n_samples_pulses['n_samples'].values
+    cum_n_samples = list(np.cumsum(n_samples))
+      
+    n_spikes = 100
+    n_samples = 60
+    n_channels = 385 # 384 channels + 1 digital channel
+
+    avg_waveforms = {}
+    peak_channel = {} 
+    channels = {} # all channels on which the cluster features
+
+    # load the template ids of each spike
+    spike_sorting_dir = os.path.join(spike_dir, 'sorter_output')
+    spike_templates = np.load(os.path.join(spike_sorting_dir, 
+                               'spike_templates.npy'))
+
+    spike_clusters = np.load(os.path.join(spike_sorting_dir, 
+                                'spike_clusters.npy'))
+    
+    # load the templates. Each template consists of the 
+    # spike waveform across all channels. 
+    # The shape is (n_templates, n_samples, n_channels). 
+    # For some reason n_channels is 383 - need to investigate. 
+    templates = np.load(os.path.join(spike_sorting_dir, 
+                                'templates.npy'))
+
+    for u in units.keys():
+       
+        unit = units[u]
+        # cluster number is integer after 'cluster_' in u
+        cluster = int(u.split('_')[1])
+        
+        # find spikes that belong to this cluster
+        spike_ind = np.nonzero(spike_clusters == cluster)[0]
+
+        # get template most commonly associated with this particular unit
+        # templates_for_cluster, _ = stats.mode(spike_templates[spike_ind], 
+        #                                      keepdims=False)[0]
+        templates_for_cluster = np.unique(spike_templates[spike_ind])       
+        if templates_for_cluster.shape[0] != 1:
+            # use the most common template, i.e. the mode
+            templates_for_cluster = stats.mode(spike_templates[spike_ind], 
+                                                 keepdims=False)[0]
+            
+        
+        # determine on which channel this template has its largest amplitude. 
+        template_across_channels = np.squeeze(templates[templates_for_cluster, :, :]).T
+        max_val_all_ch = np.max(np.abs(template_across_channels), axis=1)
+        cluster_channel = np.argmax(max_val_all_ch)
+        max_ind = np.where(np.abs(template_across_channels[cluster_channel,:]) 
+                        == np.max(max_val_all_ch))
+        peak_channel[u] = cluster_channel 
+
+        # also, determine all the channels where template features significantly, as we
+        # can use this to focus our wavelet analysis on only those channels with spikes
+        max_across_channels = np.squeeze(np.abs(template_across_channels[:, max_ind]))    
+        mean_val = np.mean(max_across_channels)
+        std_val = np.std(max_across_channels)
+        channels[u] = np.where(max_across_channels > mean_val + 2*std_val)  
+
+        # select 100 spikes at random
+        spikes = []
+        for t in unit.keys():
+            spikes.append(unit[t].values)
+        
+        spikes = np.concatenate(spikes)
+        if spikes.shape[0] > n_spikes:
+            spikes = sample(list(spikes), n_spikes)
+
+        # get the waveform for each spike
+        waveform_data = np.zeros((n_spikes, n_samples))
+
+        for i,s in enumerate(spikes):
+            # data_temp = np.memmap(full_path, np.int16, mode='r', shape=(60, n_channels),
+            # offset=10 * n_channels * 2)
+
+            # find the index of the bin file that contains the spike by finding the index of the 
+            # first element in cum_n_samples that is greater than s
+            ind = np.where(np.array(cum_n_samples) > s)[0][0]
+
+            bin_path = os.path.join(bin_dir, n_samples_pulses.dir_name.iloc[ind], 
+                                    n_samples_pulses.dir_name.iloc[ind] + '_imec0', 
+                                    n_samples_pulses.dir_name.iloc[ind] + '_t0.imec0.ap.bin')
+            
+            if ind > 0:
+                s = s - cum_n_samples[ind-1]
+
+            data_temp = np.memmap(bin_path, np.int16, mode='r', shape=(60, n_channels),
+                offset = int(s-30) * n_channels * 2) # multiplied by 2 because each value is 2 bytes (i.e. 16 bit)
+
+            waveform_data[i,:] = data_temp[:, cluster_channel].T
+
+        avg_waveforms[u] = np.mean(waveform_data, axis=0)
+
+    return avg_waveforms
+
+
+
+
 def plot_average_waveforms(average_waveforms, mean_rates, spike_dir):
 
     # create folder if it doesn't exist
@@ -121,6 +226,11 @@ def plot_average_waveforms(average_waveforms, mean_rates, spike_dir):
         os.makedirs(os.path.join(spike_dir, 'average_waveforms'))
 
     for u in average_waveforms.keys():
+
+        # if all values in average_waveforms[u] are 0, then skip
+        unique_vals = np.unique(average_waveforms[u])
+        if unique_vals.shape[0] == 1 and unique_vals[0] == 0:
+            continue
 
         # calculate spike width
         halfwidth, halfwidth_ind, waveform_upsampled = \
@@ -131,6 +241,7 @@ def plot_average_waveforms(average_waveforms, mean_rates, spike_dir):
         # plt.figure()
         fig, ax = plt.subplots()
         plt.plot(waveform_upsampled)
+        # plt.plot(average_waveforms[u])
 
         # draw a line from the rising edge to the falling edge
         plt.plot(halfwidth_ind, [waveform_upsampled[halfwidth_ind[0]], 
@@ -267,10 +378,14 @@ def classify_neurons(halfwidths, mean_rates):
 
 
 if __name__ == "__main__":
-    animal = 'Rat47'
-    session = '16-02-2024'
-    data_dir = get_data_dir(animal, session)
+    
+    experiment = 'robot_single_goal'
+    animal = 'Rat_HC1'
+    session = '31-07-2024'
 
+    data_dir = get_data_dir(experiment, animal, session)
+
+    
     # load dlc_data which has the trial times
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
     dlc_data = load_pickle('dlc_final', dlc_dir)
@@ -278,6 +393,15 @@ if __name__ == "__main__":
     # load the spike data
     spike_dir = os.path.join(data_dir, 'spike_sorting')
     units = load_pickle('restricted_units', spike_dir)
+
+
+
+
+
+    pass
+
+
+
     
     # hardcoding the directory of the neuropixel bin file, as
     # it's not in the data directory
@@ -285,17 +409,18 @@ if __name__ == "__main__":
     # bin_path = glob.glob(bin_dir + '/*.ap.bin')[0]
 
     # allow user to select bin_path interactively, starting from the spike_dir
-    import tkinter as tk
-    from tkinter import filedialog
-    root = tk.Tk()
-    root.withdraw()
-    bin_path = filedialog.askopenfilename(title='Select the .ap.bin file', initialdir=spike_dir)
+    # import tkinter as tk
+    # from tkinter import filedialog
+    # root = tk.Tk()
+    # root.withdraw()
+    # bin_path = filedialog.askopenfilename(title='Select the .ap.bin file', initialdir=spike_dir)
 
     # calculate mean firing rates
     mean_rates = calculate_mean_rates(units, dlc_data)
 
     # get average waveforms
-    average_waveforms = get_average_waveforms(units, spike_dir, bin_path)
+    bin_dir = os.path.join(data_dir, 'spikeglx_data')
+    average_waveforms = get_average_waveforms(units, spike_dir, bin_dir)
     save_pickle(average_waveforms, 'average_waveforms', spike_dir)
 
     # plot average waveforms

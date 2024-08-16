@@ -59,9 +59,11 @@ def concatenate_unit_across_trials(unit):
 
 if __name__ == "__main__":
     
-    animal = 'Rat46'
-    session = '19-02-2024'
-    data_dir = get_data_dir(animal, session)
+    experiment = 'robot_single_goal'
+    animal = 'Rat_HC1'
+    session = '31-07-2024'
+
+    data_dir = get_data_dir(experiment, animal, session)
 
     # data_dir = 'D:/analysis/og_honeycomb/rat7/6-12-2019'
     # data_dir = '/media/jake/DataStorage_6TB/DATA/neural_network/og_honeycomb/rat7/6-12-2019'

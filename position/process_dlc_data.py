@@ -372,8 +372,7 @@ def recalculate_start_and_endpoints(original_dlc_data, nan_removed_dlc_data, sta
         The new endpoints of the video data. Each key is a trial time and the 
         value is the new endpoint. 
     """
-    new_startpoints = startpoints
-    new_endpoints = endpoints
+
     
     for t in original_dlc_data.keys():
         original_data = original_dlc_data[t]
@@ -382,19 +381,33 @@ def recalculate_start_and_endpoints(original_dlc_data, nan_removed_dlc_data, sta
         # get the startpoint and endpoint
         startpoint = startpoints[t]
         endpoint = endpoints[t]['end_frame']
-        
-        # get the original and nan_removed indices
-        original_indices = original_data.index
-        nan_removed_indices = nan_removed_data.index
-        
-        # get the new startpoint and endpoint
-        new_startpoint = nan_removed_indices.get_loc(startpoint)
-        new_endpoint = nan_removed_indices.get_loc(endpoint)
-        
-        new_startpoints[t] = new_startpoint
-        new_endpoints[t] = new_endpoint
-        
-    return new_startpoints, new_endpoints
+            
+        if original_data.iloc[startpoint].ts != nan_removed_data.iloc[0].ts:
+            # find the index of the original_data.ts that matches the first ts of nan_removed_data
+            matching_row = original_data[original_data['ts'] == nan_removed_data.iloc[0].ts]
+            startpoints[t] = matching_row.index[0]
+
+        if original_data.iloc[endpoint].ts != nan_removed_data.iloc[-1].ts:
+            # find the index of the original_data.ts that matches the last ts of nan_removed_data
+            matching_row = original_data[original_data['ts'] == nan_removed_data.iloc[-1].ts]
+            new_endpoint = matching_row.index[0]
+            endpoints[t]['end_frame'] = new_endpoint
+            d_frames = endpoint - new_endpoint
+
+            d_t = d_frames/30 # 30 frames per second, approximately; don't think we actually use the end_time for anything
+            end_time = endpoints[t]['end_time']
+            end_time_split = end_time.split(':')
+            end_time_seconds = int(end_time_split[0])*60 + int(end_time_split[1]) - d_t
+            end_time_minutes = str(int(end_time_seconds//60))
+            if len(end_time_minutes) < 2:
+                end_time_minutes = '0' + end_time_minutes
+            end_time_seconds = str(int(end_time_seconds%60))
+            if len(end_time_seconds) < 2:
+                end_time_seconds = '0' + end_time_seconds
+            end_time = end_time_minutes + ':' + end_time_seconds
+            endpoints[t]['end_time'] = end_time
+
+    return startpoints, endpoints
 
 
 if __name__ == "__main__":
@@ -442,12 +455,12 @@ if __name__ == "__main__":
     # recalculate the start and endpoints of the video data after removing NaNs
     # this is necessary because the start and endpoints are based on the original
     # data, which may have NaNs that were interpolated out
-    new_startpoints, new_endpoints = \
+    video_startpoints, video_endpoints = \
         recalculate_start_and_endpoints(dlc_processed_data, dlc_final, \
                                         video_startpoints, video_endpoints)
     
-    save_pickle(video_startpoints, 'new_startpoints', video_dir)
-    save_pickle(video_endpoints, 'new_endpoints', video_dir)
+    save_pickle(video_startpoints, 'video_startpoints', video_dir)
+    save_pickle(video_endpoints, 'video_endpoints', video_dir)
 
 
 
