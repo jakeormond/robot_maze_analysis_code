@@ -273,18 +273,21 @@ def calculate_spike_halfwidths(average_waveforms):
 
 def calculate_spike_halfwidth(average_waveform):
     
+    baseline = np.mean(average_waveform[0:20])
+
     positive_peak = np.max(average_waveform)
     negative_peak = np.min(average_waveform)
 
-    if np.abs(negative_peak) > positive_peak:
+    # flip_flag = False
+    if np.abs(negative_peak-baseline) > (positive_peak-baseline):
         peak = negative_peak
     else:
         peak = -positive_peak
         # flip the waveform so code still works
         average_waveform = -average_waveform
-    
-    baseline = np.mean(average_waveform[0:20])
-    
+        baseline = -baseline
+        # flip_flag = True
+       
     waveform_len = average_waveform.shape[0]
     waveform_upsampled = np.interp(np.linspace(0, 
         waveform_len, waveform_len*upsample_factor), np.arange(waveform_len), 
@@ -293,12 +296,14 @@ def calculate_spike_halfwidth(average_waveform):
 
     # rising edge is value closest to half-peak in first half of waveform
     denominator = 4 # set this to 2 for halfwidth, 4 for quarterwidth
-    half_peak = baseline + (peak-baseline)/denominator
+    half_peak = baseline + ((peak-baseline)/denominator)
    
-    if half_peak < 0:
-        rising_edge = np.where(waveform_upsampled < half_peak)[0][0]
-    else:
-        rising_edge = np.where(waveform_upsampled > half_peak)[0][0]
+    rising_edge = np.where(waveform_upsampled < half_peak)[0][0]
+    
+    # if not flip_flag:
+    #     rising_edge = np.where(waveform_upsampled < half_peak)[0][0]
+    # else:
+    #     rising_edge = np.where(waveform_upsampled > half_peak)[0][0]
         
     # falling edge is value closest to half-peak in second half of waveform
     if rising_edge < upsampled_len/2:
@@ -322,7 +327,7 @@ def calculate_spike_halfwidth(average_waveform):
 
     halfwidth_ind = [rising_edge, falling_edge]
 
-    if np.abs(negative_peak) < positive_peak:
+    if np.abs(negative_peak-baseline) < (positive_peak-baseline):
         # flip the waveform back
         waveform_upsampled = -waveform_upsampled
 
@@ -420,8 +425,8 @@ if __name__ == "__main__":
 
     # get average waveforms
     bin_dir = os.path.join(data_dir, 'spikeglx_data')
-    average_waveforms = get_average_waveforms(units, spike_dir, bin_dir)
-    save_pickle(average_waveforms, 'average_waveforms', spike_dir)
+    # average_waveforms = get_average_waveforms(units, spike_dir, bin_dir)
+    # save_pickle(average_waveforms, 'average_waveforms', spike_dir)
 
     # plot average waveforms
     average_waveforms = load_pickle('average_waveforms', spike_dir)

@@ -22,13 +22,23 @@ def basic_spike_pos_plot(ax, unit, dlc_data, goal_coordinates, x_and_y_limits):
     
     # plot the goal positions
     colours = ['b', 'g']
-    for i, g in enumerate(goal_coordinates.keys()):
-        # draw a circle with radius 80 around the goal on ax
-        circle = plt.Circle((goal_coordinates[g][0], 
-            goal_coordinates[g][1]), 80, color=colours[i], 
-            fill=False, linewidth=10)
-        ax.add_artist(circle)       
-    
+
+    # if goal_coordinates is a dictionary, then there is only one goal
+    if isinstance(goal_coordinates, dict):
+        for i, g in enumerate(goal_coordinates.keys()):
+            # draw a circle with radius 80 around the goal on ax
+            circle = plt.Circle((goal_coordinates[g][0], 
+                goal_coordinates[g][1]), 80, color=colours[i], 
+                fill=False, linewidth=10)
+            ax.add_artist(circle)       
+
+        else:
+            circle = plt.Circle((goal_coordinates[0], 
+                goal_coordinates[1]), 80, color=colours[0], 
+                fill=False, linewidth=10)
+            ax.add_artist(circle)
+
+        
     for t in unit.keys():
         # plot every 10th position from the dlc data
         ax.plot(dlc_data[t]['x'][::10], dlc_data[t]['y'][::10], 'k.', markersize=4)
@@ -161,9 +171,23 @@ def plot_rate_maps(rate_maps, smoothed_rate_maps, goal_coordinates, plot_dir):
 
             # draw the goal positions over top
             colours = ['k', '0.5']
-            for j, g in enumerate(goal_coordinates.keys()):
-                # first, convert to heat map coordinates
-                goal_x, goal_y = goal_coordinates[g]
+
+            if isinstance(goal_coordinates, dict):
+                for j, g in enumerate(goal_coordinates.keys()):
+                    # first, convert to heat map coordinates
+                    goal_x, goal_y = goal_coordinates[g]
+
+                    # Convert to heat map coordinates
+                    goal_x_heatmap = np.interp(goal_x, x_bins, np.arange(len(x_bins))) - 0.5
+                    goal_y_heatmap = np.interp(goal_y, y_bins, np.arange(len(y_bins))) - 0.5                          
+                    
+                    # draw a circle with radius 80 around the goal on ax
+                    circle = plt.Circle((goal_x_heatmap, 
+                        goal_y_heatmap), radius=1, color=colours[j], 
+                        fill=False, linewidth=4)
+                    ax[i].add_artist(circle)
+            else:
+                goal_x, goal_y = goal_coordinates
 
                 # Convert to heat map coordinates
                 goal_x_heatmap = np.interp(goal_x, x_bins, np.arange(len(x_bins))) - 0.5
@@ -171,7 +195,7 @@ def plot_rate_maps(rate_maps, smoothed_rate_maps, goal_coordinates, plot_dir):
                 
                 # draw a circle with radius 80 around the goal on ax
                 circle = plt.Circle((goal_x_heatmap, 
-                    goal_y_heatmap), radius=1, color=colours[j], 
+                    goal_y_heatmap), radius=1, color=colours[0], 
                     fill=False, linewidth=4)
                 ax[i].add_artist(circle)
 
@@ -383,9 +407,12 @@ def plot_spike_rates_by_direction_2goals(spike_rates_by_direction, plot_dir):
     
     
 if __name__ == "__main__":
-    animal = 'Rat46'
-    session = '19-02-2024'
-    data_dir = get_data_dir(animal, session)
+    
+    experiment = 'robot_single_goal'
+    animal = 'Rat_HC1'
+    session = '31-07-2024'
+
+    data_dir = get_data_dir(experiment, animal, session)
 
     # get goal coordinates
     goal_coordinates = get_goal_coordinates(data_dir=data_dir)
@@ -411,6 +438,31 @@ if __name__ == "__main__":
     plot_dir = os.path.join(spike_dir, 'spikes_and_pos')
     # plot_spikes_and_pos(units, dlc_data, goal_coordinates, x_and_y_limits, plot_dir)
 
+    
+    # plot spikes and position 
+    plot_dir = os.path.join(spike_dir, 'spikes_and_pos')
+
+    # plot_spikes_and_pos(units, dlc_data, goal_coordinates, x_and_y_limits, plot_dir)
+
+
+    # plot spike rates by direction
+    plot_dir = os.path.join(spike_dir, 'spike_rates_by_direction')
+    spike_rates_by_direction = load_pickle('spike_rates_by_direction', spike_dir)
+
+    # plot_spike_rates_by_direction(spike_rates_by_direction, plot_dir)
+
+    # plot rate maps
+    plot_dir = os.path.join(spike_dir, 'rate_maps')
+    rate_maps = load_pickle('rate_maps', spike_dir)
+    smoothed_rate_maps = load_pickle('smoothed_rate_maps', spike_dir)  
+    plot_rate_maps(rate_maps, smoothed_rate_maps, goal_coordinates, plot_dir)
+
+    
+    
+    
+    
+    
+    
     # plot spike and position by goal
     units_by_goal = {}
     for u in units.keys():

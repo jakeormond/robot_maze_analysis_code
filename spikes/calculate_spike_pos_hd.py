@@ -566,12 +566,15 @@ def create_artificial_unit(units, directional_occupancy_by_position):
 
 
 if __name__ == "__main__":
-    animal = 'Rat47'
-    session = '16-02-2024'
-    data_dir = get_data_dir(animal, session)
+
+    experiment = 'robot_single_goal'
+    animal = 'Rat_HC1'
+    session = '31-07-2024'
+
+    data_dir = get_data_dir(experiment, animal, session)
 
     # code_to_run = range(8)
-    code_to_run = [4]
+    code_to_run = [0, 1, 2, 3]
 
 
     ################## LOAD DATA ##################
