@@ -16,14 +16,16 @@ from position.calculate_pos_and_dir import get_goal_coordinates, get_x_and_y_lim
 cm_per_pixel = 0.2
 
 
-def calculate_vector_fields(spike_rates_by_position_and_direction, x_bins, y_bins, direction_bins):
+def calculate_vector_fields(spike_rates_by_position_and_direction):
 
-    bin_centres = direction_bins[:-1] + np.diff(direction_bins)/2
+    bin_centres = spike_rates_by_position_and_direction['direction_bins'][:-1] + np.diff(spike_rates_by_position_and_direction['direction_bins'])/2
 
-    vector_fields = {'units': {}, 'x_bins': x_bins, 
-                     'y_bins': y_bins, 'direction_bins': direction_bins}
-    mean_resultant_lengths = {'units': {}, 'x_bins': x_bins, 
-                     'y_bins': y_bins, 'direction_bins': direction_bins} 
+    vector_fields = {'units': {}, 'x_bins': spike_rates_by_position_and_direction['x_bins'], 
+                     'y_bins': spike_rates_by_position_and_direction['y_bins'], 
+                     'direction_bins': spike_rates_by_position_and_direction['direction_bins']}
+    mean_resultant_lengths = {'units': {}, 'x_bins': spike_rates_by_position_and_direction['x_bins'], 
+                     'y_bins': spike_rates_by_position_and_direction['y_bins'], 
+                     'direction_bins': spike_rates_by_position_and_direction['direction_bins']} 
     
 
     # poss_unit_keys = ['units', 'popn']
@@ -31,6 +33,7 @@ def calculate_vector_fields(spike_rates_by_position_and_direction, x_bins, y_bin
     # # find the key common to both lists
     # unit_key = [k for k in poss_unit_keys if k in data_keys][0]
 
+    spike_rates_by_position_and_direction = spike_rates_by_position_and_direction['units']
     units = list(spike_rates_by_position_and_direction.keys())
 
     for u in units:
@@ -62,6 +65,7 @@ def calculate_vector_fields(spike_rates_by_position_and_direction, x_bins, y_bin
         mean_resultant_lengths['units'][u] = mrl_field
 
     return vector_fields, mean_resultant_lengths
+
 
 
 def calculate_vector_fields_2goals(spike_rates_by_position_and_direction_by_goal, behaviour_data):
@@ -133,7 +137,7 @@ def plot_vector_field_test(vector_fields, plot_dir):
     plt.close(fig)
 
     
-def plot_vector_fields(vector_fields, plot_dir):
+def plot_vector_fields(vector_fields, goal_coordinates, plot_dir):
     if not os.path.exists(plot_dir):
         os.mkdir(plot_dir)
 
@@ -147,6 +151,13 @@ def plot_vector_fields(vector_fields, plot_dir):
         ax.set_title(u)
         ax.set_xlabel('x position (cm)')
         ax.set_ylabel('y position (cm)')
+
+
+        # plot the goal positions
+        circle = plt.Circle((goal_coordinates[0], 
+                goal_coordinates[1]), 80, color='g', 
+                fill=False, linewidth=5)
+        ax.add_artist(circle)    
 
         vector_field = vector_fields['units'][u]
 
@@ -298,9 +309,13 @@ def plot_vector_fields_2goals_all_units(vector_fields, goal_coordinates, plot_di
 
 
 if __name__ == "__main__":
-    animal = 'Rat47'
-    session = '16-02-2024'
-    data_dir = get_data_dir(animal, session)
+    
+    experiment = 'robot_single_goal'
+    animal = 'Rat_HC1'
+    session = '31-07-2024'
+
+    data_dir = get_data_dir(experiment, animal, session)
+
 
     # get goal coordinates
     goal_coordinates = get_goal_coordinates(data_dir=data_dir)
@@ -308,7 +323,7 @@ if __name__ == "__main__":
     # load spike data
     spike_dir = os.path.join(data_dir, 'spike_sorting')
 
-    code_to_run = [2]
+    code_to_run = [1]
 
     ###################### VECTOR FIELDS ACROSS WHOLE SESSSION (I.E. NOT SPLIT BY GOAL) #####################
     if 1 in code_to_run:
@@ -316,6 +331,7 @@ if __name__ == "__main__":
         spike_rates_by_position_and_direction = load_pickle('spike_rates_by_position_and_direction', spike_dir)
         
         vector_fields, mean_resultant_lengths = calculate_vector_fields(spike_rates_by_position_and_direction)
+
         save_pickle(vector_fields, 'vector_fields', spike_dir)
         save_pickle(mean_resultant_lengths, 'mean_resultant_lengths', spike_dir)
 
@@ -325,10 +341,10 @@ if __name__ == "__main__":
         plot_dir = os.path.join(spike_dir, 'vector_fields')
 
         # plot test field
-        plot_vector_field_test(vector_fields, plot_dir)
+        # plot_vector_field_test(vector_fields, plot_dir)
 
         # plot vector fields
-        # plot_vector_fields(vector_fields, plot_dir)
+        plot_vector_fields(vector_fields, goal_coordinates, plot_dir)
 
 
     ########################## BOTH GOALS ############################

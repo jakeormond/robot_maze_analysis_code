@@ -570,13 +570,14 @@ def load_consink_df(directory):
 
 def main():
 
-    code_to_run = [3]
+    code_to_run = [0]
+            
+    experiment = 'robot_single_goal'
+    animal = 'Rat_HC1'
+    session = '31-07-2024'
+
+    data_dir = get_data_dir(experiment, animal, session)    
     
-    # animal = 'Rat46'
-    animal = 'Rat46'
-    session = '20-02-2024'
-    # session = '16-02-2024'
-    data_dir = get_data_dir(animal, session)
     spike_dir = os.path.join(data_dir, 'spike_sorting')
 
     # get direction bins
@@ -587,13 +588,17 @@ def main():
     dlc_data = load_pickle('dlc_final', dlc_dir)
     dlc_data = calculate_frame_durations(dlc_data)
     dlc_data_concat = concatenate_dlc_data(dlc_data)
+    save_pickle(dlc_data_concat, 'dlc_data_concat', dlc_dir)
 
     # get x and y limits
     limits = get_axes_limits(dlc_data_concat)
 
-    units = load_pickle('units_by_goal', spike_dir)
+    # units = load_pickle('units_by_goal', spike_dir)
+    units = load_pickle('units_w_behav_correlates', spike_dir)
 
-    goals = units.keys()
+    neuron_types = load_pickle('neuron_types', spike_dir)
+
+    # goals = units.keys()
 
     # get relative direction occupancy by position if np array not already saved
     if os.path.exists(os.path.join(dlc_dir, 'reldir_occ_by_pos.npy')) == False:
@@ -614,23 +619,43 @@ def main():
         
         consinks = {}
         consinks_df = {}
-        for goal in goals:
-            goal_units = units[goal]
-            consinks[goal] = {}
+        # for goal in goals:
+        #     goal_units = units[goal]
+        #     consinks[goal] = {}
             
-            for cluster in goal_units.keys():
-                unit = concatenate_unit_across_trials(goal_units[cluster])
+        #     for cluster in goal_units.keys():
+        #         unit = concatenate_unit_across_trials(goal_units[cluster])
                 
-                # get consink  
-                max_mrl, max_mrl_indices, mean_angle = find_consink(unit, reldir_occ_by_pos, sink_bins, direction_bins, candidate_sinks)
-                consink_position = np.round([candidate_sinks['x'][max_mrl_indices[1][0]], candidate_sinks['y'][max_mrl_indices[0][0]]], 3)
-                consinks[goal][cluster] = {'mrl': max_mrl, 'position': consink_position, 'mean_angle': mean_angle}
+        #         # get consink  
+        #         max_mrl, max_mrl_indices, mean_angle = find_consink(unit, reldir_occ_by_pos, sink_bins, direction_bins, candidate_sinks)
+        #         consink_position = np.round([candidate_sinks['x'][max_mrl_indices[1][0]], candidate_sinks['y'][max_mrl_indices[0][0]]], 3)
+        #         consinks[goal][cluster] = {'mrl': max_mrl, 'position': consink_position, 'mean_angle': mean_angle}
 
-            # create a data frame with the consink positions
-            consinks_df[goal] = pd.DataFrame(consinks[goal]).T
+        #     # create a data frame with the consink positions
+        #     consinks_df[goal] = pd.DataFrame(consinks[goal]).T
 
+
+        consinks = {}
+        
+        for cluster in units.keys():
+            
+            if neuron_types[cluster] == 'interneuron':
+                continue
+
+            unit = concatenate_unit_across_trials(units[cluster])
+            
+            # get consink  
+            max_mrl, max_mrl_indices, mean_angle = find_consink(unit, reldir_occ_by_pos, sink_bins, direction_bins, candidate_sinks)
+            consink_position = np.round([candidate_sinks['x'][max_mrl_indices[1][0]], candidate_sinks['y'][max_mrl_indices[0][0]]], 3)
+            consinks[cluster] = {'mrl': max_mrl, 'position': consink_position, 'mean_angle': mean_angle}
+
+        # create a data frame with the consink positions
+        consinks_df = pd.DataFrame(consinks).T
+        
         # save consinks_df 
         save_pickle(consinks_df, 'consinks_df', spike_dir)
+        # save as csv
+        consinks_df.to_csv(os.path.join(spike_dir, 'consinks_df.csv'))
 
     
     ######################### TEST STATISTICAL SIGNIFICANCE OF CONSINKS #########################

@@ -39,7 +39,7 @@ def calculate_translated_mrl(unit, dlc_data, reldir_occ_by_pos, sink_bins, direc
 
 def recalculate_consink_to_all_candidates_from_translation(unit, dlc_data, reldir_occ_by_pos, sink_bins, direction_bins, candidate_sinks):
 
-    n_shuffles = 1000
+    n_shuffles = 2
     mrl = np.zeros(n_shuffles)
 
     # mrl = Parallel(n_jobs=-1, verbose=50)(delayed(calculate_translated_mrl)(unit, dlc_data, reldir_occ_by_pos, sink_bins, direction_bins, candidate_sinks) for s in range(n_shuffles))
@@ -89,10 +89,13 @@ def recalculate_consink_to_all_candidates_from_shuffle(unit, reldir_occ_by_pos, 
 
 
 def main():
-    animal = 'Rat47'
-    session = '08-02-2024'
+    
+    experiment = 'robot_single_goal'
+    animal = 'Rat_HC1'
+    session = '31-07-2024'
 
-    data_dir = get_data_dir(animal, session)
+    data_dir = get_data_dir(experiment, animal, session)
+
     spike_dir = os.path.join(data_dir, 'spike_sorting')
     # load neuron_types.pkl
     neuron_types = load_pickle('neuron_types', spike_dir)
@@ -102,11 +105,13 @@ def main():
 
     # load positional data
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
-    dlc_data_concat_by_goal = load_pickle('dlc_data_concat_by_goal', dlc_dir)
+    # dlc_data_concat_by_goal = load_pickle('dlc_data_concat_by_goal', dlc_dir)
+    dlc_data_concat = load_pickle('dlc_data_concat', dlc_dir)
 
-    units = load_pickle('units_by_goal', spike_dir)
+    # units = load_pickle('units_by_goal', spike_dir)
+    units = load_pickle('units_w_behav_correlates', spike_dir)
     
-    goals = units.keys()
+    # goals = units.keys()
 
     reldir_occ_by_pos = np.load(os.path.join(dlc_dir, 'reldir_occ_by_pos.npy'))
     sink_bins = load_pickle('sink_bins', dlc_dir)
@@ -114,39 +119,95 @@ def main():
 
     consinks_df = load_pickle('consinks_df', spike_dir)
 
-    for goal in goals:
-        goal_units = units[goal]
+    # dlc_data = dlc_data_concat_by_goal[goal][['video_samples', 'x', 'y', 'hd']]
+    dlc_data = dlc_data_concat[['video_samples', 'x', 'y', 'hd']]
 
-        dlc_data = dlc_data_concat_by_goal[goal][['video_samples', 'x', 'y', 'hd']]
+    # make columns for the confidence intervals; place them directly beside the mrl column
+    # if the columns don't exist, insert them            
+    # if 'ci_95' not in consinks_df[goal].columns:
+    #     idx = consinks_df[goal].columns.get_loc('mrl')
+    #     consinks_df[goal].insert(idx + 1, 'ci_95', np.nan)
+    #     consinks_df[goal].insert(idx + 2, 'ci_999', np.nan)
 
-        # make columns for the confidence intervals; place them directly beside the mrl column
-        # if the columns don't exist, insert them            
-        if 'ci_95' not in consinks_df[goal].columns:
-            idx = consinks_df[goal].columns.get_loc('mrl')
-            consinks_df[goal].insert(idx + 1, 'ci_95', np.nan)
-            consinks_df[goal].insert(idx + 2, 'ci_999', np.nan)
 
-        for cluster in goal_units.keys():
+    if 'ci_95' not in consinks_df.columns:
+        idx = consinks_df.columns.get_loc('mrl')
+        consinks_df.insert(idx + 1, 'ci_95', np.nan)
+        consinks_df.insert(idx + 2, 'ci_999', np.nan)
 
-            if cluster not in neuron_types.keys() or neuron_types[cluster] != 'pyramidal':
-                continue
+
+    # for cluster in goal_units.keys():
+
+    #     if cluster not in neuron_types.keys() or neuron_types[cluster] != 'pyramidal':
+    #         continue
+        
+    #     unit = concatenate_unit_across_trials(goal_units[cluster])
+    #     unit = unit[['samples', 'x', 'y', 'hd']]
+
+    #     ######### PERFORM CICULAR TRANSLATION CONTROL
+        
+    #     print(f'calcualting confidence intervals for goal {goal} {cluster}')
+        
+    #     ci = recalculate_consink_to_all_candidates_from_translation(unit, dlc_data, reldir_occ_by_pos, sink_bins, direction_bins, candidate_sinks)
+    #     # ci = recalculate_consink_to_all_candidates_from_shuffle(unit, dlc_data, reldir_occ_by_pos, sink_bins,  direction_bins, candidate_sinks)
+        
+    #     consinks_df[goal].loc[cluster, 'ci_95'] = ci[0]
+    #     consinks_df[goal].loc[cluster, 'ci_999'] = ci[1]
+
+    for cluster in units.keys():
+
+        if cluster not in neuron_types.keys() or neuron_types[cluster] != 'pyramidal':
+            continue
+        
+        unit = concatenate_unit_across_trials(units[cluster])
+        unit = unit[['samples', 'x', 'y', 'hd']]
+
+        ######### PERFORM CICULAR TRANSLATION CONTROL
+        
+        print(f'calcualting confidence intervals for {cluster}')
+        
+        ci = recalculate_consink_to_all_candidates_from_translation(unit, dlc_data, reldir_occ_by_pos, sink_bins, direction_bins, candidate_sinks)
+        # ci = recalculate_consink_to_all_candidates_from_shuffle(unit, dlc_data, reldir_occ_by_pos, sink_bins,  direction_bins, candidate_sinks)
+        
+        consinks_df.loc[cluster, 'ci_95'] = ci[0]
+        consinks_df.loc[cluster, 'ci_999'] = ci[1]
+
+
+
+    # for goal in goals:
+    #     goal_units = units[goal]
+
+    #     dlc_data = dlc_data_concat_by_goal[goal][['video_samples', 'x', 'y', 'hd']]
+
+    #     # make columns for the confidence intervals; place them directly beside the mrl column
+    #     # if the columns don't exist, insert them            
+    #     if 'ci_95' not in consinks_df[goal].columns:
+    #         idx = consinks_df[goal].columns.get_loc('mrl')
+    #         consinks_df[goal].insert(idx + 1, 'ci_95', np.nan)
+    #         consinks_df[goal].insert(idx + 2, 'ci_999', np.nan)
+
+    #     for cluster in goal_units.keys():
+
+    #         if cluster not in neuron_types.keys() or neuron_types[cluster] != 'pyramidal':
+    #             continue
            
-            unit = concatenate_unit_across_trials(goal_units[cluster])
-            unit = unit[['samples', 'x', 'y', 'hd']]
+    #         unit = concatenate_unit_across_trials(goal_units[cluster])
+    #         unit = unit[['samples', 'x', 'y', 'hd']]
 
-            ######### PERFORM CICULAR TRANSLATION CONTROL
+    #         ######### PERFORM CICULAR TRANSLATION CONTROL
             
-            print(f'calcualting confidence intervals for goal {goal} {cluster}')
+    #         print(f'calcualting confidence intervals for goal {goal} {cluster}')
             
-            ci = recalculate_consink_to_all_candidates_from_translation(unit, dlc_data, reldir_occ_by_pos, sink_bins, direction_bins, candidate_sinks)
-            # ci = recalculate_consink_to_all_candidates_from_shuffle(unit, dlc_data, reldir_occ_by_pos, sink_bins,  direction_bins, candidate_sinks)
+    #         ci = recalculate_consink_to_all_candidates_from_translation(unit, dlc_data, reldir_occ_by_pos, sink_bins, direction_bins, candidate_sinks)
+    #         # ci = recalculate_consink_to_all_candidates_from_shuffle(unit, dlc_data, reldir_occ_by_pos, sink_bins,  direction_bins, candidate_sinks)
             
-            consinks_df[goal].loc[cluster, 'ci_95'] = ci[0]
-            consinks_df[goal].loc[cluster, 'ci_999'] = ci[1]
+    #         consinks_df[goal].loc[cluster, 'ci_95'] = ci[0]
+    #         consinks_df[goal].loc[cluster, 'ci_999'] = ci[1]
 
     save_pickle(consinks_df, 'consinks_df_translated_ctrl', spike_dir)
+
     # save as csv
-    # consinks_df.to_csv(os.path.join(spike_dir, 'consinks_df_translated_ctrl.csv'))
+    consinks_df.to_csv(os.path.join(spike_dir, 'consinks_df_translated_ctrl.csv'))
     # print('saved consinks_df_translated_ctrl to {spike_dir}')    
 
 if __name__ == "__main__":
