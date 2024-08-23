@@ -179,7 +179,11 @@ def process_dlc_data(data_dir):
         x_body_cor = np.around(x_body_cor, 3)
         y_body_cor = np.around(y_body_cor, 3)    
         
+        x_crops = np.squeeze(x_crops)
+        y_crops = np.squeeze(y_crops)
+        
         df_data = {'ts': video_ts, 'x': x_cor, 'y': y_cor, 
+                'x_crop_vals': x_crops, 'y_crop_vals': y_crops,
                 'x_cropped': x_uncor, 'y_cropped': y_uncor, 
                 'x_body': x_body_cor, 'y_body': y_body_cor, 
                 'x_body_cropped': x_body_uncor, 'y_body_cropped': y_body_uncor,
@@ -235,9 +239,21 @@ def get_video_times_in_samples(dlc_processed_data, pulses):
         # so they need to be manually calculated
         # first find the first video_ts that is greater than the last pulse_ts
         last_pulse_ts = pulses_ts.iloc[-1]
-        last_video_ind = np.where(video_ts > last_pulse_ts)[0][0]
-        video_samples[last_video_ind:] = video_samples[last_video_ind - 1] + \
-            (video_ts[last_video_ind:] - video_ts[last_video_ind - 1])*(sample_rate/1000) # sample rate 30000 divide by 1000 (i.e. 30 samples per ms)
+
+        if video_ts.iloc[-1] > last_pulse_ts:
+            last_video_ind = np.where(video_ts > last_pulse_ts)[0][0]
+
+            if len(video_ts) - last_video_ind > 15:
+                print(f'Warning: more than 15 frames after last pulse in trial {t}')
+                print(f'Number of frames after last pulse: {len(video_ts) - last_video_ind}')
+
+                # truncate dlc data and video_samples
+                d = d.iloc[:last_video_ind]
+                video_samples = video_samples[:last_video_ind]
+            
+            else:
+                video_samples[last_video_ind:] = video_samples[last_video_ind - 1] + \
+                    (video_ts[last_video_ind:] - video_ts[last_video_ind - 1])*(sample_rate/1000) # sample rate 30000 divide by 1000 (i.e. 30 samples per ms)
 
         # add the video samples to the dlc_processed_data.
         # make it the second column
@@ -410,11 +426,8 @@ def recalculate_start_and_endpoints(original_dlc_data, nan_removed_dlc_data, sta
     return startpoints, endpoints
 
 
-if __name__ == "__main__":
-    
-    experiment = 'robot_single_goal'
-    animal = 'Rat_HC1'
-    session = '31-07-2024'
+def main(experiment = 'robot_single_goal', animal = 'Rat_HC2', session = '15-07-2024'):
+
     data_dir = get_data_dir(experiment, animal, session)
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
 
@@ -462,10 +475,14 @@ if __name__ == "__main__":
     save_pickle(video_startpoints, 'video_startpoints', video_dir)
     save_pickle(video_endpoints, 'video_endpoints', video_dir)
 
-
-
-
     pass
 
+
+if __name__ == "__main__":
+
+    main(experiment = 'robot_single_goal', animal = 'Rat_HC2', session = '15-07-2024')
+    
+    
+    
 
 

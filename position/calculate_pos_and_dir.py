@@ -514,11 +514,7 @@ def main_2goal():
     pass
 
 
-def main():
-
-    experiment = 'robot_single_goal'
-    animal = 'Rat_HC1'
-    session = '31-07-2024'
+def main(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024'):
 
     data_dir = get_data_dir(experiment, animal, session)
 
@@ -583,8 +579,9 @@ def main():
 
     # save the dlc_data
     save_pickle(dlc_data, 'dlc_final', dlc_dir)
+    pass
 
 
 if __name__ == "__main__":
-    main()
+    main(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024')
     

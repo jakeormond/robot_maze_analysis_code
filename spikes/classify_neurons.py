@@ -374,7 +374,7 @@ def classify_neurons(halfwidths, mean_rates):
     mean_rate_cutoff = float(input('Enter mean firing rate cutoff (Hz): '))
 
     for u in halfwidths.keys():
-        if halfwidths[u] <= halfwidth_cutoff or mean_rates[u] >= mean_rate_cutoff:
+        if halfwidths[u] <= halfwidth_cutoff and mean_rates[u] >= mean_rate_cutoff:
             neuron_types[u] = 'interneuron'
         else:
             neuron_types[u] = 'pyramidal'
@@ -382,11 +382,7 @@ def classify_neurons(halfwidths, mean_rates):
     return neuron_types
 
 
-if __name__ == "__main__":
-    
-    experiment = 'robot_single_goal'
-    animal = 'Rat_HC1'
-    session = '31-07-2024'
+def main(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024'):
 
     data_dir = get_data_dir(experiment, animal, session)
 
@@ -399,14 +395,7 @@ if __name__ == "__main__":
     spike_dir = os.path.join(data_dir, 'spike_sorting')
     units = load_pickle('restricted_units', spike_dir)
 
-
-
-
-
     pass
-
-
-
     
     # hardcoding the directory of the neuropixel bin file, as
     # it's not in the data directory
@@ -425,8 +414,8 @@ if __name__ == "__main__":
 
     # get average waveforms
     bin_dir = os.path.join(data_dir, 'spikeglx_data')
-    # average_waveforms = get_average_waveforms(units, spike_dir, bin_dir)
-    # save_pickle(average_waveforms, 'average_waveforms', spike_dir)
+    average_waveforms = get_average_waveforms(units, spike_dir, bin_dir)
+    save_pickle(average_waveforms, 'average_waveforms', spike_dir)
 
     # plot average waveforms
     average_waveforms = load_pickle('average_waveforms', spike_dir)
@@ -461,3 +450,8 @@ if __name__ == "__main__":
     
 
     pass
+
+
+if __name__ == "__main__":
+
+    main()    

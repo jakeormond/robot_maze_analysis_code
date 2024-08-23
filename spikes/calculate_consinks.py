@@ -346,7 +346,7 @@ def recalculate_consink_to_single_candidate_from_shuffle(unit, reldir_occ_by_pos
     return ci
 
 
-def plot_all_consinks(consinks_df, goal_coordinates, limits, jitter, plot_dir, plot_name='ConSinks'):
+def plot_all_consinks_2goals(consinks_df, goal_coordinates, limits, jitter, plot_dir, plot_name='ConSinks'):
     fig, ax = plt.subplots(1, 2, figsize=(20, 10))
     fig.suptitle(plot_name, fontsize=24)
 
@@ -442,6 +442,72 @@ def plot_all_consinks(consinks_df, goal_coordinates, limits, jitter, plot_dir, p
             # set the axes values to cm
             ax[i].set_xticklabels(x_ticks_cm)
             ax[i].set_yticklabels(y_ticks_cm)
+
+
+    plt.savefig(os.path.join(plot_dir, plot_name + '.png'))
+    plt.show()
+    pass
+
+
+def plot_all_consinks(consinks_df, goal_coordinates, limits, jitter, plot_dir, plot_name='ConSinks'):
+    
+    # create a fig with 1 plot
+    fig, ax = plt.subplots(figsize=(10, 10))
+    fig.suptitle(plot_name, fontsize=24)
+
+    ax.set_xlabel('x position (cm)', fontsize=16)
+    ax.set_ylabel('y position (cm)', fontsize=16)
+
+    # plot the goal positions
+    circle = plt.Circle((goal_coordinates[0], 
+            goal_coordinates[1]), 80, color='g', 
+            fill=False, linewidth=5)
+    ax.add_artist(circle)   
+        
+    # loop through the rows of the consinks_df, plot a filled red circle at the consink 
+    # position if the mrl is greater than ci_999
+    for cluster in consinks_df.index:
+
+        x_jitter = np.random.uniform(-jitter[0], jitter[0])
+        y_jitter = np.random.uniform(-jitter[1], jitter[1])
+
+        consink_position = consinks_df.loc[cluster, 'position']
+        mrl = consinks_df.loc[cluster, 'mrl']
+        ci_95 = consinks_df.loc[cluster, 'ci_95']
+        ci_999 = consinks_df.loc[cluster, 'ci_999']
+
+        if mrl > ci_95:           
+            
+            circle = plt.Circle((consink_position[0] + x_jitter, 
+                consink_position[1] + y_jitter), 60, color='r', 
+                fill=True)
+            ax.add_artist(circle)  
+          
+        for i in range(2):
+            # set the x and y limits
+            ax.set_xlim((limits['x_min']-200, limits['x_max']+200))
+            ax.set_ylim(limits['y_min']-200, limits['y_max']+200)
+
+            # reverse the y axis
+            ax.invert_yaxis()
+
+            # make the axes equal
+            ax.set_aspect('equal')
+
+            # set font size of axes
+            ax.tick_params(axis='both', which='major', labelsize=14)
+
+            # get the axes values
+            x_ticks = ax.get_xticks()
+            y_ticks = ax.get_yticks()
+
+            # convert the axes values to cm
+            x_ticks_cm = x_ticks * cm_per_pixel
+            y_ticks_cm = y_ticks * cm_per_pixel
+
+            # set the axes values to cm
+            ax.set_xticklabels(x_ticks_cm)
+            ax.set_yticklabels(y_ticks_cm)
 
 
     plt.savefig(os.path.join(plot_dir, plot_name + '.png'))
@@ -568,13 +634,7 @@ def load_consink_df(directory):
     return consinks_df
 
 
-def main():
-
-    code_to_run = [0]
-            
-    experiment = 'robot_single_goal'
-    animal = 'Rat_HC1'
-    session = '31-07-2024'
+def main(experiment = 'robot_single_goal', animal = 'Rat_HC2', session = '15-07-2024', code_to_run = [0]):
 
     data_dir = get_data_dir(experiment, animal, session)    
     
@@ -657,45 +717,64 @@ def main():
         # save as csv
         consinks_df.to_csv(os.path.join(spike_dir, 'consinks_df.csv'))
 
+
+    ######################### PLOT CONSINKS FOR SINGLE GOAL EXPERIMENT ############################
+    if 9 in code_to_run:
+        consinks_df = load_pickle('consinks_df_translated_ctrl', spike_dir)
+
+        # get goal coordinates
+        goal_coordinates = get_goal_coordinates(data_dir=data_dir)
+
+        # make folder consinks in spike_dir if it doesn't already exist
+        plot_dir = os.path.join(spike_dir, 'consinks')
+        if not os.path.exists(plot_dir):
+            os.mkdir(plot_dir)
+
+        # calculate a jitter amount to jitter the positions by so they are visible
+        x_diff = np.mean(np.diff(candidate_sinks['x']))
+        y_diff = np.mean(np.diff(candidate_sinks['y']))
+        jitter = (x_diff/3, y_diff/3)
+        plot_all_consinks(consinks_df, goal_coordinates, limits, jitter, plot_dir)
+        
     
-    ######################### TEST STATISTICAL SIGNIFICANCE OF CONSINKS #########################
-    # shift the head directions relative to their positions, and recalculate the tuning to the 
-    # previously identified consink position. 
-    if 1 in code_to_run:
-        # load the consinks_df
-        consinks_df = load_pickle('consinks_df', spike_dir)
-        # add two columns to hold the confidence intervals
+    # ######################### TEST STATISTICAL SIGNIFICANCE OF CONSINKS #########################
+    # # shift the head directions relative to their positions, and recalculate the tuning to the 
+    # # previously identified consink position. 
+    # if 1 in code_to_run:
+    #     # load the consinks_df
+    #     consinks_df = load_pickle('consinks_df', spike_dir)
+    #     # add two columns to hold the confidence intervals
 
-        for goal in goals:
-            goal_units = units[goal]
-            # consinks[goal] = {}
+    #     for goal in goals:
+    #         goal_units = units[goal]
+    #         # consinks[goal] = {}
             
-            # make columns for the confidence intervals; place them directly beside the mrl column
-            idx = consinks_df[goal].columns.get_loc('mrl')
+    #         # make columns for the confidence intervals; place them directly beside the mrl column
+    #         idx = consinks_df[goal].columns.get_loc('mrl')
 
-            # if the columns don't exist, insert them            
-            if 'ci_95' not in consinks_df[goal].columns:
-                consinks_df[goal].insert(idx + 1, 'ci_95', np.nan)
-                consinks_df[goal].insert(idx + 2, 'ci_999', np.nan)
+    #         # if the columns don't exist, insert them            
+    #         if 'ci_95' not in consinks_df[goal].columns:
+    #             consinks_df[goal].insert(idx + 1, 'ci_95', np.nan)
+    #             consinks_df[goal].insert(idx + 2, 'ci_999', np.nan)
 
-            for cluster in goal_units.keys():
-                unit = concatenate_unit_across_trials(goal_units[cluster])
+    #         for cluster in goal_units.keys():
+    #             unit = concatenate_unit_across_trials(goal_units[cluster])
 
-                candidate_sink = consinks_df[goal].loc[cluster, 'position']
-                # find the indices of the candidate sink in the candidate_sinks dictionaries
-                sink_x_index = np.where(np.round(candidate_sinks['x'], 3) == candidate_sink[0])[0][0]
-                sink_y_index = np.where(np.round(candidate_sinks['y'], 3) == candidate_sink[1])[0][0]
+    #             candidate_sink = consinks_df[goal].loc[cluster, 'position']
+    #             # find the indices of the candidate sink in the candidate_sinks dictionaries
+    #             sink_x_index = np.where(np.round(candidate_sinks['x'], 3) == candidate_sink[0])[0][0]
+    #             sink_y_index = np.where(np.round(candidate_sinks['y'], 3) == candidate_sink[1])[0][0]
 
-                # reldir_occ_by_pos_4sink = reldir_occ_by_pos[:, :, sink_y_index, sink_x_index, :]
+    #             # reldir_occ_by_pos_4sink = reldir_occ_by_pos[:, :, sink_y_index, sink_x_index, :]
 
-                print(f'calcualting confidence intervals for goal {goal} {cluster}')
-                # ci = recalculate_consink_to_single_candidate_from_shuffle(unit, reldir_occ_by_pos_4sink, candidate_sink, direction_bins)
-                ci = recalculate_consink_to_all_candidates_from_shuffle(unit, reldir_occ_by_pos, sink_bins, candidate_sinks)
+    #             print(f'calcualting confidence intervals for goal {goal} {cluster}')
+    #             # ci = recalculate_consink_to_single_candidate_from_shuffle(unit, reldir_occ_by_pos_4sink, candidate_sink, direction_bins)
+    #             ci = recalculate_consink_to_all_candidates_from_shuffle(unit, reldir_occ_by_pos, sink_bins, candidate_sinks)
                 
-                consinks_df[goal].loc[cluster, 'ci_95'] = ci[0]
-                consinks_df[goal].loc[cluster, 'ci_999'] = ci[1]
+    #             consinks_df[goal].loc[cluster, 'ci_95'] = ci[0]
+    #             consinks_df[goal].loc[cluster, 'ci_999'] = ci[1]
 
-        save_pickle(consinks_df, 'consinks_df', spike_dir)
+    #     save_pickle(consinks_df, 'consinks_df', spike_dir)
 
     ########## PLOT ALL SIGNIFICANT CONSINKS ####################################
     if 2 in code_to_run:
@@ -718,36 +797,27 @@ def main():
         plot_all_consinks(consinks_df, goal_coordinates, limits, jitter, plot_dir)
         
 
-    ################ CALCULATE CONSINK DISTANCE TO GOAL ##############################
-    if 3 in code_to_run:
-        goal_coordinates = get_goal_coordinates(data_dir=data_dir)
+    # ################ CALCULATE CONSINK DISTANCE TO GOAL ##############################
+    # if 3 in code_to_run:
+    #     goal_coordinates = get_goal_coordinates(data_dir=data_dir)
 
-        # get the distance to goal for each consink
-        consinks_df = load_pickle('consinks_df', spike_dir)
-        consinks_df = restrict_to_significant_consinks(consinks_df)
-        consinks_df = calculate_consink_distance_to_goal(consinks_df, goal_coordinates)
+    #     # get the distance to goal for each consink
+    #     consinks_df = load_pickle('consinks_df', spike_dir)
+    #     consinks_df = restrict_to_significant_consinks(consinks_df)
+    #     consinks_df = calculate_consink_distance_to_goal(consinks_df, goal_coordinates)
 
-        # calculate the statistics for the differences in distance to goal for each consink
-        statistics = consink_distance_stats(consinks_df)
-        # save statistics as csv file
-        statistics.to_csv(os.path.join(spike_dir, 'consinks', 'consink_distance_statistics.csv'))
+    #     # calculate the statistics for the differences in distance to goal for each consink
+    #     statistics = consink_distance_stats(consinks_df)
+    #     # save statistics as csv file
+    #     statistics.to_csv(os.path.join(spike_dir, 'consinks', 'consink_distance_statistics.csv'))
 
-        ############ plot consink distances to goal ############################
-        fig_path = os.path.join(spike_dir, 'consinks', 'consink_distances_to_goal_swarmplot')
-        plot_consink_distances_to_goal(consinks_df, fig_path=fig_path)
+    #     ############ plot consink distances to goal ############################
+    #     fig_path = os.path.join(spike_dir, 'consinks', 'consink_distances_to_goal_swarmplot')
+    #     plot_consink_distances_to_goal(consinks_df, fig_path=fig_path)
 
         
 if __name__ == "__main__":
     
     main()
-
-    animal = 'Rat46'
-    session = '20-02-2024'
-    # session = '16-02-2024'
-    data_dir = get_data_dir(animal, session)
-    spike_dir = os.path.join(data_dir, 'spike_sorting')
-
-    consink_df = load_consink_df(spike_dir)
-    pass
 
 

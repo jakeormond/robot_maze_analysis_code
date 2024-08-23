@@ -168,10 +168,13 @@ def create_full_video_with_dlc_data(video_time, dlc_data, data_dir, start_and_en
         if math.isnan(hd_for_frame):
             continue
 
-        x_crop_pos = int(dlc_for_frame['x'] 
-                         - dlc_for_frame['x_cropped'])
-        y_crop_pos = int(dlc_for_frame['y'] 
-                         - dlc_for_frame['y_cropped'])
+        # x_crop_pos = int(dlc_for_frame['x'] 
+        #                  - dlc_for_frame['x_cropped'])
+        # y_crop_pos = int(dlc_for_frame['y'] 
+        #                  - dlc_for_frame['y_cropped'])
+        
+        x_crop_pos = int(dlc_for_frame['x_crop_vals'])
+        y_crop_pos = int(dlc_for_frame['y_crop_vals'])
        
         # gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         # fs_frame = blank_fs_frame
@@ -273,7 +276,7 @@ def create_full_video_with_dlc_data(video_time, dlc_data, data_dir, start_and_en
                                 [0, 0, 255], 8, tipLength = 0.5)
 
             # add x and y coordinates and hd_for_frame as text along the bottom of the frame
-            cv2.putText(fs_frame, f'x: {x:.2f}, y: {y:.2f}, hd: {hd_for_frame:.2f}', 
+            cv2.putText(fs_frame, f'x: {x:.2f}, y: {y:.2f}, hd: {hd_for_frame:.2f}, rd2g: {relative_dir:.2f}',
                         (100, fs_frame.shape[0] - 100), cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 0, 255), 8, cv2.LINE_AA)
 
             # shrink the frame to keep file size under control
@@ -357,7 +360,7 @@ def create_full_video_with_dlc_data(video_time, dlc_data, data_dir, start_and_en
                             [0, 0, 255], 8, tipLength = 0.5)
 
             # add x and y coordinates and hd_for_frame as text along the bottom of the frame
-            cv2.putText(fs_frame, f'x: {x:.2f}, y: {y:.2f}, hd: {hd_for_frame:.2f}', 
+            cv2.putText(fs_frame, f'x: {x:.2f}, y: {y:.2f}, hd: {hd_for_frame:.2f}, rd2g: {relative_dir:.2f}', 
                         (100, fs_frame.shape[0] - 100), cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 0, 255), 8, cv2.LINE_AA)
 
             # shrink the frame to keep file size under control
@@ -411,14 +414,10 @@ def get_video_paths_from_dlc(dlc_processed_data, data_dir):
         video_path = os.path.join(video_dir, "video_" + video_time + ".avi")
         video_paths[video_time] = video_path        
         
-    return video_paths        
+    return video_paths 
 
 
-if __name__ == "__main__":
-    
-    experiment = 'robot_single_goal'
-    animal = 'Rat_HC1'
-    session = '31-07-2024'
+def main(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024', n_trials = 2):
 
     data_dir = get_data_dir(experiment, animal, session)
 
@@ -440,8 +439,8 @@ if __name__ == "__main__":
 
     for i, d in enumerate(dlc_processed_data.keys()):
 
-        if i < 8:
-            continue
+        if i == n_trials:
+            break
 
         video_time = d
         print(video_time)
@@ -472,3 +471,10 @@ if __name__ == "__main__":
 
 
     pass
+
+
+if __name__ == "__main__":
+    
+    main(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024')
+
+    

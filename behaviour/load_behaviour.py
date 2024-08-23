@@ -175,14 +175,10 @@ def get_goals(data_dir):
     behav_data_by_goal = load_pickle('behaviour_data_by_goal', behaviour_dir)
     goals = list(behav_data_by_goal.keys())
     return goals
-    
 
-if __name__ == "__main__":
-    
-    experiment = 'robot_single_goal'
-    animal = 'Rat_HC1'
-    session = '31-07-2024'
 
+def main(experiment = 'robot_single_goal', animal = 'Rat_HC2', session = '15-07-2024'):
+    
     data_dir = get_data_dir(experiment, animal, session)
     behaviour_dir = get_behaviour_dir(data_dir)
 
@@ -200,9 +196,15 @@ if __name__ == "__main__":
     save_pickle(behaviour_data, 'behaviour_data', behaviour_dir)
        
     # split the behaviour data by goal and save to a pickle file
-    behaviour_data_by_goal = \
-        split_behaviour_data_by_goal(behaviour_data)
-    save_pickle(behaviour_data_by_goal, 'behaviour_data_by_goal', behaviour_dir)
-
+    # behaviour_data_by_goal = \
+    #     split_behaviour_data_by_goal(behaviour_data)
+    # save_pickle(behaviour_data_by_goal, 'behaviour_data_by_goal', behaviour_dir)
 
     pass
+
+
+if __name__ == "__main__":
+
+    main(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024')
+
+    

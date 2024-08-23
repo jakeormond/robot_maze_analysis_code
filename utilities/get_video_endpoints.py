@@ -95,12 +95,7 @@ def get_video_startpoints(dlc_data):
     return start_frame_dictionary
 
 
-if __name__ == "__main__":
-    
-    experiment = 'robot_single_goal'
-    animal = 'Rat_HC1'
-    session = '31-07-2024'
-
+def main(experiment, animal, session):
     data_dir = get_data_dir(experiment, animal, session)
     video_dir = os.path.join(data_dir, 'video_files')
 
@@ -108,7 +103,7 @@ if __name__ == "__main__":
     save_pickle(endpoints, 'video_endpoints', video_dir)
 
     # start_points IS RUN IN process_dlc_data.py NOT HERE!!!!!
-    
+
     # load dlc_data to get startpoints
     # dlc_dir = os.path.join(data_dir, 'deeplabcut')
     # dlc_data = load_pickle('dlc_processed_data', dlc_dir)
@@ -117,3 +112,8 @@ if __name__ == "__main__":
     # save_pickle(startpoints, 'video_startpoints', video_dir)
     
     pass
+
+
+if __name__ == "__main__":
+    
+    main('robot_single_goal', 'Rat_HC1', '06-08-2024')

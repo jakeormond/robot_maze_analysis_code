@@ -78,7 +78,7 @@ def get_n_spikeglx_samples(meta_path):
             eq_ind = text_line.find('=')
             slash_ind = text_line.find('\\')
             seconds = float(text_line[eq_ind+1:slash_ind])
-            n_samples = int(seconds * sample_rate)
+            n_samples = int(np.round(seconds * sample_rate))
             meta_data.close()
             break
 
@@ -302,13 +302,8 @@ def sort_key(x):
     return (time_sortable, digit_part)
 
 
+def main(experiment = 'robot_single_goal', animal = 'Rat_HC2', session = '15-07-2024'):
 
-
-if __name__ == "__main__":
-
-    experiment = 'robot_single_goal'
-    animal = 'Rat_HC2'
-    session = '12-07-2024'
     data_dir = get_data_dir(experiment, animal, session)
 
     spikeglx_dir = os.path.join(data_dir, 'spikeglx_data')    
@@ -381,3 +376,15 @@ if __name__ == "__main__":
 
     pass
 
+
+
+
+
+
+if __name__ == "__main__":
+
+    main(experiment = 'robot_single_goal', animal = 'Rat_HC2', session = '15-07-2024')
+    pass
+
+    
+    

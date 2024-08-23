@@ -573,11 +573,7 @@ def plot_directional_occupancy(directional_occupancy, figure_dir):
             # plt.close()
 
 
-if __name__ == "__main__":
-    
-    experiment = 'robot_single_goal'
-    animal = 'Rat_HC1'
-    session = '31-07-2024'
+def main(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024'):
 
     data_dir = get_data_dir(experiment, animal, session)
 
@@ -610,7 +606,7 @@ if __name__ == "__main__":
 
     # plot the the trial paths
     for d in dlc_data.keys():
-        # plot_trial_path(dlc_data[d], limits, dlc_dir, d)
+        plot_trial_path(dlc_data[d], limits, dlc_dir, d)
         pass
 
     # plot the heat map of occupancy
@@ -670,3 +666,10 @@ if __name__ == "__main__":
     # save_pickle(directional_occupancy_by_position_by_goal, 'directional_occupancy_by_position_by_goal', dlc_dir)
 
     # pass
+
+
+if __name__ == "__main__":
+    
+    main()
+
+    

@@ -101,13 +101,7 @@ def correct_spike_times(units, n_samples_and_pulses, bin_file_df):
     return corrected_units
 
 
-
-
-if __name__ == "__main__":
-
-    experiment = 'robot_single_goal'
-    animal = 'Rat_HC1'
-    session = '31-07-2024'
+def main(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024'):
 
     data_dir = get_data_dir(experiment, animal, session)
     
@@ -127,6 +121,9 @@ if __name__ == "__main__":
         bin_file = r['kwargs']['recording']['kwargs']['recording']['kwargs']['recording']['kwargs']['folder_path']
         # just keep the bin file name
         bin_file = os.path.basename(bin_file)
+        # remove the 'imec0' from the bin file name if it exists
+        if '_imec0' in bin_file:
+            bin_file = bin_file.replace('_imec0', '')
         bin_file_list.append(bin_file)
 
     # load the correct order of the bin files
@@ -148,3 +145,10 @@ if __name__ == "__main__":
     save_pickle(corrected_units, 'unit_spike_times', spike_dir)
 
     pass
+
+
+if __name__ == "__main__":
+
+    main(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024')
+
+    

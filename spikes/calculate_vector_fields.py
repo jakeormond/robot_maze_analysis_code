@@ -137,7 +137,7 @@ def plot_vector_field_test(vector_fields, plot_dir):
     plt.close(fig)
 
     
-def plot_vector_fields(vector_fields, goal_coordinates, plot_dir):
+def plot_vector_fields(vector_fields, goal_coordinates, plot_dir, consinks=None):
     if not os.path.exists(plot_dir):
         os.mkdir(plot_dir)
 
@@ -177,6 +177,54 @@ def plot_vector_fields(vector_fields, goal_coordinates, plot_dir):
         y_range = y_lim[1] - y_lim[0]
         ax.set_xlim(x_lim[0] - 0.1*x_range, x_lim[1] + 0.1*x_range)
         ax.set_ylim(y_lim[0] - 0.1*y_range, y_lim[1] + 0.1*y_range)
+
+
+        if consinks is not None:
+            if u not in consinks.index:
+                plt.close(fig)
+                continue
+            consink = consinks.loc[u]
+
+            mrl = consink['mrl']
+            ci_95 = consink['ci_95']
+            ci_999  = consink['ci_999']
+            consink_pos = consink['position']
+            consink_angle = consink['mean_angle']
+            if consink_angle > np.pi:
+                consink_angle = consink_angle - 2*np.pi
+            
+            # plot a filled circle at the consink position
+            if mrl > ci_95:
+                consink_color = 'r'
+            else: # color is gray
+                consink_color = 'gray'
+
+            circle = plt.Circle((consink_pos[0], 
+                consink_pos[1]), 50, color=consink_color, 
+                fill=True)
+            ax.add_artist(circle)      
+        
+            # add text with mrl, ci_95, ci_999
+            # ax[i].text(0, 2100, f'mrl: {mrl:.2f}\nci_95: {ci_95:.2f}\nci_999: {ci_999:.2f}\nangle: {consink_angle:.2f}', fontsize=16)
+            ax.text(0, 2000, f'mrl: {mrl:.2f}\nci_95: {ci_95:.2f}\nci_999: {ci_999:.2f}\nangle: {consink_angle:.2f}', fontsize=16)
+
+        # set font size of axes
+        ax.tick_params(axis='both', which='major', labelsize=14)
+
+        # get the axes values
+        x_ticks = ax.get_xticks()
+        y_ticks = ax.get_yticks()
+
+        # convert the axes values to cm
+        x_ticks_cm = x_ticks * cm_per_pixel
+        y_ticks_cm = y_ticks * cm_per_pixel
+
+        # set the axes values to cm
+        ax.set_xticklabels(x_ticks_cm)
+        ax.set_yticklabels(y_ticks_cm)
+
+        # set the axes to have identical scales
+        ax.set_aspect('equal')        
 
         fig.savefig(os.path.join(plot_dir, f'{u}.png'))
 
@@ -325,6 +373,8 @@ if __name__ == "__main__":
 
     code_to_run = [1]
 
+    consink_df = load_pickle('consinks_df_translated_ctrl', spike_dir)
+
     ###################### VECTOR FIELDS ACROSS WHOLE SESSSION (I.E. NOT SPLIT BY GOAL) #####################
     if 1 in code_to_run:
         # load spike_rates_by_position_and_direction
@@ -344,7 +394,7 @@ if __name__ == "__main__":
         # plot_vector_field_test(vector_fields, plot_dir)
 
         # plot vector fields
-        plot_vector_fields(vector_fields, goal_coordinates, plot_dir)
+        plot_vector_fields(vector_fields, goal_coordinates, plot_dir, consinks=consink_df)
 
 
     ########################## BOTH GOALS ############################

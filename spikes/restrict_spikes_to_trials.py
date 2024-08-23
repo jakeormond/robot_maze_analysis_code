@@ -57,11 +57,7 @@ def concatenate_unit_across_trials(unit):
     return concatenated_unit
 
 
-if __name__ == "__main__":
-    
-    experiment = 'robot_single_goal'
-    animal = 'Rat_HC1'
-    session = '31-07-2024'
+def main(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024'):
 
     data_dir = get_data_dir(experiment, animal, session)
 
@@ -85,3 +81,10 @@ if __name__ == "__main__":
     save_pickle(restricted_units, 'restricted_units', unit_dir)
 
     pass
+
+
+if __name__ == "__main__":
+    
+    main()
+
+    

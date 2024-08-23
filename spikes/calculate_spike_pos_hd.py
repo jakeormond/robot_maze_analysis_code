@@ -565,11 +565,7 @@ def create_artificial_unit(units, directional_occupancy_by_position):
     return 
 
 
-if __name__ == "__main__":
-
-    experiment = 'robot_single_goal'
-    animal = 'Rat_HC1'
-    session = '31-07-2024'
+def main_1goal(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024'):
 
     data_dir = get_data_dir(experiment, animal, session)
 
@@ -608,7 +604,6 @@ if __name__ == "__main__":
         # # save the restricted units
         save_pickle(restricted_units, 'units_w_behav_correlates', spike_dir)
         del restricted_units
-
 
     ################## LOAD UNITS (IF NOT RUNNING CODE ABOVE) ##################
     # load units
@@ -658,6 +653,8 @@ if __name__ == "__main__":
 
 
 
+def main_2goals(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024'):
+    code_to_run = [0, 1, 2, 3, 4, 5, 6, 7, 8]
     ############################ DATA SEPARATED BY GOAL ############################
     ##################################################################################
     if 4 in code_to_run:
@@ -832,12 +829,16 @@ if __name__ == "__main__":
                     spike_rates_by_position_and_direction_by_goal_popn[g][neuron_types[u]] += \
                         spike_rates_by_position_and_direction_by_goal[g]['units'][u]
                         
-        save_pickle(spike_rates_by_position_and_direction_by_goal_popn, 'spike_rates_by_position_and_direction_by_goal_popn', spike_dir)
-                        
-         
-         
-
-
-
+        save_pickle(spike_rates_by_position_and_direction_by_goal_popn, 'spike_rates_by_position_and_direction_by_goal_popn', spike_dir)                  
+      
     pass
+    
+
+
+
+if __name__ == "__main__":
+
+    main_1goal()
+
+   
     

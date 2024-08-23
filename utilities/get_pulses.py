@@ -294,10 +294,44 @@ def match_bonsai_and_imec_pulses(n_pulses_and_samples, data_dir):
             
             elif len(imec_trial_pulses) < len(pulses[trial_time]):
                 # for now, just throw an error
-                raise ValueError('Number of imec pulses less than number of bonsai pulses for trial ' + str(i))
-            
-            assert len(imec_trial_pulses) == len(pulses[trial_time])
+                # raise ValueError('Number of imec pulses less than number of bonsai pulses for trial ' + str(i))
+                print('Number of imec pulses less than number of bonsai pulses for trial ' + str(i))
+                diff_imec = np.diff(imec_seconds[0:10])
+                diff_bonsai = np.diff(bonsai_seconds[0:10])
 
+                # calculate the difference between the differences
+                diff_diff = np.sum(np.abs(diff_imec - diff_bonsai))
+
+                if diff_diff > 0.01:
+                    # throw error
+                    raise ValueError('Difference between the differences is greater than 0.01')
+                
+                # truncate the bonsai pulses so they are same length as imec pulses
+                pulses[trial_time] = pulses[trial_time].iloc[:len(imec_trial_pulses)]                
+            
+        assert len(imec_trial_pulses) == len(pulses[trial_time])
+
+
+        bonsai_seconds = pulses[trial_time][0]/1000
+        bonsai_seconds = bonsai_seconds - bonsai_seconds[0]
+        print('bonsai seconds: ' + str(bonsai_seconds[0:10]))
+
+        imec_seconds = imec_trial_pulses/30000
+        imec_seconds = imec_seconds - imec_seconds[0]
+        print('imec seconds: ' + str(imec_seconds[0:10]))
+
+        diff_imec = np.diff(imec_seconds[0:10])
+        diff_bonsai = np.diff(bonsai_seconds[0:10])     
+
+        # calculate the difference between the differences
+        diff_diff = np.abs(diff_imec - diff_bonsai)  
+
+        # find where diff_diff becomes less than 0.01
+        first_diff = np.where(diff_diff < 0.01)[0][0]
+
+        # remove pulses and imec_trial_pulses preceding first_diff
+        pulses[trial_time] = pulses[trial_time].iloc[first_diff:]
+        imec_trial_pulses = imec_trial_pulses[first_diff:]          
            
         # add the imec pulses to the bonsai pulses dataframe
         pulses[trial_time] = pulses[trial_time].assign(new_column=imec_trial_pulses)
@@ -417,21 +451,14 @@ def plot_pulse_alignment(pulses, data_dir):
                 ax[j].set_title('Last 10 pulses')
 
             
-        plt.show()
+        # plt.show()
         # save the figure
         fig_name = trial_name + '.png'
         fig_name = os.path.join(fig_dir, fig_name)
         fig.savefig(fig_name)
         plt.close()
 
-
-if __name__ == "__main__":
-    # animal = 'Rat46'
-    # session = '19-02-2024'
-    
-    experiment = 'robot_single_goal'
-    animal = 'Rat_HC1'
-    session = '31-07-2024'
+def main(experiment = 'robot_single_goal', animal = 'Rat_HC2', session = '15-07-2024'):
 
     data_dir = get_data_dir(experiment, animal, session)
 
@@ -469,4 +496,13 @@ if __name__ == "__main__":
     pulses = match_bonsai_and_imec_pulses(n_pulses_and_samples, data_dir)
 
     plot_pulse_alignment(pulses, data_dir)
+
     pass
+    
+
+
+if __name__ == "__main__":
+    
+    main(experiment = 'robot_single_goal', animal = 'Rat_HC2', session = '15-07-2024')
+    
+    

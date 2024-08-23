@@ -109,9 +109,15 @@ through the plots, and manually enter a spike-width cut-off.
 # calculate_spike_pos_hd.py
 
 
-# plot_spike_pos_hd.py
+# plot_spikes_pos.py
 
 
 # calculate_consinks
 
-# 
+# calculate_consink_shuffles.py OR calculate_consink_shuffles_hpc.py
+
+# calculate_vector_fields.py
+
+
+# plot_channel_map.py
+
