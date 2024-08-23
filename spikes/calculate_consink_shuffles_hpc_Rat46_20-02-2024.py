@@ -86,10 +86,10 @@ def recalculate_consink_to_all_candidates_from_shuffle(unit, reldir_occ_by_pos, 
 
 
 def main():
-    animal = 'Rat46'
-    session = '20-02-2024'
+    animal = 'Rat_HC1'
+    session = '31-07-2024'
 
-    data_dir = os.path.join('/ceph/scratch/jakeo/robot_maze/', animal, session)
+    data_dir = os.path.join('/ceph/scratch/jakeo/robot_maze/single_goal_expt', animal, session)
     spike_dir = os.path.join(data_dir, 'spike_sorting')
 
     neuron_types = load_pickle('neuron_types', spike_dir)
@@ -143,7 +143,7 @@ def main():
 
     save_pickle(consinks_df, 'consinks_df_translated_ctrl', spike_dir)
     # save as csv
-    consinks_df.to_csv(os.path.join(spike_dir, 'consinks_df_translated_ctrl.csv'))
+    # consinks_df.to_csv(os.path.join(spike_dir, 'consinks_df_translated_ctrl.csv'))
     print('saved consinks_df_translated_ctrl to {spike_dir}')    
 
 if __name__ == "__main__":
