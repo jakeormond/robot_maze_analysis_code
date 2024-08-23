@@ -68,8 +68,8 @@ def recalculate_consink_to_all_candidates_from_shuffle(unit, reldir_occ_by_pos, 
 
 
 def main():
-    animal = 'Rat_HC1'
-    session = '31-07-2024'
+    animal = 'Rat_HC2'
+    session = '16-07-2024'
 
     data_dir = os.path.join('/ceph/scratch/jakeo/robot_maze/single_goal_expt', animal, session)
     spike_dir = os.path.join(data_dir, 'spike_sorting')
@@ -108,9 +108,9 @@ def main():
         unit = concatenate_unit_across_trials(units[cluster])
         unit = unit[['samples', 'x', 'y', 'hd']]
 
-        ######### PERFORM CICULAR TRANSLATION CONTROL
+        ######### PERFORM CIRCULAR TRANSLATION CONTROL
 
-        print(f'calcualting confidence intervals for goal {goal} {cluster}')
+        print(f'calcualting confidence intervals for {cluster}')
 
         ci = recalculate_consink_to_all_candidates_from_translation(unit, dlc_data, reldir_occ_by_pos, sink_bins, direction_bins, candidate_sinks)
         # ci = recalculate_consink_to_all_candidates_from_shuffle(unit, reldir_occ_by_pos, sink_bins,  direction_bins, candidate_sinks)
@@ -120,7 +120,7 @@ def main():
 
     save_pickle(consinks_df, 'consinks_df_translated_ctrl', spike_dir)
     # save as csv
-    #  consinks_df.to_csv(os.path.join(spike_dir, 'consinks_df_translated_ctrl.csv'))
+    consinks_df.to_csv(os.path.join(spike_dir, 'consinks_df_translated_ctrl.csv'))
     # print('saved consinks_df_translated_ctrl to {spike_dir}')    
 
 if __name__ == "__main__":
