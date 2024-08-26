@@ -68,8 +68,8 @@ def recalculate_consink_to_all_candidates_from_shuffle(unit, reldir_occ_by_pos, 
 
 
 def main():
-    animal = 'Rat_HC2'
-    session = '16-07-2024'
+    animal = 'Rat_HC4'
+    session = '01-08-2024'
 
     data_dir = os.path.join('/ceph/scratch/jakeo/robot_maze/single_goal_expt', animal, session)
     spike_dir = os.path.join(data_dir, 'spike_sorting')
