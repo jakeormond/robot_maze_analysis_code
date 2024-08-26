@@ -24,8 +24,8 @@ import spikes.calculate_consinks as csk
 if __name__ == "__main__":
     
     experiment = 'robot_single_goal'
-    animal = 'Rat_HC3'
-    session = '23-07-2024'
+    animal = 'Rat_HC4'
+    session = '01-08-2024'
 
     epr.main(experiment=experiment, animal=animal, session=session)
 

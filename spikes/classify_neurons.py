@@ -149,12 +149,13 @@ def get_average_waveforms(units, spike_dir, bin_dir):
     for u in units.keys():
        
         unit = units[u]
+        
         # cluster number is integer after 'cluster_' in u
         cluster = int(u.split('_')[1])
         
         # find spikes that belong to this cluster
         spike_ind = np.nonzero(spike_clusters == cluster)[0]
-
+        
         # get template most commonly associated with this particular unit
         # templates_for_cluster, _ = stats.mode(spike_templates[spike_ind], 
         #                                      keepdims=False)[0]
@@ -436,6 +437,11 @@ def main(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024')
     # plot halfwidths vs mean firing rates
     plt.figure()
     for u in mean_rates.keys():
+
+        # if u not in haflwidths, then skip
+        if u not in halfwidths.keys():
+            continue
+
         plt.scatter(mean_rates[u], halfwidths[u])
     plt.xlabel('Mean firing rate (Hz)')
     plt.ylabel('Halfwidth (ms)')
