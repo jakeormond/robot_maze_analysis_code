@@ -788,7 +788,7 @@ def main(experiment = 'robot_single_goal', animal = 'Rat_HC2', session = '15-07-
             os.mkdir(plot_dir)
         
         # load the consinks_df
-        consinks_df = load_pickle('consinks_df', spike_dir)
+        consinks_df = load_pickle('consinks_df_translated_ctrl', spike_dir)
 
         # calculate a jitter amount to jitter the positions by so they are visible
         x_diff = np.mean(np.diff(candidate_sinks['x']))

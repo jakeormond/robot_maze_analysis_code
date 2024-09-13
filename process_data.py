@@ -1,6 +1,8 @@
 import sys
 sys.path.append('C:/Users/Jake/Documents/python_code/robot_maze_analysis_code')
 
+import os
+
 # run extract_pulses_from_raw.py, located in the utilities directory
 import utilities.extract_pulses_from_raw as epr
 import utilities.get_pulses as gp
@@ -19,10 +21,10 @@ import spikes.classify_neurons as cn
 import spikes.calculate_spike_pos_hd as csp
 import spikes.plot_spikes_and_pos as psp
 import spikes.calculate_consinks as csk
+import spikes.calculate_vector_fields as cvf
 
 
-if __name__ == "__main__":
-    
+def main():
     experiment = 'robot_single_goal'
     animal = 'Rat_HC4'
     session = '01-08-2024'
@@ -54,5 +56,29 @@ if __name__ == "__main__":
     psp.main(experiment=experiment, animal=animal, session=session)
 
     csk.main(experiment=experiment, animal=animal, session=session, code_to_run = [0])
+
+
+def main2():
+    experiment = 'robot_single_goal'
+    
+    animals = ['Rat_HC1', 'Rat_HC2', 'Rat_HC3', 'Rat_HC4']
+    # animals = ['Rat_HC3', 'Rat_HC4']
+
+    for animal in animals:
+
+        # find directories in the animal directory
+        parent_directory = "D:/analysis/" + experiment + "/" + animal
+        directories = os.listdir(parent_directory)
+
+        for session in directories:
+
+            # csk.main(experiment=experiment, animal=animal, session=session, code_to_run = [9])
+            cvf.main(experiment=experiment, animal=animal, session=session, code_to_run = [1])
+
+
+if __name__ == "__main__":
+    
+    # main()
+    main2()
     
     

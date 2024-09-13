@@ -356,11 +356,7 @@ def plot_vector_fields_2goals_all_units(vector_fields, goal_coordinates, plot_di
 
 
 
-if __name__ == "__main__":
-    
-    experiment = 'robot_single_goal'
-    animal = 'Rat_HC1'
-    session = '31-07-2024'
+def main(experiment = 'robot_single_goal', animal = 'Rat_HC2', session = '15-07-2024', code_to_run = [1]):
 
     data_dir = get_data_dir(experiment, animal, session)
 
@@ -438,6 +434,14 @@ if __name__ == "__main__":
 
     pass
 
+
+
+
+if __name__ == "__main__":
+
+    main()
+    
+    
         
 
 
