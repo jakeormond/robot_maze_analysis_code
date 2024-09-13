@@ -797,8 +797,8 @@ def main(experiment = 'robot_single_goal', animal = 'Rat_HC2', session = '15-07-
         plot_all_consinks(consinks_df, goal_coordinates, limits, jitter, plot_dir)
         
 
-    # ################ CALCULATE CONSINK DISTANCE TO GOAL ##############################
-    # if 3 in code_to_run:
+    # ################ CALCULATE CONSINK DISTANCE TO GOAL #######Finsbury Park#######################
+    # if 3 in code_to_run:Finsbury Park
     #     goal_coordinates = get_goal_coordinates(data_dir=data_dir)
 
     #     # get the distance to goal for each consink
