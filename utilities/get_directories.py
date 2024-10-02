@@ -5,8 +5,8 @@ def get_home_dir():
     if os.name == 'nt':
         home_dir = 'D:/analysis' # WINDOWS
     elif os.name == 'posix': # Linux or Mac OS
-        # home_dir = "/media/jake/LaCie" # Linux/Ubuntu
-        home_dir = "/home/jake/Documents/analysis" # Linux/Ubuntu
+        home_dir = "/media/jake/Elements" # Linux/Ubuntu
+        # home_dir = "/home/jake/Documents/analysis" # Linux/Ubuntu
     return home_dir
 
 def get_data_dir(experiment, animal, session):
