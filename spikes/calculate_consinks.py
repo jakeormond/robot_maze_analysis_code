@@ -634,7 +634,7 @@ def load_consink_df(directory):
     return consinks_df
 
 
-def main(experiment = 'robot_single_goal', animal = 'Rat_HC2', session = '15-07-2024', code_to_run = [0]):
+def main(experiment = 'robot_single_goal', animal = 'Rat_HC4', session = '01-08-2024', code_to_run = [9]):
 
     data_dir = get_data_dir(experiment, animal, session)    
     
@@ -720,10 +720,24 @@ def main(experiment = 'robot_single_goal', animal = 'Rat_HC2', session = '15-07-
 
     ######################### PLOT CONSINKS FOR SINGLE GOAL EXPERIMENT ############################
     if 9 in code_to_run:
+        # load consinks
         consinks_df = load_pickle('consinks_df_translated_ctrl', spike_dir)
 
+        # load good_clusters.csv which has the brain regions for the clusters
+        good_clusters = pd.read_csv(os.path.join(spike_dir, 'good_clusters.csv'), index_col=0)
+
         # get goal coordinates
-        goal_coordinates = get_goal_coordinates(data_dir=data_dir)
+        goal_coordinates = get_goal_coordinates(data_dir=data_dir)        
+
+        # add a cluster_id column to the consinks_df which removes the 'cluster_' from the index and converts it to an int
+        consinks_df['cluster_id'] = consinks_df.index.str.replace('cluster_', '').astype(int)
+
+        # add a region column to the consinks_df, where the regions is taken from the row in the good_clusters dataframe
+        # with the same cluster_id
+        consinks_df['region'] = consinks_df['cluster_id'].map(good_clusters['region'])
+
+        # separate the consinks_df by brain region
+        regions = ['CA1', 'CA3-DG']
 
         # make folder consinks in spike_dir if it doesn't already exist
         plot_dir = os.path.join(spike_dir, 'consinks')
@@ -734,8 +748,17 @@ def main(experiment = 'robot_single_goal', animal = 'Rat_HC2', session = '15-07-
         x_diff = np.mean(np.diff(candidate_sinks['x']))
         y_diff = np.mean(np.diff(candidate_sinks['y']))
         jitter = (x_diff/3, y_diff/3)
-        plot_all_consinks(consinks_df, goal_coordinates, limits, jitter, plot_dir)
-        
+
+        for region in regions:
+            # deep copy the consinks_df, keeping only the rows with the region
+            consinks_df_region = consinks_df[consinks_df['region'] == region].copy()
+
+            plot_all_consinks(consinks_df_region, goal_coordinates, limits, jitter, plot_dir, plot_name=f'ConSinks_{region}')
+
+            
+    pass
+
+       
     
     # ######################### TEST STATISTICAL SIGNIFICANCE OF CONSINKS #########################
     # # shift the head directions relative to their positions, and recalculate the tuning to the 

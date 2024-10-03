@@ -1,5 +1,13 @@
 import sys
-sys.path.append('C:/Users/Jake/Documents/python_code/robot_maze_analysis_code')
+import os
+
+# if on windows system
+if os.name == 'nt':
+    sys.path.append('C:/Users/Jake/Documents/python_code/robot_maze_analysis_code')
+
+# if on linux system
+else:
+    sys.path.append('/home/jake/Documents/python_code/robot_maze_analysis_code')
 
 import os
 
@@ -20,6 +28,7 @@ import spikes.restrict_spikes_to_trials as rst
 import spikes.classify_neurons as cn
 import spikes.calculate_spike_pos_hd as csp
 import spikes.plot_spikes_and_pos as psp
+import spikes.plot_channel_map as pcm
 import spikes.calculate_consinks as csk
 import spikes.calculate_vector_fields as cvf
 
@@ -67,13 +76,19 @@ def main2():
     for animal in animals:
 
         # find directories in the animal directory
-        parent_directory = "D:/analysis/" + experiment + "/" + animal
+        if os.name == 'nt':
+            parent_directory = "D:/analysis/" + experiment + "/" + animal
+
+        else:
+            parent_directory = "/media/jake/Elements/" + experiment + "/" + animal
+        
+        
         directories = os.listdir(parent_directory)
 
         for session in directories:
-
-            # csk.main(experiment=experiment, animal=animal, session=session, code_to_run = [9])
-            cvf.main(experiment=experiment, animal=animal, session=session, code_to_run = [1])
+            pcm.main(experiment=experiment, animal=animal, session=session)
+            csk.main(experiment=experiment, animal=animal, session=session, code_to_run = [9])
+            # cvf.main(experiment=experiment, animal=animal, session=session, code_to_run = [1])
 
 
 if __name__ == "__main__":

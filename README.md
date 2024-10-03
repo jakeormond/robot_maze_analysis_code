@@ -113,6 +113,8 @@ through the plots, and manually enter a spike-width cut-off.
 
 
 # calculate_consinks
+Calculates everything needed to calculate the consink, except for the cicular shifts, which are calculated by clculate_consink_shuffles.py (which is run on the cluster). 
+Also contains code for plotting the consink positions, which should be run after the shuffles have been calculated.
 
 # calculate_consink_shuffles.py OR calculate_consink_shuffles_hpc.py
 
@@ -121,3 +123,4 @@ through the plots, and manually enter a spike-width cut-off.
 
 # plot_channel_map.py
 
+Plots cluster recording positions along the shanks. Uses probe positions entered by the experiementer to assign the clusters to brain regions (e.g. CA1, CA3, DG, etc.).
