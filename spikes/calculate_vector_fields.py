@@ -394,8 +394,8 @@ def main(experiment = 'robot_single_goal', animal = 'Rat_HC2', session = '15-07-
 
 
     ########################## BOTH GOALS ############################
-    behaviour_dir = os.path.join(data_dir, 'behaviour')
-    behaviour_data = load_pickle('behaviour_data_by_goal', behaviour_dir)
+    # behaviour_dir = os.path.join(data_dir, 'behaviour')
+    # behaviour_data = load_pickle('behaviour_data_by_goal', behaviour_dir)
 
     if 2 in code_to_run:
 

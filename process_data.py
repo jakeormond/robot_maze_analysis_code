@@ -15,6 +15,7 @@ import os
 import utilities.extract_pulses_from_raw as epr
 import utilities.get_pulses as gp
 import utilities.get_video_endpoints as gve
+import utilities.get_directories as gd
 
 import position.process_dlc_data as pdd
 import position.calculate_pos_and_dir as cpd
@@ -72,23 +73,20 @@ def main2():
     
     animals = ['Rat_HC1', 'Rat_HC2', 'Rat_HC3', 'Rat_HC4']
     # animals = ['Rat_HC3', 'Rat_HC4']
+    # animals = ['Rat_HC2', 'Rat_HC3', 'Rat_HC4']
 
     for animal in animals:
 
         # find directories in the animal directory
-        if os.name == 'nt':
-            parent_directory = "D:/analysis/" + experiment + "/" + animal
-
-        else:
-            parent_directory = "/media/jake/Elements/" + experiment + "/" + animal
-        
+        home_directory = gd.get_home_dir()
+        parent_directory = os.path.join(home_directory, experiment, animal)
         
         directories = os.listdir(parent_directory)
 
         for session in directories:
-            pcm.main(experiment=experiment, animal=animal, session=session)
-            csk.main(experiment=experiment, animal=animal, session=session, code_to_run = [9])
-            # cvf.main(experiment=experiment, animal=animal, session=session, code_to_run = [1])
+            # pcm.main(experiment=experiment, animal=animal, session=session)
+            # csk.main(experiment=experiment, animal=animal, session=session, code_to_run = [9])
+            cvf.main(experiment=experiment, animal=animal, session=session, code_to_run = [1])
 
 
 if __name__ == "__main__":

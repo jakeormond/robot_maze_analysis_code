@@ -2,7 +2,14 @@ import pickle
 import os
 
 import sys
-sys.path.append('C:/Users/Jake/Documents/python_code/robot_maze_analysis_code')
+
+# if on windows system
+if os.name == 'nt':
+    sys.path.append('C:/Users/Jake/Documents/python_code/robot_maze_analysis_code')
+
+else:
+    sys.path.append('/home/jake/Documents/python_code/robot_maze_analysis_code')
+    
 from utilities.get_directories import get_data_dir
 
 

@@ -466,7 +466,13 @@ def plot_all_consinks(consinks_df, goal_coordinates, limits, jitter, plot_dir, p
         
     # loop through the rows of the consinks_df, plot a filled red circle at the consink 
     # position if the mrl is greater than ci_999
+
+    clusters = []
+    consink_positions = []
+
     for cluster in consinks_df.index:
+
+        
 
         x_jitter = np.random.uniform(-jitter[0], jitter[0])
         y_jitter = np.random.uniform(-jitter[1], jitter[1])
@@ -482,6 +488,9 @@ def plot_all_consinks(consinks_df, goal_coordinates, limits, jitter, plot_dir, p
                 consink_position[1] + y_jitter), 60, color='r', 
                 fill=True)
             ax.add_artist(circle)  
+
+            clusters.append(cluster)
+            consink_positions.append(consink_position)
           
         for i in range(2):
             # set the x and y limits
@@ -512,6 +521,9 @@ def plot_all_consinks(consinks_df, goal_coordinates, limits, jitter, plot_dir, p
 
     plt.savefig(os.path.join(plot_dir, plot_name + '.png'))
     plt.show()
+
+    # make df with clusters and cluster_positions
+    consinks = pd.DataFrame({'cluster': clusters, 'position': consink_positions})
     pass
 
 
@@ -634,6 +646,41 @@ def load_consink_df(directory):
     return consinks_df
 
 
+# convert consink_df to an object that contains methods for restricing data by region and significance
+class ConSinkData:
+    def __init__(self, consinks_df, good_clusters):
+        self.consinks_df = consinks_df
+
+        self.consinks_df['cluster_id'] = consinks_df.index.str.replace('cluster_', '').astype(int)
+
+        # add a region column to the consinks_df, where the regions is taken from the row in the good_clusters dataframe
+        # with the same cluster_id
+        good_clusters.set_index('cluster_id', inplace=True)
+        cluster_to_region = good_clusters['region'].to_dict()
+        self.consinks_df['region'] = consinks_df['cluster_id'].map(cluster_to_region)
+
+    def print_consinks(self):
+        print(ConSinkData.consinks_df.to_string())
+
+    def restrict_by_region(self, region):
+        """Restrict the DataFrame to a specific region."""
+        restricted_df = {g: df[df['region'] == region] for g, df in self.consinks_df.items()}
+        
+        return restricted_df
+    
+    def restrict_by_significance(self):
+        """Restrict the DataFrame to significant consinks."""
+        restricted_df = {g: df[df['mrl'] > df['ci_95']] for g, df in self.consinks_df.items()}
+        return restricted_df
+    
+    def restrict_by_region_and_significance(self, region):
+        """Restrict the DataFrame to a specific region and significant consinks."""
+        restricted_df = {g: df[(df['region'] == region) & (df['mrl'] > df['ci_95'])] for g, df in self.consinks_df.items()}
+        return restricted_df
+
+
+
+
 def main(experiment = 'robot_single_goal', animal = 'Rat_HC4', session = '01-08-2024', code_to_run = [9]):
 
     data_dir = get_data_dir(experiment, animal, session)    
@@ -726,15 +773,20 @@ def main(experiment = 'robot_single_goal', animal = 'Rat_HC4', session = '01-08-
         # load good_clusters.csv which has the brain regions for the clusters
         good_clusters = pd.read_csv(os.path.join(spike_dir, 'good_clusters.csv'), index_col=0)
 
+        # create ConSinkData object
+        consinks = ConSinkData(consinks_df, good_clusters)
+
         # get goal coordinates
         goal_coordinates = get_goal_coordinates(data_dir=data_dir)        
 
         # add a cluster_id column to the consinks_df which removes the 'cluster_' from the index and converts it to an int
-        consinks_df['cluster_id'] = consinks_df.index.str.replace('cluster_', '').astype(int)
+        # consinks_df['cluster_id'] = consinks_df.index.str.replace('cluster_', '').astype(int)
 
         # add a region column to the consinks_df, where the regions is taken from the row in the good_clusters dataframe
         # with the same cluster_id
-        consinks_df['region'] = consinks_df['cluster_id'].map(good_clusters['region'])
+        # good_clusters.set_index('cluster_id', inplace=True)
+        # cluster_to_region = good_clusters['region'].to_dict()
+        # consinks_df['region'] = consinks_df['cluster_id'].map(cluster_to_region)
 
         # separate the consinks_df by brain region
         regions = ['CA1', 'CA3-DG']
@@ -751,7 +803,8 @@ def main(experiment = 'robot_single_goal', animal = 'Rat_HC4', session = '01-08-
 
         for region in regions:
             # deep copy the consinks_df, keeping only the rows with the region
-            consinks_df_region = consinks_df[consinks_df['region'] == region].copy()
+            # consinks_df_region = consinks_df[consinks_df['region'] == region].copy()
+            consinks_df_region = consinks.restrict_by_region_and_significance(region)
 
             plot_all_consinks(consinks_df_region, goal_coordinates, limits, jitter, plot_dir, plot_name=f'ConSinks_{region}')
 

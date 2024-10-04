@@ -11,7 +11,12 @@ import imageio
 import cv2
 
 import sys
-sys.path.append('C:/Users/Jake/Documents/python_code/robot_maze_analysis_code')
+
+if os.name == 'nt':
+    sys.path.append('C:/Users/Jake/Documents/python_code/robot_maze_analysis_code')
+else:
+    sys.path.append('/home/jake/Documents/python_code/robot_maze_analysis_code')
+
 from utilities.get_directories import get_data_dir 
 from utilities.load_and_save_data import load_pickle, save_pickle
 from position.calculate_pos_and_dir import get_goal_coordinates
