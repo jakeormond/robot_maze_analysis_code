@@ -17,9 +17,10 @@ if os.name == 'nt':
 else:
     sys.path.append('/home/jake/Documents/python_code/robot_maze_analysis_code')
 
-from utilities.get_directories import get_data_dir 
+from utilities.get_directories import get_data_dir
 from utilities.load_and_save_data import load_pickle, save_pickle
 from position.calculate_pos_and_dir import get_goal_coordinates
+from behaviour.load_behaviour import get_behaviour_dir
 
 
 def create_cropped_video_with_dlc_data(dlc_data, 
@@ -102,7 +103,7 @@ def create_cropped_video_with_dlc_data(dlc_data,
     cv2.destroyAllWindows()
     video_writer.release()  
 
-def create_full_video_with_dlc_data(video_time, dlc_data, data_dir, start_and_end):
+def create_full_video_with_dlc_data(video_time, dlc_data, behaviour_data, data_dir, start_and_end):
 
     # get path to full_video.avi, which is two directories above data_dir
     full_video_path = os.path.join(os.path.dirname(os.path.dirname(data_dir)), "full_video.avi")
@@ -138,7 +139,7 @@ def create_full_video_with_dlc_data(video_time, dlc_data, data_dir, start_and_en
     # create video_with_tracking folder
     video_name = os.path.basename(video_path)
     video_with_tracking_dir = os.path.join(os.path.dirname(video_path), \
-                                           'full_videos_with_tracking')
+                                           'full_videos_with_tracking_and_choices')
     if not os.path.exists(video_with_tracking_dir):
         os.mkdir(video_with_tracking_dir)
 
@@ -151,6 +152,10 @@ def create_full_video_with_dlc_data(video_time, dlc_data, data_dir, start_and_en
                                fps, (width, height), isColor=True)
     
     # num_frames = dlc_data.shape[0]
+
+    decision_counter = 0
+    choice_flag = False
+    choice_frame_counter = 0
 
     for frame_idx in range(num_frames):
         _, frame = cap.read()
@@ -172,6 +177,24 @@ def create_full_video_with_dlc_data(video_time, dlc_data, data_dir, start_and_en
 
         if math.isnan(hd_for_frame):
             continue
+
+        sample_for_frame = dlc_for_frame.video_samples
+
+        if decision_counter < len(behaviour_data) :
+            if sample_for_frame >= behaviour_data.iloc[decision_counter]['samples'] and choice_flag == False:
+                choice_flag = True
+                choice_code = behaviour_data.iloc[decision_counter]['correct_choice']
+                if choice_code == 1:
+                    choice = 'correct'
+                elif choice_code == 0:
+                    choice = 'incorrect'
+                else:
+                    choice = 'neutral'
+
+                choice_frame_counter = 0
+
+        if choice_flag == True:
+            choice_frame_counter += 1
 
         # x_crop_pos = int(dlc_for_frame['x'] 
         #                  - dlc_for_frame['x_cropped'])
@@ -280,6 +303,9 @@ def create_full_video_with_dlc_data(video_time, dlc_data, data_dir, start_and_en
                 cv2.arrowedLine(fs_frame, arrow_end, arrow_start, 
                                 [0, 0, 255], 8, tipLength = 0.5)
 
+            # if choice_flag is True, then we are in the choice period
+            # label the frame with the choice
+
             # add x and y coordinates and hd_for_frame as text along the bottom of the frame
             cv2.putText(fs_frame, f'x: {x:.2f}, y: {y:.2f}, hd: {hd_for_frame:.2f}, rd2g: {relative_dir:.2f}',
                         (100, fs_frame.shape[0] - 100), cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 0, 255), 8, cv2.LINE_AA)
@@ -364,6 +390,16 @@ def create_full_video_with_dlc_data(video_time, dlc_data, data_dir, start_and_en
             cv2.arrowedLine(fs_frame, arrow_end, arrow_start, 
                             [0, 0, 255], 8, tipLength = 0.5)
 
+            
+            # if choice_flag is True, then we are in the choice period
+            # label the top right corner of the frame with the choice
+            if choice_flag:
+                cv2.putText(fs_frame, choice, (fs_frame.shape[1] - 700, int(y_offset - 0.75*circle_radius)), 
+                            cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 0, 255), 8, cv2.LINE_AA)
+                
+                # cv2.putText(fs_frame, choice, 
+                #             (100, fs_frame.shape[0] - 100), cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 0, 255), 8, cv2.LINE_AA)
+                                  
             # add x and y coordinates and hd_for_frame as text along the bottom of the frame
             cv2.putText(fs_frame, f'x: {x:.2f}, y: {y:.2f}, hd: {hd_for_frame:.2f}, rd2g: {relative_dir:.2f}', 
                         (100, fs_frame.shape[0] - 100), cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 0, 255), 8, cv2.LINE_AA)
@@ -379,7 +415,13 @@ def create_full_video_with_dlc_data(video_time, dlc_data, data_dir, start_and_en
 
             if cv2.waitKey(2) & 0xFF == ord('q'):
                 break 
-       
+
+        if choice_frame_counter > 9 and choice_flag == True:
+            choice_flag = False
+            choice_frame_counter = 0
+            decision_counter += 1
+
+
     cap.release()
     cv2.destroyAllWindows()
     video_writer.release()
@@ -422,7 +464,7 @@ def get_video_paths_from_dlc(dlc_processed_data, data_dir):
     return video_paths 
 
 
-def main(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024', n_trials = 2):
+def main(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024', n_trials = 24):
 
     data_dir = get_data_dir(experiment, animal, session)
 
@@ -442,10 +484,16 @@ def main(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024',
     # load video_endpoints.pkl
     video_endpoints = load_pickle('video_endpoints', video_dir)
 
+    # get behavioural directory so we can show whether choices are correct, incorrect, or neutral
+    behaviour_dir = get_behaviour_dir(data_dir)
+
     for i, d in enumerate(dlc_processed_data.keys()):
 
         if i == n_trials:
             break
+
+        # load behavioural data from csv file
+        behaviour_data = pd.read_csv(os.path.join(behaviour_dir, 'samples', f'{d}_samples.csv'))
 
         video_time = d
         print(video_time)
@@ -463,7 +511,7 @@ def main(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024',
         #                                video_path, start_and_end)
             
         create_full_video_with_dlc_data(video_time, dlc_final_data[d], 
-                                               data_dir, start_and_end)
+                                               behaviour_data, data_dir, start_and_end)
 
     
     # create a gif from video "video_2023-11-08_16.52.26.avi" using frames

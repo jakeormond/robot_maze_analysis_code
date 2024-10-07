@@ -185,7 +185,7 @@ def get_goals(data_dir):
     return goals
 
 
-def assess_choices(behaviour_df, map):
+def assess_choices(behaviour_df, platform_map):
 
     correct_choice = []
 
@@ -194,8 +194,8 @@ def assess_choices(behaviour_df, map):
         chosen_pos = row['chosen_pos']
         unchosen_pos = row['unchosen_pos']
 
-        chosen_to_goal_dist = map.cartesian_distance(chosen_pos, map.goal_position)
-        unchosen_to_goal_dist = map.cartesian_distance(unchosen_pos, map.goal_position)
+        chosen_to_goal_dist = platform_map.cartesian_distance(chosen_pos, platform_map.goal_position)
+        unchosen_to_goal_dist = platform_map.cartesian_distance(unchosen_pos, platform_map.goal_position)
 
         if chosen_to_goal_dist < unchosen_to_goal_dist:
             correct_choice.append(1)
@@ -209,13 +209,13 @@ def assess_choices(behaviour_df, map):
     return behaviour_df
 
 
-def assess_choices_all_trials(csv_files, map):
+def assess_choices_all_trials(csv_files, platform_map):
     # load the csv files
     behaviour_data = {}
     for i, f in enumerate(csv_files):
         behaviour_df = load_behaviour_file(f)
         
-        behaviour_df  = assess_choices(behaviour_df, map)
+        behaviour_df  = assess_choices(behaviour_df, platform_map)
         
         trial_time = behaviour_df.name
         behaviour_data[trial_time] = behaviour_df
@@ -277,10 +277,10 @@ def main2(experiment = 'robot_single_goal', animal = 'Rat_HC2', session = '15-07
 
     # load the platform map
     map_dir = '/home/jake/Documents/robot_maze/workstation/map_files'
-    map_file = 'platform_map.csv'
+    # map_file = 'platform_map.csv'
     # map = pd.read_csv(os.path.join(map_dir, map_file))
     # load map as an array
-    map = Map(directory=map_dir)
+    platform_map = Map(directory=map_dir)
 
     # load behaviour data
     data_dir = get_data_dir(experiment, animal, session)
@@ -291,10 +291,10 @@ def main2(experiment = 'robot_single_goal', animal = 'Rat_HC2', session = '15-07
 
     # get the goal, it is the last entry in the chosen_pos column
     goal = get_goal(csv_files)
-    map.set_goal_position(goal)
+    platform_map.set_goal_position(goal)
 
     # assess the choices
-    behaviour_data = assess_choices_all_trials(csv_files, map)
+    behaviour_data = assess_choices_all_trials(csv_files, platform_map)
     # save the behaviour data to a pickle file
     save_pickle(behaviour_data, 'behaviour_data', behaviour_dir)
 
@@ -321,14 +321,36 @@ def find_continuous_blocks(lst, value):
     return blocks
 
 
+def time_to_ms(time_str):
+    # Split the time string into hours, minutes, and seconds
+    h, m, s = map(float, time_str.split(':'))
+    
+    # Convert hours, minutes, and seconds to milliseconds
+    ms = (h * 3600 + m * 60 + s) * 1000
+    
+    return int(ms)
+
+
 def main3(experiment = 'robot_single_goal', animal = 'Rat_HC2', session = '15-07-2024'):
 
     # load behaviour data
     data_dir = get_data_dir(experiment, animal, session)
     behaviour_dir = get_behaviour_dir(data_dir)
 
+    # create new directory to save the csv files with samples column
+    samples_dir = os.path.join(behaviour_dir, 'samples')
+    if not os.path.exists(samples_dir):
+        os.makedirs(samples_dir)
+
     # find csv files in behaviour directory
     csv_files = glob.glob(os.path.join(behaviour_dir, '*.csv'))
+
+    # get the goal, it is the last entry in the chosen_pos column
+    # load the platform map
+    map_dir = '/home/jake/Documents/robot_maze/workstation/map_files'
+    platform_map = Map(directory=map_dir)
+    goal = get_goal(csv_files)
+    platform_map.set_goal_position(goal)
 
     # load dlc data
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
@@ -341,6 +363,9 @@ def main3(experiment = 'robot_single_goal', animal = 'Rat_HC2', session = '15-07
     crop_val_cols = ['x_crop_vals', 'y_crop_vals']
     for i, f in enumerate(csv_files):
         behaviour_data_temp = load_behaviour_file(f)
+
+        assess_choices(behaviour_data_temp, platform_map)
+
         trial_time = behaviour_data_temp.name
         # get the dlc data for the trial
         dlc_data = dlc_final_data[trial_time]
@@ -403,24 +428,27 @@ def main3(experiment = 'robot_single_goal', animal = 'Rat_HC2', session = '15-07
                 sample_diff = time_diff * 30
                 crop_vals.at[i, 'samples'] = np.round(crop_vals.at[i-1, 'samples'] + sample_diff)
 
+        # add samples column from crop_vals to the behaviour data, omitting the first value
+        samples_list = crop_vals['samples'].tolist()[2:]  # This will be shorter than the original list
+        samples_list.extend([np.NaN] * (len(behaviour_data_temp) - len(samples_list)))  # Extend to match the length
 
-        pass
+        # Assign the list to the DataFrame column
+        behaviour_data_temp['samples'] = samples_list
 
+        # calculate time diff between last 2 choices
+        last_time = time_to_ms(behaviour_data_temp['choice_time'].iloc[-1])
+        second_last_time = time_to_ms(behaviour_data_temp['choice_time'].iloc[-2])
 
+        time_diff = last_time - second_last_time
+        sample_diff = time_diff * 30
 
-                
-    
-
-
+        # add the time diff to the last sample
+        behaviour_data_temp['samples'].iloc[-1] = behaviour_data_temp['samples'].iloc[-2] + sample_diff
         
-
+        # save the behaviour data to a csv file
+        behaviour_data_temp.to_csv(os.path.join(samples_dir, f'{trial_time}_samples.csv'), index=False)
         
-        pass
-
-
-
-
-
+      
     pass
 
 
