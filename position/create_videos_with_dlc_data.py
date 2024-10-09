@@ -464,7 +464,7 @@ def get_video_paths_from_dlc(dlc_processed_data, data_dir):
     return video_paths 
 
 
-def main(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024', n_trials = 24):
+def main(experiment='robot_single_goal', animal='Rat_HC1', session='01-08-2024', n_trials = 20):
 
     data_dir = get_data_dir(experiment, animal, session)
 
@@ -528,6 +528,6 @@ def main(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024',
 
 if __name__ == "__main__":
     
-    main(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024')
+    main(experiment='robot_single_goal', animal='Rat_HC1', session='31-07-2024', n_trials=21)
 
     

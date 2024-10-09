@@ -9,7 +9,10 @@ import cv2
 import glob
 
 import sys
-sys.path.append('C:/Users/Jake/Documents/python_code/robot_maze_analysis_code')
+if sys.platform == 'linux':
+    sys.path.append('/home/jake/Documents/python_code/robot_maze_analysis_code')
+else:
+    sys.path.append('C:/Users/Jake/Documents/python_code/robot_maze_analysis_code')
 from utilities.get_directories import get_data_dir, get_robot_maze_directory
 from utilities.load_and_save_data import save_pickle, load_pickle
 

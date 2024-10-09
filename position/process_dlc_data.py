@@ -478,6 +478,30 @@ def main(experiment = 'robot_single_goal', animal = 'Rat_HC2', session = '15-07-
     pass
 
 
+def main2(experiment = 'robot_single_goal', animal = 'Rat_HC2', session = '15-07-2024'):
+
+    # load behaviour data
+    data_dir = get_data_dir(experiment, animal, session)
+    dlc_dir = os.path.join(data_dir, 'deeplabcut')
+    dlc_final_data = load_pickle('dlc_final', dlc_dir)
+
+    # print animal and session
+    print(f'Animal: {animal}')
+    print(f'Session: {session}')
+
+    # loop through the dfs in the dlc_final_data dict and print the column names
+    for i, t in enumerate(dlc_final_data.keys()):
+        print(t)
+        print(dlc_final_data[t].columns)
+        print('\n')
+
+        if i >= 0:
+            break
+
+    pass
+
+
+
 if __name__ == "__main__":
 
     main(experiment = 'robot_single_goal', animal = 'Rat_HC2', session = '15-07-2024')

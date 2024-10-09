@@ -331,6 +331,77 @@ def time_to_ms(time_str):
     return int(ms)
 
 
+def get_choice_times(behaviour_data_temp, dlc_data, crop_vals, crop_times):
+
+    crop_vals_dlc = list(zip(dlc_data['x_crop_vals'], dlc_data['y_crop_vals']))
+
+    # create an empty column called 'samples'
+    crop_vals['samples'] = np.nan
+
+    crop_vals_used = [(crop_vals.iloc[0]['x_crop_vals'], crop_vals.iloc[0]['y_crop_vals'])]
+    
+    for i in range(1, len(crop_vals)):
+        
+        current_crop_vals = (crop_vals.iloc[i]['x_crop_vals'], crop_vals.iloc[i]['y_crop_vals'])
+        previous_crop_vals = (crop_vals.iloc[i-1]['x_crop_vals'], crop_vals.iloc[i-1]['y_crop_vals'])
+
+        if current_crop_vals == previous_crop_vals:
+            continue
+
+        # check how many times current_crop_vals appears in crop_vals_used
+        n = crop_vals_used.count(current_crop_vals)
+        
+        if n == 0:
+            # find the index of the first instance of current_crop_vals in crop_vals_dlc
+            index = crop_vals_dlc.index(current_crop_vals)
+        
+        else: 
+            # find the index of the first instance of current_crop_vals in the n+1th continuous
+            # block of current_crop_vals in crop_vals_dlc
+            blocks = find_continuous_blocks(crop_vals_dlc, current_crop_vals)
+            index = blocks[n][0]
+
+        crop_vals.at[i, 'samples'] = dlc_data['video_samples'].iloc[index]
+        crop_vals_used.append(current_crop_vals)
+
+
+    # if there are any nan values in the samples column, interpolate their values using 
+    # crop_times values
+    if crop_vals['samples'].isnull().values.any():
+        # get the indices of the nan values
+        nan_indices = crop_vals[crop_vals['samples'].isnull()].index
+        for i in nan_indices:
+            
+            if i == 0:
+                time_diff = crop_times.iloc[0] - crop_times.iloc[1]
+                sample_diff = time_diff * 30 # time in ms, sample rate is 30 kHz
+                crop_vals.at[i, 'samples'] = np.round(crop_vals.at[i+1, 'samples'] + sample_diff)
+                continue
+
+            time_diff = crop_times.iloc[i] - crop_times.iloc[i-1]
+            sample_diff = time_diff * 30
+            crop_vals.at[i, 'samples'] = np.round(crop_vals.at[i-1, 'samples'] + sample_diff)
+
+    # add samples column from crop_vals to the behaviour data, omitting the first value
+    samples_list = crop_vals['samples'].tolist()[2:]  # This will be shorter than the original list
+    samples_list.extend([np.NaN] * (len(behaviour_data_temp) - len(samples_list)))  # Extend to match the length
+
+    # Assign the list to the DataFrame column
+    behaviour_data_temp['samples'] = samples_list
+
+    # calculate time diff between last 2 choices
+    last_time = time_to_ms(behaviour_data_temp['choice_time'].iloc[-1])
+    second_last_time = time_to_ms(behaviour_data_temp['choice_time'].iloc[-2])
+
+    time_diff = last_time - second_last_time
+    sample_diff = time_diff * 30
+
+    # add the time diff to the last sample
+    behaviour_data_temp['samples'].iloc[-1] = behaviour_data_temp['samples'].iloc[-2] + sample_diff
+
+    return behaviour_data_temp
+
+
 def main3(experiment = 'robot_single_goal', animal = 'Rat_HC2', session = '15-07-2024'):
 
     # load behaviour data
@@ -364,95 +435,28 @@ def main3(experiment = 'robot_single_goal', animal = 'Rat_HC2', session = '15-07
     for i, f in enumerate(csv_files):
         behaviour_data_temp = load_behaviour_file(f)
 
-        assess_choices(behaviour_data_temp, platform_map)
+        behaviour_data_temp = assess_choices(behaviour_data_temp, platform_map)
 
         trial_time = behaviour_data_temp.name
         # get the dlc data for the trial
         dlc_data = dlc_final_data[trial_time]
-        # make a list of tuples from the x_crop_vals and y_crop_vals columns
-        crop_vals_dlc = list(zip(dlc_data['x_crop_vals'], dlc_data['y_crop_vals']))
 
         # get the crop values for the trial
         crop_vals_file = f'cropValues_{trial_time}.csv'
         crop_vals_path = os.path.join(crop_vals_dir, crop_vals_file)
         crop_vals = pd.read_csv(crop_vals_path, usecols=[0,1], names=crop_val_cols)
-        # create an empty column called 'samples'
-        crop_vals['samples'] = np.nan
 
         # get the crop times for the trial
         crop_times_file = f'cropTS_{trial_time}.csv'
         crop_times_path = os.path.join(crop_vals_dir, crop_times_file)
         crop_times = pd.read_csv(crop_times_path, header=None)
 
-        crop_vals_used = [(crop_vals.iloc[0]['x_crop_vals'], crop_vals.iloc[0]['y_crop_vals'])]
-        
-        for i in range(1, len(crop_vals)):
-            
-            current_crop_vals = (crop_vals.iloc[i]['x_crop_vals'], crop_vals.iloc[i]['y_crop_vals'])
-            previous_crop_vals = (crop_vals.iloc[i-1]['x_crop_vals'], crop_vals.iloc[i-1]['y_crop_vals'])
 
-            if current_crop_vals == previous_crop_vals:
-                continue
-
-            # check how many times current_crop_vals appears in crop_vals_used
-            n = crop_vals_used.count(current_crop_vals)
-          
-            if n == 0:
-                # find the index of the first instance of current_crop_vals in crop_vals_dlc
-                index = crop_vals_dlc.index(current_crop_vals)
-            
-            else: 
-                # find the index of the first instance of current_crop_vals in the n+1th continuous
-                # block of current_crop_vals in crop_vals_dlc
-                blocks = find_continuous_blocks(crop_vals_dlc, current_crop_vals)
-                index = blocks[n][0]
-
-            crop_vals.at[i, 'samples'] = dlc_data['video_samples'].iloc[index]
-            crop_vals_used.append(current_crop_vals)
-
-
-        # if there are any nan values in the samples column, interpolate their values using 
-        # crop_times values
-        if crop_vals['samples'].isnull().values.any():
-            # get the indices of the nan values
-            nan_indices = crop_vals[crop_vals['samples'].isnull()].index
-            for i in nan_indices:
-                
-                if i == 0:
-                    time_diff = crop_times.iloc[0] - crop_times.iloc[1]
-                    sample_diff = time_diff * 30 # time in ms, sample rate is 30 kHz
-                    crop_vals.at[i, 'samples'] = np.round(crop_vals.at[i+1, 'samples'] + sample_diff)
-                    continue
-
-                time_diff = crop_times.iloc[i] - crop_times.iloc[i-1]
-                sample_diff = time_diff * 30
-                crop_vals.at[i, 'samples'] = np.round(crop_vals.at[i-1, 'samples'] + sample_diff)
-
-        # add samples column from crop_vals to the behaviour data, omitting the first value
-        samples_list = crop_vals['samples'].tolist()[2:]  # This will be shorter than the original list
-        samples_list.extend([np.NaN] * (len(behaviour_data_temp) - len(samples_list)))  # Extend to match the length
-
-        # Assign the list to the DataFrame column
-        behaviour_data_temp['samples'] = samples_list
-
-        # calculate time diff between last 2 choices
-        last_time = time_to_ms(behaviour_data_temp['choice_time'].iloc[-1])
-        second_last_time = time_to_ms(behaviour_data_temp['choice_time'].iloc[-2])
-
-        time_diff = last_time - second_last_time
-        sample_diff = time_diff * 30
-
-        # add the time diff to the last sample
-        behaviour_data_temp['samples'].iloc[-1] = behaviour_data_temp['samples'].iloc[-2] + sample_diff
-        
+        behaviour_data_temp = get_choice_times(behaviour_data_temp, dlc_data, crop_vals, crop_times)
         # save the behaviour data to a csv file
         behaviour_data_temp.to_csv(os.path.join(samples_dir, f'{trial_time}_samples.csv'), index=False)
         
       
-    pass
-
-
-
 if __name__ == "__main__":
 
     main3(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024')

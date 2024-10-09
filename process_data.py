@@ -84,9 +84,12 @@ def main2():
         directories = os.listdir(parent_directory)
 
         for session in directories:
+            cpd.main(experiment=experiment, animal=animal, session=session)
             # pcm.main(experiment=experiment, animal=animal, session=session)
             # csk.main(experiment=experiment, animal=animal, session=session, code_to_run = [9])
-            cvf.main(experiment=experiment, animal=animal, session=session, code_to_run = [1])
+            # cvf.main(experiment=experiment, animal=animal, session=session, code_to_run = [1])
+            # lb.main3(experiment=experiment, animal=animal, session=session)
+            pass
 
 
 if __name__ == "__main__":
