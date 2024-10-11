@@ -10,7 +10,11 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 import sys
-sys.path.append('C:/Users/Jake/Documents/python_code/robot_maze_analysis_code')
+if os.name == 'nt':
+    sys.path.append('C:/Users/Jake/Documents/python_code/robot_maze_analysis_code')
+else:
+    sys.path.append('/home/jake/Documents/python_code/robot_maze_analysis_code')
+
 from utilities.get_directories import get_data_dir, get_robot_maze_directory
 from position.calculate_pos_and_dir import get_goal_coordinates
 from utilities.load_and_save_data import load_pickle, save_pickle
@@ -379,19 +383,37 @@ def get_og_bins(bins):
 
 
 def calculate_frame_durations(dlc_data):
-    for d in dlc_data.keys():
 
-        # calculate frame intervals
-        times = dlc_data[d]['ts'].values
+    def calculate_intervals(times):
         frame_intervals = np.diff(times)
         # one less interval than frames, so we'll just replicate the last interval
         frame_intervals = np.append(frame_intervals, frame_intervals[-1])
 
         # add frame intervals to dlc_data
-        frame_intervals = frame_intervals/1000 # convert to seconds
+        frame_intervals = frame_intervals/1000
+
         # round to 4 decimal places, i.e. 0.1 ms
         frame_intervals = np.round(frame_intervals, 4)
-        dlc_data[d]['durations'] = frame_intervals
+
+        return frame_intervals
+
+    for t, d in dlc_data.items():
+
+        # if d is list then loop through the list, otherwise calculate frame intervals from d
+        if isinstance(d, list):
+            for i, d2 in enumerate(d):
+                times = d2['ts'].values
+                
+                frame_intervals = calculate_intervals(times)
+
+                dlc_data[t][i]['durations'] = frame_intervals
+        
+        else:
+            times = dlc_data[d]['ts'].values
+            
+            frame_intervals = calculate_intervals(times)
+            
+            dlc_data[d]['durations'] = frame_intervals
 
     return dlc_data
 
@@ -442,6 +464,42 @@ def concatenate_dlc_data(dlc_data):
                     ignore_index=True)            
 
     return dlc_data_concat
+
+
+def concatenate_dlc_data_by_choice(dlc_data, behaviour_dir):
+
+    choice_type = ['correct', 'incorrect']
+
+    dlc_concat_by_choice = {}
+
+    for c in choice_type:
+
+        if c == 'correct':
+            choice_code = 1
+        elif c == 'incorrect':
+            choice_code = 0
+        
+        choice_counter = 0
+        for i, t in enumerate(dlc_data.keys()): 
+
+            behaviour_data = pd.read_csv(os.path.join(behaviour_dir, f"{t}_samples.csv"))
+            
+            for j, d in enumerate(dlc_data[t]):
+
+                if behaviour_data['correct_choice'][j] != choice_code:
+                    continue
+
+                choice_counter += 1
+                if choice_counter == 1:
+                    dlc_data_concat = d
+                else:
+                    dlc_data_concat = pd.concat([dlc_data_concat, d], ignore_index=True)
+                    
+        dlc_concat_by_choice[c] = dlc_data_concat
+        del dlc_data_concat
+
+    return dlc_concat_by_choice
+
 
 def concatenate_dlc_data_by_goal(dlc_data, behaviour_data):
     
@@ -668,8 +726,71 @@ def main(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024')
     # pass
 
 
+def main2(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024'):
+    
+    data_dir = get_data_dir(experiment, animal, session)
+
+    # load dlc_data which has the trial times
+    dlc_dir = os.path.join(data_dir, 'deeplabcut')
+    dlc_data_by_choice = load_pickle('dlc_by_choice', dlc_dir)
+    
+        # get goal coordinates 
+    goal_coordinates = get_goal_coordinates(data_dir=data_dir)
+
+    # calculate frame intervals
+    dlc_data_by_choice = calculate_frame_durations(dlc_data_by_choice)
+
+    # concatenate dlc_data
+    behaviour_dir = os.path.join(data_dir, 'behaviour', 'samples')
+    dlc_data_concat_by_choice = concatenate_dlc_data_by_choice(dlc_data_by_choice, behaviour_dir)
+
+    # get axes limits
+    dlc_data = load_pickle('dlc_final', dlc_dir)
+    dlc_data_concat = concatenate_dlc_data(dlc_data)
+    limits = get_axes_limits(dlc_data_concat)
+    del dlc_data, dlc_data_concat
+
+    # calculate positional occupancy
+    choices = ['correct', 'incorrect']
+    positional_occupancy = {}
+    directional_occupancy = {}
+    directional_occupancy_by_position = {}
+    dlc_by_choice_dir = os.path.join(dlc_dir, 'by_choice')
+    for c in choices:
+        positional_occupancy[c] = get_positional_occupancy(dlc_data_concat_by_choice[c], limits)
+    
+        # plot the heat map of occupancy
+        figure_dir = os.path.join(dlc_by_choice_dir, f'positional_occupancy_heatmaps_{c}')
+        plot_occupancy_heatmap(positional_occupancy[c], goal_coordinates, figure_dir)
+
+        # calculate directional occupancy
+        directional_occupancy[c] = get_directional_occupancy_from_dlc(dlc_data_concat_by_choice[c])  
+
+        # plot the directional occupancy
+        figure_dir = os.path.join(dlc_by_choice_dir, f'directional_occupancy_plots_{c}')
+        plot_directional_occupancy(directional_occupancy[c], figure_dir)
+
+        # get directional occupancy by position
+        directional_occupancy_by_position[c] = get_directional_occupancy_by_position(dlc_data_concat_by_choice[c], limits)
+
+    
+    # save the positional_occupancy
+    save_pickle(positional_occupancy, 'positional_occupancy_by_choice', dlc_dir)
+    # positional_occupancy = load_pickle('positional_occupancy', dlc_dir)
+    
+    # save the directional_occupancy
+    save_pickle(directional_occupancy, 'directional_occupancy_by_choice', dlc_dir)
+   
+    # save the directional_occupancy_by_position
+    save_pickle(directional_occupancy_by_position, 'directional_occupancy_by_position_by_choice', dlc_dir)
+
+    pass
+
+
 if __name__ == "__main__":
     
-    main()
+    # main()
+
+    main2(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024')
 
     

@@ -445,6 +445,64 @@ def get_goals(behaviour_data):
         return goal
 
 
+def restrict_dlc_to_choices(dlc_data, behaviour_dir, time_before_choice=8, time_after_choice=4, sample_freq=30000):
+
+    # loop through the data frames contained in the dlc_data dict
+    dlc_to_choices = {}
+
+    for t, d in dlc_data.items():
+
+        dlc_to_choices[t] = []
+
+        # get the sample times from d
+        sample_times = d['video_samples']
+
+        # load the behaviour data
+        behaviour_data = pd.read_csv(os.path.join(behaviour_dir, f"{t}_samples.csv"))
+
+        # get the number of rows in behaviour_data
+        n_choices = behaviour_data.shape[0]
+
+        choice_start = []
+        choice_end = []
+
+
+        # loop through the rows of behaviour_data
+        for i, row in behaviour_data.iterrows():
+            # get the choice time
+            choice_time = row['samples']
+            
+            start_time = choice_time - (time_before_choice*sample_freq)
+            end_time = choice_time + (time_after_choice*sample_freq)
+            
+            if i > 0:
+                # check if the start time is less than the end time of the previous choice
+                if start_time < choice_end[-1]:
+                    choice_end[-1] = start_time-1
+
+            choice_start.append(start_time)
+            choice_end.append(end_time)
+
+        # add choice_start and choice_end to behaviour_data
+        behaviour_data['choice_start'] = choice_start
+        behaviour_data['choice_end'] = choice_end         
+
+        for _, row in behaviour_data.iterrows():
+            # copy d
+            d_copy = d.copy(deep = True)
+
+            # get the indices of the samples that are in the trial
+            start_time = row['choice_start']
+            end_time = row['choice_end']
+            indices = np.where((sample_times >= start_time) & (sample_times <= end_time))[0]
+
+            # restrict d_copy to the indices
+            d_copy = d_copy.iloc[indices]
+
+            dlc_to_choices[t].append(d_copy)
+
+    return dlc_to_choices
+
 
 def main_2goal():
 
@@ -517,6 +575,10 @@ def main_2goal():
     pass
 
 
+
+
+
+
 def main(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024'):
 
     data_dir = get_data_dir(experiment, animal, session)
@@ -585,6 +647,27 @@ def main(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024')
     pass
 
 
+def main2(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024'):
+
+    data_dir = get_data_dir(experiment, animal, session)
+    dlc_dir = os.path.join(data_dir, 'deeplabcut')
+
+    behaviour_dir = os.path.join(data_dir, 'behaviour', 'samples')
+
+    # load the dlc data
+    dlc_data = load_pickle('dlc_final', dlc_dir)
+
+    dlc_by_choice = restrict_dlc_to_choices(dlc_data, behaviour_dir)
+
+    # save the dlc data
+    save_pickle(dlc_by_choice, 'dlc_by_choice', dlc_dir)
+
+    pass
+    
+
+
 if __name__ == "__main__":
-    main(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024')
+    # main(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024')
+
+    main2(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024')
     

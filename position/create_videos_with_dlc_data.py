@@ -315,7 +315,7 @@ def create_full_video_with_dlc_data(video_time, dlc_data, behaviour_data, data_d
 
             cv2.startWindowThread()
 
-            cv2.imshow('Video Player', fs_frame_re)
+            # cv2.imshow('Video Player', fs_frame_re)
 
             video_writer.write(fs_frame_re)
 
@@ -409,7 +409,7 @@ def create_full_video_with_dlc_data(video_time, dlc_data, behaviour_data, data_d
 
             cv2.startWindowThread()
 
-            cv2.imshow('Video Player', fs_frame_re)
+            # cv2.imshow('Video Player', fs_frame_re)
 
             video_writer.write(fs_frame_re)
 
@@ -528,6 +528,6 @@ def main(experiment='robot_single_goal', animal='Rat_HC1', session='01-08-2024',
 
 if __name__ == "__main__":
     
-    main(experiment='robot_single_goal', animal='Rat_HC1', session='31-07-2024', n_trials=21)
+    main(experiment='robot_single_goal', animal='Rat_HC4', session='01-08-2024', n_trials=20)
 
     

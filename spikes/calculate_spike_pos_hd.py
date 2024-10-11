@@ -37,11 +37,7 @@ def interpolate_rads(og_times, og_rads, target_times):
 
 def get_unit_position_and_directions(dlc_data, unit):
 
-    for t in unit.keys():
-        
-        # make spike times a data frame with samples as the column name
-        unit[t] = pd.DataFrame({'samples': unit[t]})
-
+    def interpolate_pos_and_dir(unit, dlc_data):
         # create the interpolation functions
         f_x = interpolate.interp1d(dlc_data[t]['video_samples'], dlc_data[t]['x'])
         f_y = interpolate.interp1d(dlc_data[t]['video_samples'], dlc_data[t]['y'])
@@ -56,11 +52,26 @@ def get_unit_position_and_directions(dlc_data, unit):
             if 'relative_direction' in c:
                 directional_data_cols.append(c)
 
-        for c in directional_data_cols:
-            
+        for c in directional_data_cols:            
             target_rads = interpolate_rads(dlc_data[t]['video_samples'], dlc_data[t][c], 
                                        unit[t]['samples'])
             unit[t][c] = np.around(target_rads, 3)
+
+
+    for t in unit.keys():
+        
+        # make spike times a data frame with samples as the column name
+
+        if not isinstance(unit[t], list):
+            unit_temp = pd.DataFrame({'samples': unit[t]})
+            dlc_temp = dlc_data[t]
+            unit[t] = interpolate_pos_and_dir(unit_temp, dlc_temp)
+
+        else:
+            for ch in unit[t]:
+                unit_temp = pd.DataFrame({'samples': unit[t][ch]})
+                dlc_temp = dlc_data[t][ch]
+                unit[t][ch] = interpolate_pos_and_dir(unit_temp, dlc_temp)
 
     return unit
 
@@ -652,6 +663,76 @@ def main_1goal(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-
     # artifial_unit = create_artificial_unit(units, directional_occupancy_by_position)
 
 
+def main_by_choices(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024'):
+
+    data_dir = get_data_dir(experiment, animal, session)
+
+    # load spike data
+    spike_dir = os.path.join(data_dir, 'spike_sorting')
+    units = load_pickle('units_by_choice', spike_dir)
+
+    # load positional data by choices
+    dlc_dir = os.path.join(data_dir, 'deeplabcut')
+    dlc_data = load_pickle('dlc_to_choices', dlc_dir)
+
+    # load occupancy data
+    positional_occupancy = load_pickle('positional_occupancy_by_choice', dlc_dir)
+
+    # find any NaNs or infs in the positional occupancy['occupancy']
+    if np.isnan(positional_occupancy['occupancy']).sum() > 0:
+        raise ValueError('There are NaNs in the positional occupancy.')
+    if np.isinf(positional_occupancy['occupancy']).sum() > 0:
+        raise ValueError('There are infs in the positional occupancy.')
+
+    code_to_run = [0, 1, 2, 3]
+
+    ####################### CALCULATE SPIKE POSITIONS AND DIRECTIONS #######################
+    # loop through units and calculate positions and various directional correlates
+    for unit in units.keys():
+        units[unit] = get_unit_position_and_directions(dlc_data, units[unit])
+
+    # # save the restricted units
+    save_pickle(units, 'units_by_choice_w_behav_correlates', spike_dir)
+
+    ############################### SINGLE RATE MAPS FOR ENTIRE SESSION ###############################
+    # bin spikes by position
+    rate_maps = bin_spikes_by_choice_and_position(units, positional_occupancy)
+    # save the spike counts by position
+    save_pickle(rate_maps, 'rate_maps_by_choice', spike_dir)
+
+    # create smoothed rate_maps
+    smoothed_rate_maps = smooth_rate_maps(rate_maps)
+    save_pickle(smoothed_rate_maps, 'smoothed_rate_maps_by_choice', spike_dir) 
+
+
+    ############################### DIRECTIONAL TUNING FOR ENTIRE SESSION ###############################
+    if 2 in code_to_run:
+        # bin spikes by direction
+        directional_occupancy = load_pickle('directional_occupancy', dlc_dir)
+        spike_rates_by_direction, spike_counts = bin_spikes_by_direction(units, 
+                                                directional_occupancy)
+        # save the spike counts and rates by direction
+        save_pickle(spike_rates_by_direction, 'spike_rates_by_direction', spike_dir)
+        save_pickle(spike_counts, 'spike_counts_by_direction', spike_dir)
+
+
+    ####################SPIKE RATES BY POSITION AND DIRECTION FOR ENTIRE SESSSION ###############################
+    if 3 in code_to_run:
+        # load the directional occupancy by position data
+        directional_occupancy_by_position = load_pickle('directional_occupancy_by_position', dlc_dir)
+        # bin spikes by position and direction
+        spike_rates_by_position_and_direction, bad_vals = bin_spikes_by_position_and_direction_individual_units(units, 
+                                                directional_occupancy_by_position)
+        
+        check_bad_vals(bad_vals, dlc_data)
+
+        # save the spike rates by position and direction
+        save_pickle(spike_rates_by_position_and_direction, 'spike_rates_by_position_and_direction', spike_dir)
+
+
+
+    pass
+
 
 def main_2goals(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024'):
     code_to_run = [0, 1, 2, 3, 4, 5, 6, 7, 8]
@@ -838,7 +919,9 @@ def main_2goals(experiment='robot_single_goal', animal='Rat_HC2', session='15-07
 
 if __name__ == "__main__":
 
-    main_1goal()
+    # main_1goal()
+
+    main_by_choices(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024')
 
    
     
