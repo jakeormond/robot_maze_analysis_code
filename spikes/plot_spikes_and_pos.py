@@ -9,7 +9,12 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy import ndimage
 
 import sys
-sys.path.append('C:/Users/Jake/Documents/python_code/robot_maze_analysis_code')
+if sys.platform == 'linux':
+    sys.path.append('/home/jake/Documents/python_code/robot_maze_analysis_code')
+
+else:
+    sys.path.append('C:/Users/Jake/Documents/python_code/robot_maze_analysis_code')
+
 from utilities.get_directories import get_data_dir, get_robot_maze_directory
 from utilities.load_and_save_data import load_pickle, save_pickle
 from behaviour.load_behaviour import split_dictionary_by_goal
@@ -39,13 +44,18 @@ def basic_spike_pos_plot(ax, unit, dlc_data, goal_coordinates, x_and_y_limits):
         ax.add_artist(circle)
 
         
-    for t in unit.keys():
-        # plot every 10th position from the dlc data
-        ax.plot(dlc_data[t]['x'][::10], dlc_data[t]['y'][::10], 'k.', markersize=4)
+    # for t in unit.keys():
+    #     # plot every 10th position from the dlc data
+    #     ax.plot(dlc_data[t]['x'][::10], dlc_data[t]['y'][::10], 'k.', markersize=4)
+    
+    ax.plot(dlc_data['x'][::10], dlc_data['y'][::10], 'k.', markersize=4)
 
     # plot the spike positions
-    for t in unit.keys():
-        ax.plot(unit[t]['x'], unit[t]['y'], 'r.', markersize=1)
+    # for t in unit.keys():
+    #     ax.plot(unit[t]['x'], unit[t]['y'], 'r.', markersize=1)
+    
+    ax.plot(unit['x'], unit['y'], 'r.', markersize=1)
+
     
     ax.set_xlabel('x (cm)')
     ax.set_ylabel('y (cm)')
@@ -67,6 +77,32 @@ def basic_spike_pos_plot(ax, unit, dlc_data, goal_coordinates, x_and_y_limits):
     ax.invert_yaxis()
 
     ax.set_aspect('equal', 'box')
+
+
+def plot_spikes_and_pos_by_choice(units, dlc_data, goal_coordinates, x_and_y_limits, plot_dir):
+
+    choice_types = ['correct', 'incorrect']
+
+    if not os.path.exists(plot_dir):
+        os.mkdir(plot_dir)
+
+    for u in units.keys():
+        fig, ax = plt.subplots(1, 2, figsize=(10, 20))        
+
+        for i, c in enumerate(choice_types):
+            ax[i].set_title(c)
+            dlc_data_temp = dlc_data[c]
+
+            # concatenate the dfs in the units[u][c] dictionary into a single df
+            unit = units[u][c]
+            unit_concat = pd.concat(unit, axis=0)
+
+            basic_spike_pos_plot(ax[i], unit_concat, dlc_data_temp, goal_coordinates, x_and_y_limits)
+
+        
+        fig.savefig(os.path.join(plot_dir, f'{u}.png'))
+        # plt.close(fig)
+
 
 
 def plot_spikes_and_pos(units, dlc_data, goal_coordinates, x_and_y_limits, plot_dir):
@@ -246,6 +282,114 @@ def plot_rate_maps(rate_maps, smoothed_rate_maps, goal_coordinates, plot_dir):
         # plt.close()
 
 
+
+def plot_rate_maps_by_choice(rate_maps, smoothed_rate_maps, goal_coordinates, plot_dir):
+    # plot the rate maps
+    if not os.path.exists(plot_dir):
+        os.mkdir(plot_dir)
+
+
+    choice_types = ['correct', 'incorrect']
+    x_bins = {}
+    y_bins = {}
+    occupancy = {}
+    for c in choice_types:
+        x_bins[c] = rate_maps[c]['x_bins']
+        y_bins[c] = rate_maps[c]['y_bins']
+        occupancy[c] = rate_maps[c]['occupancy']
+
+    x_bins = x_bins[c]
+    y_bins = y_bins[c]
+
+    units = rate_maps[choice_types[0]]['rate_maps'].keys()
+
+    for u in units:
+        
+        # make figure with 2 subplots
+        fig, ax = plt.subplots(2, 2, figsize=(20, 20))       
+        
+        for j, c in enumerate(choice_types):
+            rate_map = rate_maps[c]['rate_maps'][u]
+            rate_map_smoothed = smoothed_rate_maps[c]['rate_maps'][u]        
+            
+            # plot the unsmoothed rate map in the first subplot
+            for i in range(2):
+                if i == 0:
+                    im = ax[j, i].imshow(rate_map, cmap='jet', aspect='auto')
+                    ax[j, i].set_title([c + ' - unsmoothed'], fontsize=15)  
+                    # add a colourbar
+                    divider = make_axes_locatable(ax[j,i])
+                    cax = divider.append_axes("right", size="5%", pad=0.05)
+                    cbar = plt.colorbar(im, cax=cax)
+                                    
+                else:
+                    im = ax[j, i].imshow(rate_map_smoothed, cmap='jet', aspect='auto')
+                    ax[j, i].set_title([c + ' - smoothed'], fontsize=15)
+                    # add a colourbar
+                    divider = make_axes_locatable(ax[j, i])
+                    cax = divider.append_axes("right", size="5%", pad=0.05)
+                    cbar = plt.colorbar(im, cax=cax)
+                    
+                    
+                    # cbar = plt.colorbar(ax[1].imshow(rate_map_smoothed, cmap='jet', aspect='auto'), ax=ax[1])
+
+                cbar.set_label('Firing rate (Hz)', size=15)         
+                cbar.ax.tick_params(labelsize=15)   
+
+                ax[j, i].set_xlabel('x (cm)',fontsize=15)
+                ax[j, i].set_ylabel('y (cm)', fontsize=15)
+                # don't need to flip the y axis because it's an image, so plots from top dow
+                ax[j, i].set_aspect('equal', 'box')
+
+                # get x_ticks
+                xticks = ax[j, i].get_xticks()
+                # set the x ticks so that only those that are between 0 and n_x_bins are shown
+                xticks = xticks[(xticks >= 0) & (xticks < len(x_bins))]
+                ax[j, i].set_xticks(xticks)
+                # interpolate the x values to get the pixel values, noting that 0.5 needs to be added to the xticks, because they are centred on their bins
+                xtick_values = np.int32(np.round(np.interp(xticks + 0.5, np.arange(len(x_bins)), x_bins), 0))
+                # then convert to cm 
+                xtick_values = np.int32(np.round(xtick_values * cm_per_pixel, 0))        
+                ax[j, i].set_xticklabels(xtick_values)
+                ax[j, i].tick_params(axis='x', labelsize=15)
+
+                # do the same for y_ticks
+                yticks = ax[j, i].get_yticks()
+                yticks = yticks[(yticks >= 0) & (yticks < len(y_bins))]
+                ax[j, i].set_yticks(yticks)
+                ytick_values = np.int32(np.round(np.interp(yticks + 0.5, np.arange(len(y_bins)), y_bins), 0))
+                ytick_values = np.int32(np.round(ytick_values * cm_per_pixel, 0))
+                ax[j, i].set_yticklabels(ytick_values)
+                ax[j, i].tick_params(axis='y', labelsize=15)
+
+                # draw the goal positions over top
+                colours = ['k', '0.5']
+
+             
+                goal_x, goal_y = goal_coordinates
+
+                # Convert to heat map coordinates
+                goal_x_heatmap = np.interp(goal_x, x_bins, np.arange(len(x_bins))) - 0.5
+                goal_y_heatmap = np.interp(goal_y, y_bins, np.arange(len(y_bins))) - 0.5                          
+                
+                # draw a circle with radius 80 around the goal on ax
+                circle = plt.Circle((goal_x_heatmap, 
+                    goal_y_heatmap), radius=1, color=colours[0], 
+                    fill=False, linewidth=4)
+                ax[j, i].add_artist(circle)
+
+
+        # show the plot
+        # plt.show()
+        
+        fig.savefig(os.path.join(plot_dir, f'{u}.png'))
+
+        # plt.close()
+
+
+
+
+
 def plot_rate_maps_2goals(rate_maps_by_goal, goal_coordinates, plot_dir):
     if not os.path.exists(plot_dir):
         os.mkdir(plot_dir)
@@ -336,6 +480,81 @@ def plot_rate_maps_2goals(rate_maps_by_goal, goal_coordinates, plot_dir):
         # plt.close()
 
     pass
+
+
+def basic_rate_by_direction_plot(ax, unit, dlc_data, goal_coordinates, x_and_y_limits):
+    
+    for i, d in enumerate(spike_rates[u].keys()):
+
+            # get the spike rates for this direction
+            spike_rates_temp = spike_rates[u][d]
+            # concatenate the first value to the end so that the plot is closed
+            spike_rates_temp = np.append(spike_rates_temp, spike_rates_temp[0])
+
+            # make a polar plot
+            ax[i//4, i%4].plot(tick_positions, spike_rates_temp, 'b-')
+            
+            
+            ax[i//4, i%4].tick_params(axis='x', labelsize=15) # these are the degrees
+            ax[i//4, i%4].tick_params(axis='y', labelsize=15) # these are the rates
+            
+            if d != 'hd':
+                ax[i//4, i%4].set_theta_zero_location('N')
+            # ax[i//4, i%4].set_theta_direction(-1)
+
+            ax[i//4, i%4].set_title(f'{u} - {d}', fontsize=15)
+
+
+
+
+def plot_spike_rates_by_direction_by_choice(spike_rates_by_direction, plot_dir):
+
+    if not os.path.exists(plot_dir):
+        os.mkdir(plot_dir)
+
+    # note that polar plot converts radian to degrees. 0 degrees = 0 radians,
+    # 90 degrees = pi/2 radians, 180 degrees = +/- pi radians, etc.
+        
+    choice_types = ['correct', 'incorrect']
+    bins = spike_rates_by_direction[choice_types[0]]['bins']
+    # polar plot ticks are the centres of the bins
+    tick_positions = np.round(bins[:-1] + np.diff(bins)/2, 2)
+    tick_positions = np.append(tick_positions, tick_positions[0])
+
+    units = list(spike_rates_by_direction[choice_types[0]]['units'].keys())
+    directions = ['hd', 'relative_direction_to_goal']
+
+    for u in units:
+        n_rows = 2
+        n_cols = 2
+        fig, ax = plt.subplots(n_rows, n_cols, figsize=(20, 20), subplot_kw=dict(polar=True))
+        counter = 0
+        for c in choice_types:
+            for d in directions:
+                
+                # get the spike rates for this direction
+                spike_rates_temp = spike_rates_by_direction[c]['units'][u][d]
+                # concatenate the first value to the end so that the plot is closed
+                spike_rates_temp = np.append(spike_rates_temp, spike_rates_temp[0])
+
+                # make a polar plot
+                ax[counter//2, counter%2].plot(tick_positions, spike_rates_temp, 'b-')
+                
+            
+                ax[counter//2, counter%2].tick_params(axis='x', labelsize=15) # these are the degrees
+                ax[counter//2, counter%2].tick_params(axis='y', labelsize=15) # these are the rates
+            
+                if d != 'hd':
+                    ax[counter//2, counter%2].set_theta_zero_location('N')
+
+                ax[counter//2, counter%2].set_title(f'{c} - {d}', fontsize=15)
+
+                counter += 1
+
+        # plt.show()
+        fig.savefig(os.path.join(plot_dir, f'{u}.png'))
+        # plt.close()
+
 
 
 def plot_spike_rates_by_direction(spike_rates_by_direction, plot_dir):
@@ -553,9 +772,65 @@ def main(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024')
         
     pass
 
+def main2(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024'):
+
+    data_dir = get_data_dir(experiment, animal, session)
+
+    # get goal coordinates
+    goal_coordinates = get_goal_coordinates(data_dir=data_dir)
+
+    # load positional data
+    dlc_dir = os.path.join(data_dir, 'deeplabcut')
+    dlc_data = load_pickle('dlc_by_choice', dlc_dir)
+    dlc_data_concat = load_pickle('dlc_data_concat_by_choice', dlc_dir)
+
+    # get x and y limits
+    dlc_data_temp = load_pickle('dlc_final', dlc_dir)
+    x_and_y_limits = get_x_and_y_limits(dlc_data_temp)
+    del dlc_data_temp
+
+    # load the positional occupancy data
+    positional_occupancy = load_pickle('positional_occupancy_by_choice', dlc_dir)
+
+    # load the directional occupancy data
+    directional_occupancy = load_pickle('directional_occupancy_by_choice', dlc_dir)
+
+    # load the spike data
+    spike_dir = os.path.join(data_dir, 'spike_sorting')
+    units = load_pickle('units_concat_by_choice', spike_dir)
+
+    # plot spikes and position by trial
+    # plot_dir = os.path.join(spike_dir, 'spikes_and_pos_by_trial')
+    # plot_spikes_and_pos_by_trials(units, dlc_data, goal_coordinates, x_and_y_limits, plot_dir)
+
+    # plot spikes and position
+    # plot_dir = os.path.join(spike_dir, 'spikes_and_pos_by_choice')
+    # plot_spikes_and_pos_by_choice(units, dlc_data_concat, goal_coordinates, x_and_y_limits, plot_dir)
+
+    
+    # plot spikes and position 
+    # plot_dir = os.path.join(spike_dir, 'spikes_and_pos')
+
+    # plot_spikes_and_pos(units, dlc_data, goal_coordinates, x_and_y_limits, plot_dir)
+
+
+    # plot spike rates by direction
+    plot_dir = os.path.join(spike_dir, 'spike_rates_by_direction_by_choice')
+    # spike_rates_by_direction = load_pickle('spike_rates_by_direction_by_choice', spike_dir)
+
+    # plot_spike_rates_by_direction_by_choice(spike_rates_by_direction, plot_dir)
+
+    # plot rate maps
+    plot_dir = os.path.join(spike_dir, 'rate_maps_by_choice')
+    rate_maps = load_pickle('rate_maps_by_choice', spike_dir)
+    smoothed_rate_maps = load_pickle('smoothed_rate_maps_by_choice', spike_dir)  
+    plot_rate_maps_by_choice(rate_maps, smoothed_rate_maps, goal_coordinates, plot_dir)
+
+    pass
+
     
 if __name__ == "__main__":
     
-    main()
+    main2(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024')
 
     

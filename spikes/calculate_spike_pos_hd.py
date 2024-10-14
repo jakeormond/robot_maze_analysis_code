@@ -3,9 +3,16 @@ import numpy as np
 import pandas as pd
 import pickle
 from scipy import interpolate, ndimage
+import copy
 
 import sys
-sys.path.append('C:/Users/Jake/Documents/python_code/robot_maze_analysis_code')
+if sys.platform == 'linux':
+    sys.path.append('/home/jake/Documents/python_code/robot_maze_analysis_code')
+
+else:
+    sys.path.append('C:/Users/Jake/Documents/python_code/robot_maze_analysis_code')
+
+
 from utilities.get_directories import get_data_dir, get_robot_maze_directory
 from utilities.load_and_save_data import load_pickle, save_pickle
 from behaviour.load_behaviour import get_behaviour_dir
@@ -39,23 +46,25 @@ def get_unit_position_and_directions(dlc_data, unit):
 
     def interpolate_pos_and_dir(unit, dlc_data):
         # create the interpolation functions
-        f_x = interpolate.interp1d(dlc_data[t]['video_samples'], dlc_data[t]['x'])
-        f_y = interpolate.interp1d(dlc_data[t]['video_samples'], dlc_data[t]['y'])
+        f_x = interpolate.interp1d(dlc_data['video_samples'], dlc_data['x'])
+        f_y = interpolate.interp1d(dlc_data['video_samples'], dlc_data['y'])
 
-        unit[t]['x'] = np.round(f_x(unit[t]['samples']), 2)
-        unit[t]['y'] = np.round(f_y(unit[t]['samples']), 2)
+        unit['x'] = np.round(f_x(unit['samples']), 2)
+        unit['y'] = np.round(f_y(unit['samples']), 2)
 
         # interpolate the directional data
         directional_data_cols = ['hd']
-        dlc_columns = dlc_data[t].columns
+        dlc_columns = dlc_data.columns
         for c in dlc_columns:
             if 'relative_direction' in c:
                 directional_data_cols.append(c)
 
         for c in directional_data_cols:            
-            target_rads = interpolate_rads(dlc_data[t]['video_samples'], dlc_data[t][c], 
-                                       unit[t]['samples'])
-            unit[t][c] = np.around(target_rads, 3)
+            target_rads = interpolate_rads(dlc_data['video_samples'], dlc_data[c], 
+                                       unit['samples'])
+            unit[c] = np.around(target_rads, 3)
+
+        return unit
 
 
     for t in unit.keys():
@@ -68,10 +77,10 @@ def get_unit_position_and_directions(dlc_data, unit):
             unit[t] = interpolate_pos_and_dir(unit_temp, dlc_temp)
 
         else:
-            for ch in unit[t]:
-                unit_temp = pd.DataFrame({'samples': unit[t][ch]})
-                dlc_temp = dlc_data[t][ch]
-                unit[t][ch] = interpolate_pos_and_dir(unit_temp, dlc_temp)
+            for i, ch in enumerate(unit[t]):
+                unit_temp = pd.DataFrame({'samples': ch})
+                dlc_temp = dlc_data[t][i]
+                unit[t][i] = interpolate_pos_and_dir(unit_temp, dlc_temp)
 
     return unit
 
@@ -115,26 +124,25 @@ def circularly_translate_units_by_goal(unit, dlc_data):
     shifted_unit = pd.DataFrame(shifted_unit)
 
     return shifted_unit
-    
-    
 
 
+def bin_spikes_by_position_all_units_by_choice(units, positional_occupancy):
+    choice_type = ['correct', 'incorrect']
 
+    spike_rates_by_position = {}
+    for c in choice_type:
         
-        
+        pos_occ_temp = positional_occupancy[c]
 
+        units_temp = {}
+        for u in units.keys():
+            units_temp[u] = units[u][c]
 
+        spike_rates_by_position[c] = bin_spikes_by_position(units_temp, pos_occ_temp)
 
-
-
-
-    pass
-
+    return spike_rates_by_position
 
 def bin_spikes_by_position(units, positional_occupancy):
-
-    
-    # np.seterr(divide='raise', invalid='raise')
 
     # get the x and y bins
     x_bins_og = positional_occupancy['x_bins']
@@ -157,6 +165,9 @@ def bin_spikes_by_position(units, positional_occupancy):
         # loop through the trials getting all the spike positions
         for i, t in enumerate(units[u].keys()):
             # get the x and y positions
+            if units[u][t] is None:
+                continue
+
             if i == 0:
                 x = units[u][t]['x']
                 y = units[u][t]['y']
@@ -200,6 +211,16 @@ def bin_spikes_by_position(units, positional_occupancy):
             
     return spike_rates_by_position
 
+
+def smooth_rate_maps_by_choice(rate_maps):
+
+    choice_type = ['correct', 'incorrect']
+    smoothed_rate_maps = {}
+    for c in choice_type:
+
+        smoothed_rate_maps[c] = smooth_rate_maps(rate_maps[c])       
+
+    return smoothed_rate_maps
 
 def smooth_rate_maps(rate_maps):
      # make smoothed_rate_maps a copy of rate_maps
@@ -254,6 +275,25 @@ def smooth_rate_maps(rate_maps):
     return smoothed_rate_maps
 
 
+def bin_spikes_by_direction_by_choice(units, directional_occupancy):
+    
+    choice_type = ['correct', 'incorrect']
+
+    spike_rates_by_direction = {}
+    spike_counts_by_direction = {}
+
+    for c in choice_type:
+        directional_occupancy_temp = directional_occupancy[c]
+        units_temp = {}
+        for u in units.keys():
+            units_temp[u] = units[u][c]
+
+        spike_rates_by_direction[c], spike_counts_by_direction[c] = bin_spikes_by_direction(units_temp, 
+                                                directional_occupancy_temp)
+
+    return spike_rates_by_direction, spike_counts_by_direction
+
+
 def bin_spikes_by_direction(units, directional_occupancy):
     
     direction_bins_og = directional_occupancy['bins']
@@ -289,9 +329,15 @@ def bin_spikes_by_direction(units, directional_occupancy):
         # loop through the different types of directional data
         for d in occupancy.keys():       
             # loop through the trials 
+            counter = 0
             for i, t in enumerate(units[u].keys()):
                 
-                if i == 0:
+                if units[u][t] is None:
+                    continue
+            
+                counter += 1
+
+                if counter == 1:
                     directional_data = units[u][t][d]
                     
                 else:
@@ -434,6 +480,25 @@ def bin_spikes_by_position_and_direction_popn(popn, directional_occupancy_by_pos
     return spike_rates_by_position_and_direction, bad_vals
         
 
+def bin_spikes_by_position_and_direction_by_choice(units, directional_occupancy_by_position):
+
+    choice_type = ['correct', 'incorrect']
+
+    spike_rates_by_position_and_direction = {}
+    bad_vals = {}
+    for c in choice_type:
+        directional_occupancy_temp = directional_occupancy_by_position[c]
+        units_temp = {}
+        for u in units.keys():
+            units_temp[u] = units[u][c]
+
+        spike_rates_by_position_and_direction[c], bad_vals[c] = bin_spikes_by_position_and_direction_individual_units(units_temp, 
+                                                directional_occupancy_temp)
+
+    return spike_rates_by_position_and_direction, bad_vals
+
+
+
 def bin_spikes_by_position_and_direction_individual_units(units, directional_occupancy_by_position):
     
     # get the x and y bins
@@ -465,9 +530,16 @@ def bin_spikes_by_position_and_direction_individual_units(units, directional_occ
             np.zeros((len(y_bins)-1, len(x_bins)-1, n_bins))
         
         # loop through the trials getting all the spike positions
+        counter = 0
         for i, t in enumerate(units[u].keys()):
+
+            if units[u][t] is None:
+                continue
+
+            counter += 1
+
             # get the x and y positions
-            if i == 0:
+            if counter == 1:
                 x = units[u][t]['x']
                 y = units[u][t]['y']
                 hd = units[u][t]['hd']
@@ -576,6 +648,53 @@ def create_artificial_unit(units, directional_occupancy_by_position):
     return 
 
 
+def concatenate_units_by_choice(units, behaviour_dir):
+    
+    choice_type = ['correct', 'incorrect']
+
+    units_concat_by_choice = {}
+
+    for unit_name, unit in units.items():
+
+        unit_concat_by_choice = {}
+
+        for c in choice_type:
+
+            if c == 'correct':
+                choice_code = 1
+            elif c == 'incorrect':
+                choice_code = 0
+            
+            unit_concat_by_choice[c] = {}
+            
+            for t in unit.keys(): 
+
+                behaviour_data = pd.read_csv(os.path.join(behaviour_dir, f"{t}_samples.csv"))
+                
+                choice_counter = 0
+                for i, ch in enumerate(unit[t]):
+
+                    if behaviour_data['correct_choice'][i] != choice_code:
+                        continue
+
+                    choice_counter += 1
+                    if choice_counter == 1:
+                        unit_concat = ch
+                    else:
+                        unit_concat = pd.concat([unit_concat, ch], ignore_index=True)
+                        
+                if choice_counter > 0:
+                    unit_concat_by_choice[c][t] = unit_concat   
+                    del unit_concat
+                else:
+                    unit_concat_by_choice[c][t] = None                
+                
+
+        units_concat_by_choice[unit_name] = unit_concat_by_choice
+
+    return units_concat_by_choice
+
+
 def main_1goal(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024'):
 
     data_dir = get_data_dir(experiment, animal, session)
@@ -665,6 +784,8 @@ def main_1goal(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-
 
 def main_by_choices(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024'):
 
+    choice_type = ('correct', 'incorrect')
+
     data_dir = get_data_dir(experiment, animal, session)
 
     # load spike data
@@ -673,61 +794,72 @@ def main_by_choices(experiment='robot_single_goal', animal='Rat_HC2', session='1
 
     # load positional data by choices
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
-    dlc_data = load_pickle('dlc_to_choices', dlc_dir)
+    dlc_data = load_pickle('dlc_by_choice', dlc_dir)
 
     # load occupancy data
     positional_occupancy = load_pickle('positional_occupancy_by_choice', dlc_dir)
 
     # find any NaNs or infs in the positional occupancy['occupancy']
-    if np.isnan(positional_occupancy['occupancy']).sum() > 0:
-        raise ValueError('There are NaNs in the positional occupancy.')
-    if np.isinf(positional_occupancy['occupancy']).sum() > 0:
-        raise ValueError('There are infs in the positional occupancy.')
+    for c in choice_type:
+        if np.isnan(positional_occupancy[c]['occupancy']).sum() > 0:
+            raise ValueError('There are NaNs in the positional occupancy.')
+        if np.isinf(positional_occupancy[c]['occupancy']).sum() > 0:
+            raise ValueError('There are infs in the positional occupancy.')
 
-    code_to_run = [0, 1, 2, 3]
+    code_to_run = [2]
 
     ####################### CALCULATE SPIKE POSITIONS AND DIRECTIONS #######################
     # loop through units and calculate positions and various directional correlates
-    for unit in units.keys():
-        units[unit] = get_unit_position_and_directions(dlc_data, units[unit])
+    # for unit in units.keys():
+    #     units[unit] = get_unit_position_and_directions(dlc_data, units[unit])
 
     # # save the restricted units
-    save_pickle(units, 'units_by_choice_w_behav_correlates', spike_dir)
-
+    # save_pickle(units, 'units_by_choice_w_behav_correlates', spike_dir)
+    units = load_pickle('units_by_choice_w_behav_correlates', spike_dir)
+    #################### CONCATENATE UNITS BY CHOICE ###########################
+    behaviour_dir = os.path.join(data_dir, 'behaviour', 'samples')
+    # units_concat_by_choice = concatenate_units_by_choice(units, behaviour_dir)
+    # save_pickle(units_concat_by_choice, 'units_concat_by_choice', spike_dir)
+    units_concat_by_choice = load_pickle('units_concat_by_choice', spike_dir)
+    
     ############################### SINGLE RATE MAPS FOR ENTIRE SESSION ###############################
     # bin spikes by position
-    rate_maps = bin_spikes_by_choice_and_position(units, positional_occupancy)
+    rate_maps = bin_spikes_by_position_all_units_by_choice(units_concat_by_choice, positional_occupancy)
+
     # save the spike counts by position
     save_pickle(rate_maps, 'rate_maps_by_choice', spike_dir)
+    del rate_maps
+    rate_maps = load_pickle('rate_maps_by_choice', spike_dir)
 
     # create smoothed rate_maps
-    smoothed_rate_maps = smooth_rate_maps(rate_maps)
+    smoothed_rate_maps = smooth_rate_maps_by_choice(rate_maps)
     save_pickle(smoothed_rate_maps, 'smoothed_rate_maps_by_choice', spike_dir) 
-
+    # smooth_rate_maps = load_pickle('smoothed_rate_maps_by_choice', spike_dir)
 
     ############################### DIRECTIONAL TUNING FOR ENTIRE SESSION ###############################
     if 2 in code_to_run:
         # bin spikes by direction
-        directional_occupancy = load_pickle('directional_occupancy', dlc_dir)
-        spike_rates_by_direction, spike_counts = bin_spikes_by_direction(units, 
+        directional_occupancy = load_pickle('directional_occupancy_by_choice', dlc_dir)
+        spike_rates_by_direction, spike_counts = bin_spikes_by_direction_by_choice(units_concat_by_choice, 
                                                 directional_occupancy)
         # save the spike counts and rates by direction
-        save_pickle(spike_rates_by_direction, 'spike_rates_by_direction', spike_dir)
-        save_pickle(spike_counts, 'spike_counts_by_direction', spike_dir)
+        save_pickle(spike_rates_by_direction, 'spike_rates_by_direction_by_choice', spike_dir)
+        save_pickle(spike_counts, 'spike_counts_by_direction_by_choice', spike_dir)
+        pass
 
 
     ####################SPIKE RATES BY POSITION AND DIRECTION FOR ENTIRE SESSSION ###############################
     if 3 in code_to_run:
         # load the directional occupancy by position data
-        directional_occupancy_by_position = load_pickle('directional_occupancy_by_position', dlc_dir)
+        directional_occupancy_by_position = load_pickle('directional_occupancy_by_position_by_choice', dlc_dir)
         # bin spikes by position and direction
-        spike_rates_by_position_and_direction, bad_vals = bin_spikes_by_position_and_direction_individual_units(units, 
+        spike_rates_by_position_and_direction, bad_vals = bin_spikes_by_position_and_direction_by_choice(units_concat_by_choice, 
                                                 directional_occupancy_by_position)
         
-        check_bad_vals(bad_vals, dlc_data)
+        # check_bad_vals(bad_vals, dlc_data)
 
         # save the spike rates by position and direction
-        save_pickle(spike_rates_by_position_and_direction, 'spike_rates_by_position_and_direction', spike_dir)
+        save_pickle(spike_rates_by_position_and_direction, 'spike_rates_by_position_and_direction_by_choice', spike_dir)
 
 
 

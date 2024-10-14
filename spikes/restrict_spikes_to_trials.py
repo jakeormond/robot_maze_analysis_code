@@ -134,8 +134,8 @@ def main2(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024'
     save_pickle(units_by_choice, 'units_by_choice', unit_dir)
 
     # concatenate spikes by choices within a trial
-    behaviour_dir = os.path.join(data_dir, 'behaviour', 'samples')
-    units_by_choice_concat = concatenate_units_by_choice(units_by_choice, behaviour_dir)
+    # behaviour_dir = os.path.join(data_dir, 'behaviour', 'samples')
+    # units_by_choice_concat = concatenate_units_by_choice(units_by_choice, behaviour_dir)
 
 
 

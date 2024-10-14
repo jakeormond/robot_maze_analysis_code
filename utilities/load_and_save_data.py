@@ -35,8 +35,15 @@ def load_pickle(filename, dir):
     # remove any entries in files that aren't pickle files
     files = [f for f in files if f.endswith('.pickle') or f.endswith('.pkl')]
 
+ 
+    # find the file that matches the filename
+    
     for f in files:
-        if filename in f:
+
+        # f2 is f without the extension
+        f2 = f.split('.')[0]
+
+        if filename == f2:
             filename = f
             break
 

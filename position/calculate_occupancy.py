@@ -743,6 +743,8 @@ def main2(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024'
     # concatenate dlc_data
     behaviour_dir = os.path.join(data_dir, 'behaviour', 'samples')
     dlc_data_concat_by_choice = concatenate_dlc_data_by_choice(dlc_data_by_choice, behaviour_dir)
+    save_pickle(dlc_data_concat_by_choice, 'dlc_data_concat_by_choice', dlc_dir)
+
 
     # get axes limits
     dlc_data = load_pickle('dlc_final', dlc_dir)
