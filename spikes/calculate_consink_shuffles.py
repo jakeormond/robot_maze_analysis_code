@@ -3,10 +3,6 @@ import os
 from multiprocessing import Pool
 import numpy as np
 import pandas as pd
-import matplotlib
-matplotlib.use('TkAgg')
-import matplotlib.pyplot as plt
-import seaborn as sns
 from joblib import Parallel, delayed
 
 import platform
@@ -39,7 +35,7 @@ def calculate_translated_mrl(unit, dlc_data, reldir_occ_by_pos, sink_bins, direc
 
 def recalculate_consink_to_all_candidates_from_translation(unit, dlc_data, reldir_occ_by_pos, sink_bins, direction_bins, candidate_sinks):
 
-    n_shuffles = 2
+    n_shuffles = 10
     mrl = np.zeros(n_shuffles)
 
     # mrl = Parallel(n_jobs=-1, verbose=50)(delayed(calculate_translated_mrl)(unit, dlc_data, reldir_occ_by_pos, sink_bins, direction_bins, candidate_sinks) for s in range(n_shuffles))
@@ -88,12 +84,8 @@ def recalculate_consink_to_all_candidates_from_shuffle(unit, reldir_occ_by_pos, 
     return ci
 
 
-def main():
+def main(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024'):
     
-    experiment = 'robot_single_goal'
-    animal = 'Rat_HC1'
-    session = '31-07-2024'
-
     data_dir = get_data_dir(experiment, animal, session)
 
     spike_dir = os.path.join(data_dir, 'spike_sorting')
@@ -210,9 +202,81 @@ def main():
     consinks_df.to_csv(os.path.join(spike_dir, 'consinks_df_translated_ctrl.csv'))
     # print('saved consinks_df_translated_ctrl to {spike_dir}')    
 
+
+def main2(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024'):
+    
+    data_dir = get_data_dir(experiment, animal, session)
+
+    spike_dir = os.path.join(data_dir, 'spike_sorting')
+    # load neuron_types.pkl
+    neuron_types = load_pickle('neuron_types', spike_dir)
+
+    # get direction bins
+    direction_bins = get_direction_bins(n_bins=12)
+
+    # load positional data
+    dlc_dir = os.path.join(data_dir, 'deeplabcut')
+    dlc_data_concat = load_pickle('dlc_data_concat_by_choice', dlc_dir)
+
+    units = load_pickle('units_concat_by_choice', spike_dir)
+
+    neuron_types = load_pickle('neuron_types', spike_dir)
+    
+    choice_type = ['correct', 'incorrect']
+
+    consinks_df_all = load_pickle('consinks_df_by_choice', spike_dir)
+
+    consinks_df = {}
+
+    for c in choice_type:
+    
+        reldir_occ_by_pos = np.load(os.path.join(dlc_dir, f'reldir_occ_by_pos_{c}.npy'))
+        sink_bins = load_pickle(f'sink_bins_{c}', dlc_dir)
+        candidate_sinks = load_pickle(f'candidate_sinks_{c}', dlc_dir)
+
+        consinks_df[c] = consinks_df_all[c]    
+
+        dlc_data = dlc_data_concat[c][['video_samples', 'x', 'y', 'hd']]
+
+
+        if 'ci_95' not in consinks_df[c].columns:
+            idx = consinks_df[c].columns.get_loc('mrl')
+            consinks_df[c].insert(idx + 1, 'ci_95', np.nan)
+            consinks_df[c].insert(idx + 2, 'ci_999', np.nan)
+
+        for cluster in units.keys():
+
+            if cluster not in neuron_types.keys() or neuron_types[cluster] != 'pyramidal':
+                continue
+            
+            unit = concatenate_unit_across_trials(units[cluster][c])
+            unit = unit[['samples', 'x', 'y', 'hd']]
+
+            ######### PERFORM CICULAR TRANSLATION CONTROL
+            
+            print(f'calcualting confidence intervals for {cluster}')
+            
+            ci = recalculate_consink_to_all_candidates_from_translation(unit, dlc_data, reldir_occ_by_pos, sink_bins, direction_bins, candidate_sinks)
+            # ci = recalculate_consink_to_all_candidates_from_shuffle(unit, dlc_data, reldir_occ_by_pos, sink_bins,  direction_bins, candidate_sinks)
+            
+            consinks_df[c].loc[cluster, 'ci_95'] = ci[0]
+            consinks_df[c].loc[cluster, 'ci_999'] = ci[1]
+
+        # save as csv
+        consinks_df[c].to_csv(os.path.join(spike_dir, f'consinks_df_translated_ctrl_{c}.csv'))
+
+
+    save_pickle(consinks_df, 'consinks_df_translated_ctrl_by_choice', spike_dir)
+
+    
+    # print('saved consinks_df_translated_ctrl to {spike_dir}')    
+
+
+
 if __name__ == "__main__":
 
-    main()
+    # main(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024')
+    main2(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024')
 
    
    

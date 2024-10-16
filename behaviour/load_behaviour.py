@@ -402,7 +402,7 @@ def get_choice_times(behaviour_data_temp, dlc_data, crop_vals, crop_times):
     return behaviour_data_temp
 
 
-def main3(experiment = 'robot_single_goal', animal = 'Rat_HC2', session = '15-07-2024'):
+def main3(experiment = 'robot_single_goal', animal = 'Rat_HC1', session = '06-08-2024'):
 
     # load behaviour data
     data_dir = get_data_dir(experiment, animal, session)
@@ -459,6 +459,6 @@ def main3(experiment = 'robot_single_goal', animal = 'Rat_HC2', session = '15-07
       
 if __name__ == "__main__":
 
-    main3(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024')
+    main3(experiment='robot_single_goal', animal='Rat_HC1', session='06-08-2024')
 
     

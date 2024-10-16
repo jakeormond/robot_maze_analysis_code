@@ -84,7 +84,6 @@ def main2():
         directories = os.listdir(parent_directory)
 
         for session in directories:
-            cpd.main(experiment=experiment, animal=animal, session=session)
             # pcm.main(experiment=experiment, animal=animal, session=session)
             # csk.main(experiment=experiment, animal=animal, session=session, code_to_run = [9])
             # cvf.main(experiment=experiment, animal=animal, session=session, code_to_run = [1])
@@ -92,9 +91,36 @@ def main2():
             pass
 
 
+def main3():
+    experiment = 'robot_single_goal'
+    
+    # animals = ['Rat_HC1', 'Rat_HC2', 'Rat_HC3', 'Rat_HC4']
+    animals = ['Rat_HC4']
+    # animals = ['Rat_HC2', 'Rat_HC3', 'Rat_HC4']
+
+    for animal in animals:
+
+        # find directories in the animal directory
+        home_directory = gd.get_home_dir()
+        parent_directory = os.path.join(home_directory, experiment, animal)
+        
+        directories = os.listdir(parent_directory)
+
+        for session in directories:
+            lb.main3(experiment=experiment, animal=animal, session=session)          
+            cpd.main2(experiment=experiment, animal=animal, session=session) # segment data by choice      
+            rst.main2(experiment=experiment, animal=animal, session=session) # segment spikes by choice
+            co.main2(experiment=experiment, animal=animal, session=session)
+            csp.main_by_choices(experiment=experiment, animal=animal, session=session) # segment spike pos by choice
+            psp.main2(experiment=experiment, animal=animal, session=session)
+            csk.main2(experiment=experiment, animal=animal, session=session)
+
+
+
 if __name__ == "__main__":
     
     # main()
-    main2()
+    # main2()
+    main3()
     
     

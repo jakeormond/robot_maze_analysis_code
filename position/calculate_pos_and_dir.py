@@ -647,7 +647,7 @@ def main(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024')
     pass
 
 
-def main2(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024'):
+def main2(experiment='robot_single_goal', animal='Rat_HC1', session='06-08-2024'):
 
     data_dir = get_data_dir(experiment, animal, session)
     dlc_dir = os.path.join(data_dir, 'deeplabcut')
@@ -669,5 +669,5 @@ def main2(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024'
 if __name__ == "__main__":
     # main(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024')
 
-    main2(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024')
+    main2(experiment='robot_single_goal', animal='Rat_HC1', session='06-08-2024')
     

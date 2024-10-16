@@ -253,6 +253,9 @@ def find_consink(unit, reldir_occ_by_pos, sink_bins, direction_bins, candidate_s
     # calculate the mean resultant length of the normalised relative direction distribution
     mrl, mean_angle = mean_resultant_length_nrdd(normalised_rel_dir_dist, direction_bins)
 
+    # find any nans in mrl and set them to 0
+    mrl[np.isnan(mrl)] = 0
+
     # find the maximum mrl, and its indices
     max_mrl = np.max(mrl)
     max_mrl_indices = np.where(mrl == max_mrl)
@@ -891,9 +894,93 @@ def main(experiment = 'robot_single_goal', animal = 'Rat_HC4', session = '01-08-
     #     fig_path = os.path.join(spike_dir, 'consinks', 'consink_distances_to_goal_swarmplot')
     #     plot_consink_distances_to_goal(consinks_df, fig_path=fig_path)
 
+
+def main2(experiment='robot_single_goal', animal='Rat_HC2', session='16-07-2024'):
+
+    data_dir = get_data_dir(experiment, animal, session)    
+    
+    spike_dir = os.path.join(data_dir, 'spike_sorting')
+
+    # get direction bins
+    direction_bins = get_direction_bins(n_bins=12)
+
+    # load positional data
+    dlc_dir = os.path.join(data_dir, 'deeplabcut')
+    # dlc_data = load_pickle('dlc_final', dlc_dir)
+    dlc_data_concat = load_pickle('dlc_data_concat_by_choice', dlc_dir)
+    # dlc_data = calculate_frame_durations(dlc_data)
+    # dlc_data_concat = concatenate_dlc_data(dlc_data)
+    # save_pickle(dlc_data_concat, 'dlc_data_concat', dlc_dir)
+
+    # get x and y limits
+    limits = get_axes_limits(dlc_data_concat['correct'])
+
+    # units = load_pickle('units_by_goal', spike_dir)
+    # units = load_pickle('units_w_behav_correlates', spike_dir)
+    units = load_pickle('units_concat_by_choice', spike_dir)
+
+    neuron_types = load_pickle('neuron_types', spike_dir)
+
+    # goals = units.keys()
+
+    choice_types = ['correct', 'incorrect']
+
+    reldir_occ_by_pos = {}
+    sink_bins = {}
+    candidate_sinks = {}
+
+    for c in choice_types:
+    # get relative direction occupancy by position if np array not already saved
+        file_name = f'reldir_occ_by_pos_{c}.npy'
+        if os.path.exists(os.path.join(dlc_dir, file_name)) == False:
+            reldir_occ_by_pos[c], sink_bins[c], candidate_sinks[c] = get_relative_direction_occupancy_by_position(dlc_data_concat[c], limits)
+            np.save(os.path.join(dlc_dir, file_name), reldir_occ_by_pos[c])
+            # save sink bins and candidate sinks as pickle files
+            save_pickle(sink_bins[c], f'sink_bins_{c}', dlc_dir)
+            save_pickle(candidate_sinks[c], f'candidate_sinks_{c}', dlc_dir)     
+
+        else:
+            reldir_occ_by_pos[c] = np.load(os.path.join(dlc_dir, file_name))
+            sink_bins[c] = load_pickle(f'sink_bins_{c}', dlc_dir)
+            candidate_sinks[c] = load_pickle(f'candidate_sinks_{c}', dlc_dir)
+
+    ################# CALCULATE CONSINKS ###########################################     
+    consinks = {}
+    consinks_df = {}
+    
+    for c in choice_types:
+        consinks[c] = {}
+        for cluster in units.keys():
+            
+            if neuron_types[cluster] == 'interneuron':
+                continue
+
+            unit = concatenate_unit_across_trials(units[cluster][c])
+            
+            # check if unit is empty df
+            if unit.empty:
+                consinks[c][cluster] = {'mrl': np.nan, 'position': np.nan, 'mean_angle': np.nan}
+                continue
+
+            # get consink  
+            max_mrl, max_mrl_indices, mean_angle = find_consink(unit, reldir_occ_by_pos[c], sink_bins[c], direction_bins, candidate_sinks[c])
+            consink_position = np.round([candidate_sinks[c]['x'][max_mrl_indices[1][0]], candidate_sinks[c]['y'][max_mrl_indices[0][0]]], 3)
+            consinks[c][cluster] = {'mrl': max_mrl, 'position': consink_position, 'mean_angle': mean_angle}
+
+        # create a data frame with the consink positions
+        consinks_df[c] = pd.DataFrame(consinks[c]).T
+        
+        
+        # save as csv            
+        consinks_df[c].to_csv(os.path.join(spike_dir, f'consinks_df_{c}.csv'))
+
+    # save consinks_df 
+    save_pickle(consinks_df, 'consinks_df_by_choice', spike_dir)
+
         
 if __name__ == "__main__":
     
-    main()
+    # main()
+    main2(experiment='robot_single_goal', animal='Rat_HC2', session='16-07-2024')
 
 

@@ -163,12 +163,13 @@ def bin_spikes_by_position(units, positional_occupancy):
     for u in units.keys():
         
         # loop through the trials getting all the spike positions
+        counter = 0
         for i, t in enumerate(units[u].keys()):
             # get the x and y positions
             if units[u][t] is None:
                 continue
 
-            if i == 0:
+            if counter == 0:
                 x = units[u][t]['x']
                 y = units[u][t]['y']
                 samples = units[u][t]['samples']
@@ -176,6 +177,7 @@ def bin_spikes_by_position(units, positional_occupancy):
                 x = np.concatenate((x, units[u][t]['x']))
                 y = np.concatenate((y, units[u][t]['y']))
                 samples = np.concatenate((samples, units[u][t]['samples']))
+            counter += 1
         
         # sort the spike positions into bins
         x_bin = np.digitize(x, x_bins) - 1
@@ -550,6 +552,9 @@ def bin_spikes_by_position_and_direction_individual_units(units, directional_occ
                 hd = np.concatenate((hd, units[u][t]['hd']))
                 samples = np.concatenate((samples, units[u][t]['samples']))
                
+        if x.size == 0:
+            continue
+            
         # sort the spike positions into bins
         x_bin = np.digitize(x, x_bins) - 1
         y_bin = np.digitize(y, y_bins) - 1
@@ -806,20 +811,20 @@ def main_by_choices(experiment='robot_single_goal', animal='Rat_HC2', session='1
         if np.isinf(positional_occupancy[c]['occupancy']).sum() > 0:
             raise ValueError('There are infs in the positional occupancy.')
 
-    code_to_run = [2]
+    code_to_run = [2, 3]
 
     ####################### CALCULATE SPIKE POSITIONS AND DIRECTIONS #######################
     # loop through units and calculate positions and various directional correlates
-    # for unit in units.keys():
-    #     units[unit] = get_unit_position_and_directions(dlc_data, units[unit])
+    for unit in units.keys():
+        units[unit] = get_unit_position_and_directions(dlc_data, units[unit])
 
     # # save the restricted units
-    # save_pickle(units, 'units_by_choice_w_behav_correlates', spike_dir)
+    save_pickle(units, 'units_by_choice_w_behav_correlates', spike_dir)
     units = load_pickle('units_by_choice_w_behav_correlates', spike_dir)
     #################### CONCATENATE UNITS BY CHOICE ###########################
     behaviour_dir = os.path.join(data_dir, 'behaviour', 'samples')
-    # units_concat_by_choice = concatenate_units_by_choice(units, behaviour_dir)
-    # save_pickle(units_concat_by_choice, 'units_concat_by_choice', spike_dir)
+    units_concat_by_choice = concatenate_units_by_choice(units, behaviour_dir)
+    save_pickle(units_concat_by_choice, 'units_concat_by_choice', spike_dir)
     units_concat_by_choice = load_pickle('units_concat_by_choice', spike_dir)
     
     ############################### SINGLE RATE MAPS FOR ENTIRE SESSION ###############################

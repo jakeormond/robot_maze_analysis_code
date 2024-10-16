@@ -492,6 +492,9 @@ def main(experiment='robot_single_goal', animal='Rat_HC1', session='01-08-2024',
         if i == n_trials:
             break
 
+        if i != 10:
+            continue    
+
         # load behavioural data from csv file
         behaviour_data = pd.read_csv(os.path.join(behaviour_dir, 'samples', f'{d}_samples.csv'))
 
@@ -528,6 +531,6 @@ def main(experiment='robot_single_goal', animal='Rat_HC1', session='01-08-2024',
 
 if __name__ == "__main__":
     
-    main(experiment='robot_single_goal', animal='Rat_HC4', session='01-08-2024', n_trials=20)
+    main(experiment='robot_single_goal', animal='Rat_HC1', session='06-08-2024', n_trials=20)
 
     

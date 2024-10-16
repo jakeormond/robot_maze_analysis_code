@@ -384,7 +384,7 @@ def plot_rate_maps_by_choice(rate_maps, smoothed_rate_maps, goal_coordinates, pl
         
         fig.savefig(os.path.join(plot_dir, f'{u}.png'))
 
-        # plt.close()
+        plt.close()
 
 
 
@@ -804,8 +804,8 @@ def main2(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024'
     # plot_spikes_and_pos_by_trials(units, dlc_data, goal_coordinates, x_and_y_limits, plot_dir)
 
     # plot spikes and position
-    # plot_dir = os.path.join(spike_dir, 'spikes_and_pos_by_choice')
-    # plot_spikes_and_pos_by_choice(units, dlc_data_concat, goal_coordinates, x_and_y_limits, plot_dir)
+    plot_dir = os.path.join(spike_dir, 'spikes_and_pos_by_choice')
+    plot_spikes_and_pos_by_choice(units, dlc_data_concat, goal_coordinates, x_and_y_limits, plot_dir)
 
     
     # plot spikes and position 
@@ -816,9 +816,9 @@ def main2(experiment='robot_single_goal', animal='Rat_HC2', session='15-07-2024'
 
     # plot spike rates by direction
     plot_dir = os.path.join(spike_dir, 'spike_rates_by_direction_by_choice')
-    # spike_rates_by_direction = load_pickle('spike_rates_by_direction_by_choice', spike_dir)
+    spike_rates_by_direction = load_pickle('spike_rates_by_direction_by_choice', spike_dir)
 
-    # plot_spike_rates_by_direction_by_choice(spike_rates_by_direction, plot_dir)
+    plot_spike_rates_by_direction_by_choice(spike_rates_by_direction, plot_dir)
 
     # plot rate maps
     plot_dir = os.path.join(spike_dir, 'rate_maps_by_choice')

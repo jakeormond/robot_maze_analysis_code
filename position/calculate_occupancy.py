@@ -252,7 +252,7 @@ def get_relative_direction_occupancy_by_position(dlc_data, limits):
     # create relative directional occupancy by position array
     n_dir_bins=12 # 12 bins of 30 degrees each
     
-    reldir_occ_by_pos = np.array([[np.zeros((n_y_bins, n_x_bins, n_dir_bins)) for _ in range(n_y_bins)] for _ in range(n_x_bins)])
+    reldir_occ_by_pos = np.array([[np.zeros((n_y_bins, n_x_bins, n_dir_bins)) for _ in range(n_x_bins)] for _ in range(n_y_bins)])
     
     # get x and y data
     x = dlc_data['x']
