@@ -17,7 +17,7 @@ else:
 from utilities.get_directories import get_data_dir, reverse_date
 from utilities.load_and_save_data import load_pickle, save_pickle
 
-from honeycomb_task.platform_map import Map
+# from honeycomb_task.platform_map import Map
 
 
 def get_behaviour_dir(data_dir):

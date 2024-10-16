@@ -124,10 +124,13 @@ def main():
     # print('saved consinks_df_translated_ctrl to {spike_dir}')    
 
 
-def main2(animal='Rat_HC2', session='15-07-2024'):
+def main2(animal=None, session=None):
 
     data_dir = os.path.join('/ceph/scratch/jakeo/robot_maze/single_goal_expt', animal, session)
     spike_dir = os.path.join(data_dir, 'spike_sorting')
+
+    print(f'loading data for {animal}_{session}')
+    print(f'data_dir: {data_dir}')
 
     spike_dir = os.path.join(data_dir, 'spike_sorting')
     # load neuron_types.pkl
@@ -191,14 +194,14 @@ def main2(animal='Rat_HC2', session='15-07-2024'):
     save_pickle(consinks_df, 'consinks_df_translated_ctrl_by_choice', spike_dir)
 
     
-    # print('saved consinks_df_translated_ctrl to {spike_dir}')    
+    print(f'saved consinks_df_translated_ctrl to {spike_dir}')    
 
 
 
 if __name__ == "__main__":
 
     # main()
-    main2( animal='Rat_HC1', session='31-07-2024') # this is for the data separated by correct and incorrect choices
+    main2(animal='Rat_HC4', session='01-08-2024') # this is for the data separated by correct and incorrect choices
 
    
    
