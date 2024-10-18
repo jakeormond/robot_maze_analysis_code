@@ -181,6 +181,11 @@ def main2(animal=None, session=None):
             
             print(f'calcualting confidence intervals for {cluster}_{c}')
             
+            if len(unit) == 0:
+                consinks_df[c].loc[cluster, 'ci_95'] = np.nan
+                consinks_df[c].loc[cluster, 'ci_999'] = np.nan
+                continue
+
             ci = recalculate_consink_to_all_candidates_from_translation(unit, dlc_data, reldir_occ_by_pos, sink_bins, direction_bins, candidate_sinks)
             # ci = recalculate_consink_to_all_candidates_from_shuffle(unit, dlc_data, reldir_occ_by_pos, sink_bins,  direction_bins, candidate_sinks)
             
@@ -201,7 +206,7 @@ def main2(animal=None, session=None):
 if __name__ == "__main__":
 
     # main()
-    main2(animal='Rat_HC4', session='01-08-2024') # this is for the data separated by correct and incorrect choices
+    main2(animal='Rat_HC2', session='16-07-2024') # this is for the data separated by correct and incorrect choices
 
    
    
